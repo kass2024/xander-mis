@@ -216,6 +216,90 @@ function xander_prescreening_reset_session(mysqli $conn, string $waPhone): void
     }
 }
 
+function xander_prescreening_record_invite_wamid(mysqli $conn, string $waPhone, string $wamid): void
+{
+    $wamid = trim($wamid);
+    if ($wamid === '') {
+        return;
+    }
+    xander_prescreening_ensure_delivery_columns($conn);
+    $stmt = $conn->prepare('
+        UPDATE whatsapp_prescreening_sessions
+        SET last_wamid = ?, last_delivery_status = ?, last_delivery_at = NOW()
+        WHERE wa_phone = ?
+    ');
+    if (!$stmt) {
+        return;
+    }
+    $pending = 'accepted';
+    $stmt->bind_param('sss', $wamid, $pending, $waPhone);
+    $stmt->execute();
+    $stmt->close();
+}
+
+/**
+ * Apply Meta delivery webhook (from VPS forward). Matches wamid first, else latest session for recipient.
+ */
+function xander_prescreening_apply_delivery_status(
+    mysqli $conn,
+    string $wamid,
+    string $deliveryStatus,
+    ?int $errorCode,
+    string $errorMessage,
+    string $recipientDigits
+): bool {
+    xander_prescreening_ensure_delivery_columns($conn);
+    $deliveryStatus = strtolower(trim($deliveryStatus));
+    if ($deliveryStatus === '') {
+        return false;
+    }
+
+    $updated = false;
+    if ($wamid !== '') {
+        $stmt = $conn->prepare('
+            UPDATE whatsapp_prescreening_sessions
+            SET last_delivery_status = ?, last_delivery_error_code = ?, last_delivery_error_message = ?,
+                last_delivery_at = NOW(), last_wamid = COALESCE(last_wamid, ?)
+            WHERE last_wamid = ?
+        ');
+        if ($stmt) {
+            $errCode = $errorCode ?? 0;
+            $stmt->bind_param('sisss', $deliveryStatus, $errCode, $errorMessage, $wamid, $wamid);
+            $stmt->execute();
+            $updated = $stmt->affected_rows > 0;
+            $stmt->close();
+        }
+    }
+
+    $recipientDigits = preg_replace('/\D+/', '', $recipientDigits) ?? '';
+    if (!$updated && $recipientDigits !== '') {
+        $stmt = $conn->prepare('
+            UPDATE whatsapp_prescreening_sessions
+            SET last_delivery_status = ?, last_delivery_error_code = ?, last_delivery_error_message = ?,
+                last_delivery_at = NOW(), last_wamid = COALESCE(NULLIF(?, ""), last_wamid)
+            WHERE wa_phone = ?
+        ');
+        if ($stmt) {
+            $errCode = $errorCode ?? 0;
+            $stmt->bind_param('sisss', $deliveryStatus, $errCode, $errorMessage, $wamid, $recipientDigits);
+            $stmt->execute();
+            $updated = $stmt->affected_rows > 0;
+            $stmt->close();
+        }
+    }
+
+    if ($updated && function_exists('xander_whatsapp_track')) {
+        xander_whatsapp_track('invite_delivery_' . $deliveryStatus, [
+            'wamid' => $wamid,
+            'recipient' => $recipientDigits,
+            'error_code' => $errorCode,
+            'error_message' => $errorMessage !== '' ? $errorMessage : null,
+        ]);
+    }
+
+    return $updated;
+}
+
 function xander_prescreening_normalize_wa_phone(string $raw): ?string
 {
     xander_load_env_file();
@@ -227,11 +311,11 @@ function xander_prescreening_normalize_wa_phone(string $raw): ?string
 /**
  * Admin sidebar: send invite template first, then student replies on WhatsApp.
  *
- * @return array{sent:bool,error:string,to:string,method:string,template_lang:string,staff_number_warning?:string}
+ * @return array{sent:bool,error:string,to:string,method:string,template_lang:string,message_id?:string,staff_number_warning?:string}
  */
 function xander_prescreening_admin_send_invite(mysqli $conn, string $phoneRaw, string $studentName = ''): array
 {
-    $out = ['sent' => false, 'error' => '', 'to' => '', 'method' => '', 'template_lang' => ''];
+    $out = ['sent' => false, 'error' => '', 'to' => '', 'method' => '', 'template_lang' => '', 'message_id' => ''];
     $to = xander_prescreening_normalize_wa_phone($phoneRaw);
     if ($to === null) {
         $out['error'] = 'Invalid WhatsApp number. ' . xander_whatsapp_phone_validation_hint();
@@ -296,16 +380,23 @@ function xander_prescreening_admin_send_invite(mysqli $conn, string $phoneRaw, s
 
     $out['method'] = (string) ($res['method'] ?? 'template');
     $out['template_lang'] = (string) ($res['template_lang'] ?? xander_prescreening_invite_template_lang());
+    $out['message_id'] = (string) ($res['message_id'] ?? '');
 
     $answers = ['student_name' => $name];
     xander_prescreening_save_session($conn, $to, 'invited', $answers, 0);
+    if ($out['message_id'] !== '') {
+        xander_prescreening_record_invite_wamid($conn, $to, $out['message_id']);
+    }
 
     $out['sent'] = true;
     xander_whatsapp_track('invite_send_ok', [
         'to' => $to,
         'method' => $out['method'],
         'template_lang' => $out['template_lang'],
+        'wamid' => $out['message_id'],
+        'conversation' => 'business_initiated_template',
         'student_name' => $name,
+        'note' => 'API accepted; final delivery comes via Meta webhook on xanderbot',
     ]);
 
     return $out;

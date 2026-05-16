@@ -51,6 +51,41 @@ if ($from === '') {
     exit;
 }
 
+if ($action === 'delivery_status') {
+    $wamid = trim((string) ($body['wamid'] ?? $body['external_id'] ?? ''));
+    $delivery = strtolower(trim((string) ($body['status'] ?? '')));
+    $recipient = preg_replace('/\D+/', '', (string) ($body['recipient_id'] ?? '')) ?? '';
+    $errors = $body['errors'] ?? [];
+    $errorCode = null;
+    $errorMessage = '';
+    if (is_array($errors) && isset($errors[0]) && is_array($errors[0])) {
+        $first = $errors[0];
+        $errorCode = isset($first['code']) ? (int) $first['code'] : null;
+        $errorMessage = trim((string) ($first['message'] ?? $first['title'] ?? ''));
+        $details = $first['error_data']['details'] ?? '';
+        if (is_string($details) && $details !== '') {
+            $errorMessage = $errorMessage !== '' ? $errorMessage . ' — ' . $details : $details;
+        }
+    }
+    $recorded = xander_prescreening_apply_delivery_status(
+        $conn,
+        $wamid,
+        $delivery,
+        $errorCode,
+        $errorMessage,
+        $recipient
+    );
+    xander_whatsapp_track('delivery_status_forward', [
+        'wamid' => $wamid,
+        'status' => $delivery,
+        'recipient' => $recipient,
+        'error_code' => $errorCode,
+        'recorded' => $recorded,
+    ]);
+    echo json_encode(['recorded' => $recorded, 'status' => $delivery]);
+    exit;
+}
+
 if ($action === 'active_session') {
     $session = xander_prescreening_load_session($conn, $from);
     $step = $session ? (string) ($session['current_step'] ?? 'idle') : 'idle';

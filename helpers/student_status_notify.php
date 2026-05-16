@@ -443,12 +443,20 @@ function xander_whatsapp_graph_post(string $url, string $token, array $payload):
  */
 function xander_whatsapp_response_has_message_id(?array $json): bool
 {
+    $mid = xander_whatsapp_extract_message_id($json);
+
+    return $mid !== null;
+}
+
+/** Graph API message id (wamid) when send succeeded. */
+function xander_whatsapp_extract_message_id(?array $json): ?string
+{
     if (!$json || isset($json['error'])) {
-        return false;
+        return null;
     }
     $mid = $json['messages'][0]['id'] ?? null;
 
-    return is_string($mid) && $mid !== '';
+    return is_string($mid) && $mid !== '' ? $mid : null;
 }
 
 /**
@@ -480,8 +488,11 @@ function xander_whatsapp_user_hint(array $err): string
     if ($sub === 131026 || $code === 131026) {
         return 'This number is not on WhatsApp or is invalid for WhatsApp messaging.';
     }
-    if ($sub === 131047) {
-        return 'Outside the 24-hour session window. Use an approved template or wait for the applicant to message you first.';
+    if ($sub === 131047 || $code === 131047) {
+        return 'Free-form text only works inside Meta’s 24-hour customer-care window. For cold outreach, use an approved template (pre-screening invite already does).';
+    }
+    if ($code === 131031) {
+        return 'Meta blocked delivery (business account restriction). This is not a 24-hour window issue. Check WhatsApp Manager → Account quality / Business Support Home, then retry.';
     }
     if ($code === 132000 || $code === 132005) {
         return 'WhatsApp template is missing or not approved in Meta Business Manager.';
@@ -594,11 +605,14 @@ function xander_whatsapp_post_template_message(
         . ' HTTP ' . $res['http'] . ' body: ' . $res['body'];
     error_log($logLine);
     if (function_exists('xander_whatsapp_track')) {
+        $wamid = xander_whatsapp_extract_message_id($res['json']);
         xander_whatsapp_track($res['http'] >= 200 && $res['http'] < 300 ? 'graph_template_ok' : 'graph_template_fail', [
             'template' => $templateName,
             'lang' => $templateLang,
             'to' => $payload['to'] ?? '',
             'http' => $res['http'],
+            'wamid' => $wamid,
+            'conversation' => 'business_initiated_template',
             'body_preview' => mb_substr($res['body'], 0, 400),
         ]);
     }
@@ -616,7 +630,7 @@ function xander_whatsapp_post_template_message(
  *
  * @param array<int, string> $templateBodyTexts One entry per template variable (max 1024 chars each after sanitize)
  * @param array{language_codes?:array<int,string>,allow_text_fallback?:bool} $options
- * @return array{sent:bool,method:string,error:string,detail:string,template_lang?:string}
+ * @return array{sent:bool,method:string,error:string,detail:string,template_lang?:string,message_id?:string}
  */
 function xander_whatsapp_send_template_or_session(
     string $to,
@@ -658,6 +672,7 @@ function xander_whatsapp_send_template_or_session(
                     'error' => '',
                     'detail' => '',
                     'template_lang' => $lang,
+                    'message_id' => xander_whatsapp_extract_message_id($res['json']) ?? '',
                 ];
             }
 

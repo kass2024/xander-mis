@@ -68,15 +68,17 @@ try {
 
     $method = (string) ($result['method'] ?? 'template');
     $lang = (string) ($result['template_lang'] ?? '');
-    $msg = 'Pre-screening invite accepted by Meta (template'
-        . ($lang !== '' ? ' ' . $lang : '')
-        . '). Student must tap START on WhatsApp. Delivery can still fail — check Meta message logs if they see nothing.';
+    $wamid = (string) ($result['message_id'] ?? '');
+    $msg = 'Template invite queued with Meta (paid business-initiated; no 24h window needed). '
+        . 'Student must tap START when it arrives. '
+        . 'Final delivery (sent/delivered/failed) is logged when Meta webhooks xanderbot — refresh invite log in ~30s.';
     invite_respond([
         'status' => 'success',
         'message' => $msg,
         'to' => $result['to'],
         'method' => $method,
         'template_lang' => $lang,
+        'message_id' => $wamid,
         'log_url' => 'api/prescreening-invite-log.php',
     ]);
 } catch (Throwable $e) {

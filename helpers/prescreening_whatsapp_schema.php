@@ -35,4 +35,29 @@ function xander_ensure_prescreening_whatsapp_tables(mysqli $conn): void
     if (!@$conn->query($sqlDedup)) {
         error_log('[prescreening_whatsapp_schema] dedup table: ' . $conn->error);
     }
+
+    xander_prescreening_ensure_delivery_columns($conn);
+}
+
+/** Track Meta wamid + delivery webhook status per invite session. */
+function xander_prescreening_ensure_delivery_columns(mysqli $conn): void
+{
+    $columns = [
+        'last_wamid' => 'VARCHAR(128) NULL DEFAULT NULL',
+        'last_delivery_status' => 'VARCHAR(32) NULL DEFAULT NULL',
+        'last_delivery_error_code' => 'INT NULL DEFAULT NULL',
+        'last_delivery_error_message' => 'VARCHAR(512) NULL DEFAULT NULL',
+        'last_delivery_at' => 'DATETIME NULL DEFAULT NULL',
+    ];
+    foreach ($columns as $name => $definition) {
+        $r = @$conn->query("SHOW COLUMNS FROM whatsapp_prescreening_sessions LIKE '" . $conn->real_escape_string($name) . "'");
+        if ($r && $r->num_rows === 0) {
+            @$conn->query(
+                'ALTER TABLE whatsapp_prescreening_sessions ADD COLUMN ' . $name . ' ' . $definition . ' AFTER doc_index'
+            );
+        }
+        if ($r) {
+            $r->free();
+        }
+    }
 }

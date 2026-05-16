@@ -62,7 +62,7 @@ $docLabels = [
 
   <div class="card-panel border border-success border-2">
     <h2><i class="bi bi-whatsapp text-success me-1"></i> Step 1 — Send WhatsApp template invite</h2>
-    <p class="text-muted small">Approve template <code>xander_prescreening_invite</code> in Meta. Student replies <strong>START</strong> to begin. WhatsApp number must include <strong>country code</strong> (e.g. +250…, +1…, +44…, +234…).</p>
+    <p class="text-muted small">Uses approved template <code>xander_prescreening_invite</code> (paid <strong>business-initiated</strong> message — no 24-hour window). Student replies <strong>START</strong> to begin. Number must include <strong>country code</strong> (+250…, +1…). After Send, check <a href="api/prescreening-invite-log.php" target="_blank">invite log</a> for <code>last_delivery_status</code> (sent/delivered/failed).</p>
     <form id="inviteForm" class="row g-3 align-items-end">
       <div class="col-md-5">
         <label class="form-label">Student name (template greeting)</label>
@@ -258,6 +258,9 @@ $docLabels = [
         let msg = data.message || 'Done.';
         if (data.status === 'success' && data.to) {
           msg += ' → +' + String(data.to).replace(/^\+/, '');
+        }
+        if (data.message_id) {
+          msg += ' (wamid logged; delivery status in invite log)';
         }
         if (data.status === 'error' && data.log_url) {
           msg += ' See invite log.';

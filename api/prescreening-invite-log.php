@@ -28,7 +28,9 @@ if (is_file(dirname(__DIR__) . '/db.php')) {
     if (isset($conn) && $conn instanceof mysqli) {
         xander_ensure_prescreening_whatsapp_tables($conn);
         $r = @$conn->query(
-            'SELECT wa_phone, current_step, updated_at FROM whatsapp_prescreening_sessions ORDER BY updated_at DESC LIMIT 15'
+            'SELECT wa_phone, current_step, last_wamid, last_delivery_status, last_delivery_error_code,
+                    last_delivery_error_message, last_delivery_at, updated_at
+             FROM whatsapp_prescreening_sessions ORDER BY updated_at DESC LIMIT 15'
         );
         if ($r) {
             while ($row = $r->fetch_assoc()) {
@@ -44,7 +46,7 @@ echo json_encode([
     'log_exists' => $tail['exists'],
     'lines' => $tail['lines'],
     'whatsapp_sessions' => $sessions,
-    'hint' => 'invite_send_ok = Meta API accepted. If phone gets nothing, check Meta Business → Message logs. Student START goes to xanderbot.site webhook, not cPanel.',
+    'hint' => 'invite_send_ok = Meta API accepted template (business-initiated, not 24h session). last_delivery_status = Meta webhook via xanderbot (sent/delivered/failed). failed + 131031 = account restriction at delivery time.',
     'vps_webhook' => 'https://xanderbot.site/api/webhook/meta',
     'env' => [
         'WHATSAPP_PHONE_NUMBER_ID_set' => xander_env_get('WHATSAPP_PHONE_NUMBER_ID') !== '',
