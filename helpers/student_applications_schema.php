@@ -56,6 +56,7 @@ function pcvc_student_applications_ensure_schema(mysqli $conn): void
         // Workflow flags shown in portal (if missing)
         'incomplete_app' => "TINYINT(1) NOT NULL DEFAULT 0",
         'submitted' => "TINYINT(1) NOT NULL DEFAULT 0",
+        'sent_to_platform' => "TINYINT(1) NOT NULL DEFAULT 0",
         'app_paid' => "TINYINT(1) NOT NULL DEFAULT 0",
         'admit' => "TINYINT(1) NOT NULL DEFAULT 0",
         'i20_sent' => "TINYINT(1) NOT NULL DEFAULT 0",

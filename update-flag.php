@@ -8,6 +8,12 @@ ini_set('log_errors', '1');
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers/rejection_reason_column.php';
+require_once __DIR__ . '/helpers/application_filters.php';
+require_once __DIR__ . '/helpers/student_applications_schema.php';
+
+if (isset($conn) && $conn instanceof mysqli) {
+    pcvc_student_applications_ensure_schema($conn);
+}
 
 /* =====================================================
    INPUT & VALIDATION
@@ -32,6 +38,7 @@ $allowed_tables = [
 $allowed_flags = [
     'incomplete_app',
     'submitted',
+    'sent_to_platform',
     'app_paid',
     'admit',
     'i20_sent',
@@ -70,10 +77,15 @@ function xander_update_flag_respond(bool $wantJson, bool $ok, ?string $errorKey 
     exit;
 }
 
+$dbFlags = ($table === 'student_applications' && isset($conn) && $conn instanceof mysqli)
+    ? pcvc_application_status_columns_for_db($conn)
+    : $allowed_flags;
+
 if (
     $id <= 0 ||
     !in_array($table, $allowed_tables, true) ||
-    !in_array($flag, $allowed_flags, true)
+    !in_array($flag, $allowed_flags, true) ||
+    !in_array($flag, $dbFlags, true)
 ) {
     xander_update_flag_respond($wantJson, false, 'invalid');
 }

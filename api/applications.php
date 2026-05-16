@@ -2,11 +2,18 @@
 session_start();
 require_once __DIR__ . '/../helpers/db.php';
 require_once __DIR__ . '/../helpers/datetime_utc.php';
-require_once "../helpers/response.php";
+require_once __DIR__ . '/../helpers/response.php';
 require_once __DIR__ . '/../helpers/role.php';
 require_once __DIR__ . '/../includes/company_branding.php';
 require_once __DIR__ . '/../helpers/application_filters.php';
 require_once __DIR__ . '/../helpers/study_choice_admin_actions.php';
+require_once __DIR__ . '/../helpers/student_applications_schema.php';
+require_once __DIR__ . '/../helpers/application_assignment_column.php';
+
+if (isset($conn) && $conn instanceof mysqli) {
+    pcvc_student_applications_ensure_schema($conn);
+    pcvc_ensure_assigned_admin_column($conn);
+}
 
 $action = $_GET['action'] ?? '';
 
@@ -53,7 +60,7 @@ if ($action === 'filter_options') {
 
     $statuses = [];
     $labels = pcvc_application_status_labels();
-    foreach (pcvc_application_status_priority() as $key) {
+    foreach (pcvc_application_status_columns_for_db($conn) as $key) {
         $statuses[] = [
             'value' => $key,
             'label' => $labels[$key] ?? $key,
@@ -746,9 +753,9 @@ if (!empty($_GET['agent_email'])) {
     }
 }
 
-$allowedEffStatuses = pcvc_application_status_priority();
+$allowedEffStatuses = pcvc_application_status_columns_for_db($conn);
 if (!empty($_GET['application_status']) && in_array((string)$_GET['application_status'], $allowedEffStatuses, true)) {
-    $effExpr = pcvc_sql_case_effective_status('sa');
+    $effExpr = pcvc_sql_case_effective_status('sa', $conn);
     $where[] = '(' . $effExpr . ') = ?';
     $types .= 's';
     $values[] = (string)$_GET['application_status'];
@@ -782,7 +789,7 @@ if (!empty($_GET['application_status']) && in_array((string)$_GET['application_s
 "
         : "";
 
-    $maxEffSql = pcvc_sql_max_effective_status('sa');
+    $maxEffSql = pcvc_sql_max_effective_status('sa', $conn);
 
 $sql = "
     SELECT DISTINCT
@@ -830,12 +837,21 @@ $sql .= "
 
 
     $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        error_log('applications list prepare failed: ' . $conn->error);
+        jsonResponse('Failed to load applications', false, 500);
+    }
     if ($values) {
         $stmt->bind_param($types, ...$values);
     }
-    $stmt->execute();
+    if (!$stmt->execute()) {
+        error_log('applications list execute failed: ' . $stmt->error);
+        $stmt->close();
+        jsonResponse('Failed to load applications', false, 500);
+    }
 
    $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
 
 $data = array_map(function ($r) {
     $assignRaw = trim((string) ($r['assigned_person_name'] ?? ''));
