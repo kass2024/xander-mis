@@ -7,11 +7,11 @@ declare(strict_types=1);
 require_once __DIR__ . '/application_filters.php';
 require_once __DIR__ . '/role.php';
 
+require_once __DIR__ . '/application_assignment_column.php';
+
 function pcvc_task_monitor_has_assigned_column(mysqli $conn): bool
 {
-    $r = $conn->query("SHOW COLUMNS FROM student_applications LIKE 'assigned_to_admin_id'");
-
-    return $r && $r->num_rows > 0;
+    return pcvc_has_assigned_admin_column($conn);
 }
 
 /**

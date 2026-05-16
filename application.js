@@ -1402,8 +1402,9 @@ async function saveStep() {
        VALIDATE RESPONSE
     ============================== */
     if (!res.ok) {
-      applyServerFieldErrors(data.fields);
-      throw new Error(data.message || data.debug || "Server error");
+      applyServerFieldErrors(data?.fields);
+      const detail = data?.debug ? `${data.message || "Server error"} (${data.debug})` : (data?.message || rawText?.slice(0, 280) || "Server error");
+      throw new Error(detail);
     }
 
    if (data.status !== "success") {
@@ -1446,7 +1447,21 @@ async function submitForm(options = {}) {
     try {
       data = JSON.parse(rawText);
     } catch {
-      showApplicationSaveError("Submission error. Please try again.");
+      showApplicationSaveError(
+        rawText?.trim()
+          ? `Submission error: ${rawText.trim().slice(0, 280)}`
+          : "Submission error. Please try again."
+      );
+      return false;
+    }
+    if (!res.ok && data?.status !== "success") {
+      applyServerFieldErrors(data?.fields);
+      showApplicationSaveError(
+        getErrorMessage(
+          { message: [data?.message, data?.debug].filter(Boolean).join(" — ") },
+          "Submission failed"
+        )
+      );
       return false;
     }
     if (data.status === "success") {

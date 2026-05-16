@@ -57,6 +57,7 @@ require_once __DIR__ . '/helpers/student_portal_accounts.php';
 require_once __DIR__ . '/helpers/study_choices.php';
 require_once __DIR__ . '/helpers/urls.php';
 require_once __DIR__ . '/helpers/role.php';
+require_once __DIR__ . '/helpers/application_assignment_column.php';
 require_once __DIR__ . '/includes/company_branding.php';
 function debug_log(string $label, $data = null): void
 {
@@ -654,9 +655,12 @@ if ($action === 'study_search') {
 ===================================================== */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  debug_log('POST REQUEST RECEIVED', $_POST);
+    pcvc_ensure_assigned_admin_column($conn);
+    $assignedColumnAvailable = pcvc_has_assigned_admin_column($conn);
+
     $isFinal = isset($_POST['final']) ? 1 : 0;
 
-    $assignedPosted = array_key_exists('assigned_to_admin_id', $_POST);
+    $assignedPosted = $assignedColumnAvailable && array_key_exists('assigned_to_admin_id', $_POST);
     $assignedToAdminId = null;
     if ($assignedPosted) {
         $tmpAssign = (int)trim((string)($_POST['assigned_to_admin_id'] ?? ''));
@@ -677,7 +681,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($identityAppId > 0 && looks_like_human_name($identityFirst) && looks_like_human_name($identityLast)) {
             $stmt = $conn->prepare("
-                SELECT valid_passport, cv_resume
+                SELECT valid_passport, cv_resume, degree_transcripts, high_school_degree
                 FROM student_applications
                 WHERE id = ?
                 LIMIT 1
@@ -686,11 +690,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($stmt) {
                 $stmt->bind_param("i", $identityAppId);
                 $stmt->execute();
-                $stmt->bind_result($storedPassport, $storedCv);
+                $stmt->bind_result($storedPassport, $storedCv, $storedDegree, $storedHighSchool);
                 if ($stmt->fetch()) {
                     $identityOnlySubmitAllowed = (
                         trim((string)$storedPassport) !== ''
                         || trim((string)$storedCv) !== ''
+                        || trim((string)$storedDegree) !== ''
+                        || trim((string)$storedHighSchool) !== ''
                     );
                 }
                 $stmt->close();
@@ -772,7 +778,7 @@ if ($isFinal === 1) {
         }
     }
 
-    if ($isFinal === 1 && $assignedToAdminId !== null) {
+    if ($isFinal === 1 && $assignedColumnAvailable && $assignedToAdminId !== null) {
         $stStaff = $conn->prepare(
             'SELECT id FROM admins WHERE id = ? AND ' . pcvc_sql_assignable_application_owner_condition() . ' LIMIT 1'
         );
@@ -1259,16 +1265,15 @@ debug_log('FINAL SUBMIT CONFIRMED – EMAIL SHOULD SEND', [
 ]);
 
 if ($isFinal === 1) {
-    trigger_async_email($appId);
-
-    // Also send student portal access email with credentials (non-blocking)
     try {
+        trigger_async_email($appId);
+
         $studentEmail = isset($_POST['email']) ? (string)$_POST['email'] : '';
         $studentName = trim((string)($_POST['first_name'] ?? '') . ' ' . (string)($_POST['last_name'] ?? ''));
         pcvc_send_student_portal_access_email($studentEmail, $studentName, $appId);
         debug_log('PORTAL ACCESS EMAIL SENT', ['email' => $studentEmail, 'appId' => $appId]);
     } catch (Throwable $e) {
-        debug_log('PORTAL ACCESS EMAIL FAILED', $e->getMessage());
+        debug_log('POST-COMMIT NOTIFY FAILED', $e->getMessage());
     }
 }
 
