@@ -124,18 +124,30 @@ foreach ($trackPaths as $tp) {
 wh_add($checks, 'whatsapp track log writable', $trackWritable !== '', $trackWritable !== '' ? $trackWritable : implode(' | ', $trackPaths));
 wh_add($checks, 'function_exists(curl_init)', function_exists('curl_init'), function_exists('curl_init') ? 'ok' : 'enable php-curl');
 
-wh_add(
-    $checks,
-    'function:verify_signature',
-    function_exists('xander_whatsapp_verify_webhook_signature'),
-    ''
-);
-wh_add(
-    $checks,
-    'function:handle_inbound',
-    function_exists('xander_prescreening_handle_inbound'),
-    ''
-);
+$flowLoaded = false;
+$flowLoadError = '';
+$flowPath = $root . '/helpers/prescreening_whatsapp_flow.php';
+if (is_readable($flowPath)) {
+    try {
+        require_once $flowPath;
+        $flowLoaded = true;
+    } catch (Throwable $e) {
+        $flowLoadError = $e->getMessage();
+        $ok = false;
+    }
+} else {
+    $flowLoadError = 'file missing';
+    $ok = false;
+}
+wh_add($checks, 'load:prescreening_whatsapp_flow', $flowLoaded, $flowLoadError !== '' ? $flowLoadError : 'ok');
+
+$hasVerify = function_exists('xander_whatsapp_verify_webhook_signature');
+$hasInbound = function_exists('xander_prescreening_handle_inbound');
+wh_add($checks, 'function:verify_signature', $hasVerify, $hasVerify ? 'ok' : 'not defined after load');
+wh_add($checks, 'function:handle_inbound', $hasInbound, $hasInbound ? 'ok' : 'not defined after load');
+if (!$hasVerify || !$hasInbound) {
+    $ok = false;
+}
 
 $host = (string) ($_SERVER['HTTP_HOST'] ?? 'your-domain.com');
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
