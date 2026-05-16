@@ -1,14 +1,11 @@
 <?php
 declare(strict_types=1);
 
-session_start();
-if (empty($_SESSION['id']) && empty($_SESSION['admin_id'])) {
-    header('Location: admin-login.php');
-    exit;
-}
-
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers/prescreening_schema.php';
+require_once __DIR__ . '/helpers/prescreening_access.php';
+
+xander_prescreening_require_superadmin();
 
 xander_ensure_prescreening_schema($conn);
 ?>

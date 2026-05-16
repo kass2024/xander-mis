@@ -49,6 +49,21 @@ if (!empty($_GET['id']) && is_string($_GET['id'])) {
     }
 }
 
+/** Pre-screening → application handoff (superadmin Apply now). */
+$prescreenHandoffForJs = null;
+if (!empty($_GET['from_prescreen']) && !empty($_SESSION['xander_prescreen_handoff'])) {
+    $handoff = $_SESSION['xander_prescreen_handoff'];
+    $reqId = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) ($_GET['id'] ?? ''));
+    if ($reqId !== '' && ($handoff['user_id'] ?? '') === $reqId) {
+        $_SESSION['user_id'] = $reqId;
+        $prescreenHandoffForJs = [
+            'docs' => $handoff['docs'] ?? [],
+            'prefill' => $handoff['prefill'] ?? [],
+            'hints' => $handoff['hints'] ?? [],
+        ];
+    }
+}
+
 // Language detection and setting
 $lang = $_GET['lang'] ?? $_COOKIE['app_lang'] ?? 'en';
 if (in_array($lang, ['en', 'fr'])) {
@@ -4536,6 +4551,78 @@ function startValidationSimulation(progress) {
   resetProgress();
   renderQueue();
   setTimeout(updateSmartAutofillAvailability, 300);
+
+  const prescreenHandoff = <?= json_encode($prescreenHandoffForJs, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
+
+  async function loadPrescreenHandoff() {
+    if (!prescreenHandoff || !Array.isArray(prescreenHandoff.docs) || !prescreenHandoff.docs.length) {
+      if (prescreenHandoff && prescreenHandoff.prefill) {
+        applyPrescreenPrefill(prescreenHandoff.prefill);
+      }
+      return;
+    }
+
+    setStatus("info", "Loading pre-screening documents…");
+    const files = [];
+    for (const doc of prescreenHandoff.docs) {
+      if (!doc || !doc.url) continue;
+      try {
+        const res = await fetch(doc.url, { credentials: "same-origin" });
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        const name = doc.filename || (doc.key ? doc.key + ".pdf" : "document");
+        files.push(new File([blob], name, { type: blob.type || "application/octet-stream" }));
+      } catch (e) {
+        console.warn("Prescreen doc load failed", doc.key, e);
+      }
+    }
+
+    if (files.length) {
+      addPendingFiles(files);
+      setStage(
+        "queue",
+        `${files.length} document(s) from pre-screening queued.`,
+        "info",
+        "Select study choice on step 1, then click Start analysis."
+      );
+    }
+
+    if (prescreenHandoff.prefill) {
+      applyPrescreenPrefill(prescreenHandoff.prefill);
+    }
+
+    if (prescreenHandoff.hints && prescreenHandoff.hints.country_interest) {
+      setStatus(
+        "info",
+        `Study hint: ${prescreenHandoff.hints.country_interest}` +
+          (prescreenHandoff.hints.course_program ? ` — ${prescreenHandoff.hints.course_program}` : "") +
+          ". Match these when choosing universities."
+      );
+    }
+
+    updateSmartAutofillAvailability();
+  }
+
+  function applyPrescreenPrefill(fields) {
+    if (!fields || typeof fields !== "object") return;
+    if (typeof window.applyAutofillFields === "function") {
+      window.applyAutofillFields(fields);
+      return;
+    }
+    Object.keys(fields).forEach((name) => {
+      const val = fields[name];
+      if (val == null || String(val).trim() === "") return;
+      const el = document.querySelector(`[name="${name}"]`);
+      if (el) {
+        el.value = val;
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
+  }
+
+  if (prescreenHandoff) {
+    setTimeout(loadPrescreenHandoff, 900);
+  }
 })();
 </script>
 

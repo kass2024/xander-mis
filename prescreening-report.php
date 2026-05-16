@@ -1,12 +1,15 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers/prescreening_schema.php';
 require_once __DIR__ . '/helpers/prescreening_notify.php';
+require_once __DIR__ . '/helpers/prescreening_access.php';
 
+xander_prescreening_require_superadmin();
 xander_ensure_prescreening_schema($conn);
+
+$prescreenCsrf = xander_prescreening_csrf_token();
 
 $rows = [];
 $res = $conn->query(
@@ -42,6 +45,12 @@ $docLabels = xander_prescreening_document_labels();
     .badge-ok { background: #d1e7dd; color: #0f5132; }
     .badge-warn { background: #fff3cd; color: #664d03; }
     .badge-pending { background: #e2e8f0; color: #475569; }
+    .action-bar { display: flex; flex-wrap: wrap; gap: 10px; margin: 1rem 0; }
+    .action-bar .btn-apply { background: #1d4ed8; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .action-bar .btn-apply:hover { background: #1e40af; color: #fff; }
+    .action-bar .btn-delete { background: #dc3545; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .flash-ok { background: #d1e7dd; color: #0f5132; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; }
+    .flash-err { background: #f8d7da; color: #842029; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; }
   </style>
 </head>
 <body>
@@ -53,6 +62,11 @@ $docLabels = xander_prescreening_document_labels();
     <div id="list"></div>
   </aside>
   <main class="main">
+    <?php if (!empty($_GET['deleted'])): ?>
+    <div class="flash-ok">Pre-screening record deleted.</div>
+    <?php elseif (!empty($_GET['error']) && $_GET['error'] === 'delete_failed'): ?>
+    <div class="flash-err">Could not delete record.</div>
+    <?php endif; ?>
     <div id="detail">
       <p class="text-muted">Select a submission from the list.</p>
     </div>
@@ -60,6 +74,7 @@ $docLabels = xander_prescreening_document_labels();
 </div>
 
 <script>
+const prescreenCsrf = <?= json_encode($prescreenCsrf, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const rows = <?= json_encode($rows, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const qLabels = <?= json_encode($qLabels, JSON_UNESCAPED_UNICODE) ?>;
 const docLabels = <?= json_encode($docLabels, JSON_UNESCAPED_UNICODE) ?>;
@@ -117,8 +132,28 @@ function showDetail(idx, el) {
   dHtml += '</ul>';
 
   const pending = !r.submitted_at;
+  const hasDocs = Object.keys(docLabels).some(k => !!(r[k] && String(r[k]).trim()));
+  let actions = '';
+  if (!pending) {
+    actions = '<div class="action-bar">'
+      + '<a class="btn-apply" href="prescreening-apply.php?id=' + encodeURIComponent(r.id) + '" target="_top">Apply now</a>'
+      + '<form method="post" action="delete_prescreening.php" style="display:inline" onsubmit="return confirm(\'Delete this pre-screening record and its files?\');">'
+      + '<input type="hidden" name="id" value="' + esc(String(r.id)) + '">'
+      + '<input type="hidden" name="csrf" value="' + esc(prescreenCsrf) + '">'
+      + '<button type="submit" class="btn-delete">Delete</button></form>';
+    if (!hasDocs) {
+      actions += '<span class="text-muted small align-self-center">No documents to analyze — add study choice manually on the application form.</span>';
+    }
+    actions += '</div>';
+  }
+  const hints = [];
+  if (r.country_interest) hints.push('<strong>Country:</strong> ' + esc(r.country_interest));
+  if (r.course_program) hints.push('<strong>Program interest:</strong> ' + esc(r.course_program));
+  const hintHtml = hints.length ? '<p class="alert alert-info py-2">' + hints.join(' · ') + '<br><small>After Apply now: pick matching study choice, then Start analysis (documents are pre-queued).</small></p>' : '';
+
   document.getElementById('detail').innerHTML = `
     <h4>${esc(r.student_name || '—')}</h4>
+    ${actions}
     <p><strong>Status:</strong> ${pending ? 'Pending invite' : 'Complete'}<br>
     <strong>Source:</strong> ${esc(r.source || '—')}<br>
     <strong>Channel:</strong> ${esc(r.invite_channel || '—')}<br>
@@ -126,6 +161,7 @@ function showDetail(idx, el) {
     <strong>WhatsApp:</strong> ${esc(r.whatsapp_number || '—')}<br>
     <strong>Reference:</strong> ${esc(r.user_id)}<br>
     <strong>Submitted:</strong> ${esc(r.submitted_at || '—')}</p>
+    ${hintHtml}
     ${pending ? '<p class="text-muted">Waiting for student to complete the form via email link or WhatsApp.</p>' : ''}
     <h5>Answers</h5>${qHtml}
     <h5>Documents</h5>${dHtml}

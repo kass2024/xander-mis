@@ -10,7 +10,9 @@ if (empty($_SESSION['id']) && empty($_SESSION['admin_id'])) {
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers/prescreening_schema.php';
 require_once __DIR__ . '/helpers/prescreening_notify.php';
+require_once __DIR__ . '/helpers/prescreening_access.php';
 
+xander_prescreening_require_superadmin();
 xander_ensure_prescreening_schema($conn);
 $userId = 'user-' . time() . '-' . random_int(1000, 9999);
 $stmt = $conn->prepare(

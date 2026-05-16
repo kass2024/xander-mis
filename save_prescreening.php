@@ -24,11 +24,16 @@ set_error_handler(static function ($severity, $message, $file, $line) {
 });
 
 try {
-    if (empty($_SESSION['id']) && empty($_SESSION['admin_id'])) {
+    if (empty($_SESSION['admin_id'])) {
         prescreening_respond(['status' => 'error', 'message' => 'Unauthorized'], 401);
     }
 
     require_once __DIR__ . '/db.php';
+    require_once __DIR__ . '/helpers/prescreening_access.php';
+    require_once __DIR__ . '/helpers/role.php';
+    if (!pcvc_is_superadmin_role($_SESSION['role'] ?? '')) {
+        prescreening_respond(['status' => 'error', 'message' => 'Superadmin only'], 403);
+    }
     require_once __DIR__ . '/helpers/prescreening_schema.php';
     require_once __DIR__ . '/helpers/prescreening_save.php';
     require_once __DIR__ . '/helpers/prescreening_notify.php';

@@ -15,8 +15,12 @@ function link_email_respond(array $data, int $code = 200): void
     exit;
 }
 
-if (empty($_SESSION['id']) && empty($_SESSION['admin_id'])) {
+if (empty($_SESSION['admin_id'])) {
     link_email_respond(['status' => 'error', 'message' => 'Unauthorized'], 401);
+}
+require_once __DIR__ . '/helpers/role.php';
+if (!pcvc_is_superadmin_role($_SESSION['role'] ?? '')) {
+    link_email_respond(['status' => 'error', 'message' => 'Superadmin only'], 403);
 }
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
