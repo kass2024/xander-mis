@@ -1450,42 +1450,6 @@ if (strtolower($role) !== 'catholic university of america') {
         </a>
       </div>
       <?php endif; ?>
-      
-      <?php if (in_array('prescreening', $allowedSidebarItems)): ?>
-      <a href="#prescreening" class="sidebar-link" onclick="toggleSidebarMenu('prescreening')">
-        <i class="bi bi-clipboard-check"></i>
-        <span>Pre-screening</span>
-        <i class="bi bi-chevron-down arrow"></i>
-      </a>
-      <div class="sidebar-submenu" id="submenu_prescreening">
-        <a href="#" onclick="loadInFrame('prescreening.php', 'Pre-screening Form')">
-          <i class="bi bi-plus-circle"></i>
-          New pre-screening
-        </a>
-        <a href="#" onclick="loadInFrame('prescreening-report.php', 'Pre-screening List')">
-          <i class="bi bi-list-ul"></i>
-          Pre-screening list
-        </a>
-      </div>
-      <?php endif; ?>
-
-      <?php if (in_array('prescreening', $allowedSidebarItems)): ?>
-      <a href="#prescreening" class="sidebar-link" onclick="toggleSidebarMenu('prescreening')">
-        <i class="bi bi-clipboard-check"></i>
-        <span>Pre-screening</span>
-        <i class="bi bi-chevron-down arrow"></i>
-      </a>
-      <div class="sidebar-submenu" id="submenu_prescreening">
-        <a href="#" onclick="loadInFrame('prescreening.php', 'Pre-screening Form')">
-          <i class="bi bi-plus-circle"></i>
-          New pre-screening
-        </a>
-        <a href="#" onclick="loadInFrame('prescreening-report.php', 'Pre-screening List')">
-          <i class="bi bi-list-ul"></i>
-          Pre-screening list
-        </a>
-      </div>
-      <?php endif; ?>
 
       <?php if (in_array('visit_study_visa', $allowedSidebarItems)): ?>
       <!-- Visit And Study Visa -->
@@ -1662,9 +1626,26 @@ if (strtolower($role) !== 'catholic university of america') {
         </a>
       </div>
       <?php endif; ?>
-      
+
+      <?php if (in_array('prescreening', $allowedSidebarItems)): ?>
+      <a href="#prescreening" class="sidebar-link" onclick="toggleSidebarMenu('prescreening')">
+        <i class="bi bi-clipboard-check"></i>
+        <span>Pre-screening</span>
+        <i class="bi bi-chevron-down arrow"></i>
+      </a>
+      <div class="sidebar-submenu" id="submenu_prescreening">
+        <a href="#" onclick="loadInFrame('prescreening.php', 'Pre-screening Form')">
+          <i class="bi bi-plus-circle"></i>
+          New pre-screening
+        </a>
+        <a href="#" onclick="loadInFrame('prescreening-report.php', 'Pre-screening List')">
+          <i class="bi bi-list-ul"></i>
+          Pre-screening list
+        </a>
+      </div>
+      <?php endif; ?>
+
       <?php if (in_array('chart', $allowedSidebarItems) && $role === 'superadmin'): ?>
-      <!-- Live Chat Assistant - Superadmin only -->
       <a href="#chart" class="sidebar-link" onclick="toggleSidebarMenu('chart')">
         <i class="bi bi-chat-dots"></i>
         <span>Live Chat Assistant</span>
