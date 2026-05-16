@@ -18,7 +18,7 @@ parrot/.env
 .htaccess
 **/.htaccess
 
-# Database credentials (copy db.example.php → db.php on server)
+# Database credentials (not in repo — use db.example.php as template)
 db.php
 database.php
 helpers/db.php
@@ -30,9 +30,6 @@ Stripe-check_transactions.php
 payment-success.php
 create-payment-intent.php
 strip-test.php
-
-# SMTP credentials
-helpers/mail_smtp.php
 
 # Logs & temp
 *.log
