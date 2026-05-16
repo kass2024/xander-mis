@@ -243,8 +243,11 @@ function xander_prescreening_admin_send_invite(mysqli $conn, string $phoneRaw, s
 
     $staff = xander_prescreening_staff_whatsapp_numbers();
     if (in_array($to, $staff, true)) {
-        $out['staff_number_warning'] = 'Warning: this number is a staff alert number in .env — use the student\'s personal WhatsApp for testing.';
-        xander_whatsapp_track('invite_staff_number', ['to' => $to]);
+        xander_whatsapp_track('invite_rejected_staff_number', ['to' => $to]);
+        $out['error'] = 'This number is configured for staff alerts (PRESCREENING_STAFF_WHATSAPP), not student invites. '
+            . 'Enter the student\'s personal WhatsApp with country code (e.g. +250788…).';
+
+        return $out;
     }
 
     $api = xander_whatsapp_api_messages_url();

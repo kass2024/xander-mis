@@ -71,10 +71,6 @@ try {
     $msg = 'Pre-screening invite accepted by Meta (template'
         . ($lang !== '' ? ' ' . $lang : '')
         . '). Student must tap START on WhatsApp. Delivery can still fail — check Meta message logs if they see nothing.';
-    if (! empty($result['staff_number_warning'])) {
-        $msg .= ' ' . $result['staff_number_warning'];
-    }
-
     invite_respond([
         'status' => 'success',
         'message' => $msg,
