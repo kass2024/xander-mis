@@ -1,7 +1,8 @@
 <?php
 // staff-management.php
 session_start();
-require_once 'db.php';
+require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/helpers/role.php';
 
 /* ============================================================
    SECURITY CHECK 
@@ -11,7 +12,7 @@ if (!isset($_SESSION['id']) || !isset($_SESSION['role'])) {
     exit('Access denied. Please log in.');
 }
 
-$isSuperAdmin = ($_SESSION['role'] === 'superadmin');
+$isSuperAdmin = pcvc_is_superadmin_role($_SESSION['role'] ?? '');
 $currentUserId = $_SESSION['id'];
 
 /* ============================================================
@@ -88,32 +89,89 @@ if (isset($_GET['delete']) && $isSuperAdmin) {
 ============================================================ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_staff']) && $isSuperAdmin) {
 
-    $id        = intval($_POST['id']);
-    $salary    = floatval($_POST['salary_per_minute']);
-    $monthly   = ($_POST['monthly_salary'] !== '' ? floatval($_POST['monthly_salary']) : null);
-    $currency  = $_POST['salary_currency'] ?? 'USD';
-    $break     = intval($_POST['allowed_break_minutes']);
-    $days      = intval($_POST['work_days_per_week']);
-    $sheet     = trim($_POST['sheet_id'] ?? '');
-    $link      = trim($_POST['sheet_link'] ?? '');
-    $officeId  = ($_POST['office_id'] !== '' ? intval($_POST['office_id']) : null);
-    
-    // Role update (superadmin only can change roles)
-    $role = $_POST['role'] ?? 'staff';
+    $id         = (int) ($_POST['id'] ?? 0);
+    $fullName   = trim((string) ($_POST['full_name'] ?? ''));
+    $emailIn    = trim((string) ($_POST['email'] ?? ''));
+    $phoneIn    = trim((string) ($_POST['phone_number'] ?? ''));
+    $usernameIn = trim((string) ($_POST['username'] ?? ''));
 
-    // HR / CONTRACT FIELDS
-    $position     = trim($_POST['position'] ?? '');
-    $empType      = trim($_POST['employment_type'] ?? '');
-    $startDate    = $_POST['employment_start_date'] ?: null;
-    $nid          = trim($_POST['national_id'] ?? '');
-    $address      = trim($_POST['address'] ?? '');
-    $dob          = $_POST['date_of_birth'] ?: null;
-    $marital      = $_POST['marital_status'] ?? null;
-    $nationality  = trim($_POST['nationality'] ?? '');
-    $birthPlace   = trim($_POST['place_of_birth'] ?? '');
+    $salary    = (float) ($_POST['salary_per_minute'] ?? 0);
+    $monthly   = ($_POST['monthly_salary'] !== '' ? (float) $_POST['monthly_salary'] : null);
+    $currency  = $_POST['salary_currency'] ?? 'USD';
+    $break     = (int) ($_POST['allowed_break_minutes'] ?? 0);
+    $days      = (int) ($_POST['work_days_per_week'] ?? 0);
+    $sheet     = trim((string) ($_POST['sheet_id'] ?? ''));
+    $link      = trim((string) ($_POST['sheet_link'] ?? ''));
+    $officeRaw = trim((string) ($_POST['office_id'] ?? ''));
+    $officeId  = ($officeRaw !== '' ? (int) $officeRaw : null);
+
+    $role = (string) ($_POST['role'] ?? 'staff');
+
+    $position     = trim((string) ($_POST['position'] ?? ''));
+    $empType      = trim((string) ($_POST['employment_type'] ?? ''));
+    $startDate    = !empty($_POST['employment_start_date']) ? (string) $_POST['employment_start_date'] : null;
+    $nid          = trim((string) ($_POST['national_id'] ?? ''));
+    $address      = trim((string) ($_POST['address'] ?? ''));
+    $dob          = !empty($_POST['date_of_birth']) ? (string) $_POST['date_of_birth'] : null;
+    $marital      = !empty($_POST['marital_status']) ? (string) $_POST['marital_status'] : null;
+    $nationality  = trim((string) ($_POST['nationality'] ?? ''));
+    $birthPlace   = trim((string) ($_POST['place_of_birth'] ?? ''));
+
+    if ($id <= 0) {
+        $_SESSION['error'] = 'Invalid staff record.';
+        header('Location: staff-management.php');
+        exit;
+    }
+
+    if ($fullName === '' || $emailIn === '' || $usernameIn === '') {
+        $_SESSION['error'] = 'Full name, email, and username are required.';
+        header('Location: staff-management.php');
+        exit;
+    }
+    if (!filter_var($emailIn, FILTER_VALIDATE_EMAIL)) {
+        $_SESSION['error'] = 'Please enter a valid email address.';
+        header('Location: staff-management.php');
+        exit;
+    }
+
+    $nameParts = preg_split('/\s+/u', $fullName, 2, PREG_SPLIT_NO_EMPTY);
+    $firstName = $nameParts[0] ?? '';
+    $lastName  = isset($nameParts[1]) ? trim((string) $nameParts[1]) : '';
+
+    $chkUser = $conn->prepare('SELECT id FROM admins WHERE username = ? AND id != ? LIMIT 1');
+    if ($chkUser) {
+        $chkUser->bind_param('si', $usernameIn, $id);
+        $chkUser->execute();
+        $dupUser = $chkUser->get_result()->fetch_assoc();
+        $chkUser->close();
+        if ($dupUser) {
+            $_SESSION['error'] = 'That username is already taken by another account.';
+            header('Location: staff-management.php');
+            exit;
+        }
+    }
+
+    $chkMail = $conn->prepare('SELECT id FROM admins WHERE email = ? AND id != ? LIMIT 1');
+    if ($chkMail) {
+        $chkMail->bind_param('si', $emailIn, $id);
+        $chkMail->execute();
+        $dupMail = $chkMail->get_result()->fetch_assoc();
+        $chkMail->close();
+        if ($dupMail) {
+            $_SESSION['error'] = 'That email is already used by another account.';
+            header('Location: staff-management.php');
+            exit;
+        }
+    }
 
     $stmt = $conn->prepare("
         UPDATE admins SET
+            username = ?,
+            first_name = ?,
+            last_name = ?,
+            full_name = ?,
+            email = ?,
+            phone_number = ?,
             role = ?,
             position = ?,
             employment_type = ?,
@@ -135,8 +193,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_staff']) && $i
         WHERE id = ?
     ");
 
+    if (!$stmt) {
+        $_SESSION['error'] = 'Update failed: ' . $conn->error;
+        header('Location: staff-management.php');
+        exit;
+    }
+
     $stmt->bind_param(
-        "ssssssssssddsiissii",
+        'ssssssssssssssssddsiissii',
+        $usernameIn,
+        $firstName,
+        $lastName,
+        $fullName,
+        $emailIn,
+        $phoneIn,
         $role,
         $position,
         $empType,
@@ -159,13 +229,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_staff']) && $i
     );
 
     if ($stmt->execute()) {
-        $_SESSION['success'] = "Staff information updated successfully";
+        $_SESSION['success'] = 'Staff information updated successfully';
     } else {
-        $_SESSION['error'] = "Update failed: " . $conn->error;
+        $_SESSION['error'] = 'Update failed: ' . $stmt->error;
     }
     $stmt->close();
-    
-    header("Location: staff-management.php");
+
+    header('Location: staff-management.php');
     exit;
 }
 
@@ -876,23 +946,68 @@ unset($_SESSION['success'], $_SESSION['error']);
                             </td>
                             
                             <td>
-                                <?= htmlspecialchars($row['full_name'] ?? $row['first_name'] . ' ' . $row['last_name'] ?? 'N/A', ENT_QUOTES, 'UTF-8') ?>
+                                <?php
+                                $displayName = trim((string) ($row['full_name'] ?? ''));
+                                if ($displayName === '') {
+                                    $displayName = trim((string) (($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? '')));
+                                }
+                                if ($displayName === '') {
+                                    $displayName = (string) ($row['username'] ?? '');
+                                }
+                                ?>
+                                <?php if ($isSuperAdmin): ?>
+                                <input type="text" name="full_name" class="form-control form-control-sm" required
+                                       value="<?= htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8') ?>"
+                                       placeholder="Full name" autocomplete="name">
+                                <?php else: ?>
+                                <?= htmlspecialchars($displayName !== '' ? $displayName : 'N/A', ENT_QUOTES, 'UTF-8') ?>
+                                <?php endif; ?>
                             </td>
-                            
-                            <td><?= htmlspecialchars($row['email'] ?? '', ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars($row['phone_number'] ?? '', ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars($row['username'] ?? '', ENT_QUOTES, 'UTF-8') ?></td>
+
+                            <td>
+                                <?php if ($isSuperAdmin): ?>
+                                <input type="email" name="email" class="form-control form-control-sm" required
+                                       value="<?= htmlspecialchars($row['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                       placeholder="email@…" autocomplete="email">
+                                <?php else: ?>
+                                <?= htmlspecialchars($row['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if ($isSuperAdmin): ?>
+                                <input type="text" name="phone_number" class="form-control form-control-sm"
+                                       value="<?= htmlspecialchars($row['phone_number'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                       placeholder="Phone" inputmode="tel" autocomplete="tel">
+                                <?php else: ?>
+                                <?= htmlspecialchars($row['phone_number'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if ($isSuperAdmin): ?>
+                                <input type="text" name="username" class="form-control form-control-sm" required
+                                       value="<?= htmlspecialchars($row['username'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                                       placeholder="Username" autocomplete="username">
+                                <?php else: ?>
+                                <?= htmlspecialchars($row['username'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+                                <?php endif; ?>
+                            </td>
                             
                             <!-- Role Selector -->
                             <td>
                                 <?php if ($isSuperAdmin): ?>
+                                <?php if (($row['role'] ?? '') === 'superadmin'): ?>
+                                <input type="hidden" name="role" value="superadmin">
+                                <select class="form-select form-select-sm" disabled aria-readonly="true">
+                                    <option value="superadmin" selected>Super</option>
+                                </select>
+                                <?php else: ?>
                                 <select name="role" class="form-select form-select-sm">
-                                    <option value="superadmin" <?= ($row['role'] ?? '') == 'superadmin' ? 'selected' : '' ?> 
-                                            <?= ($row['role'] ?? '') == 'superadmin' ? 'disabled' : '' ?>>Super</option>
+                                    <option value="superadmin">Super</option>
                                     <option value="admin" <?= ($row['role'] ?? '') == 'admin' ? 'selected' : '' ?>>Admin</option>
                                     <option value="staff" <?= ($row['role'] ?? '') == 'staff' ? 'selected' : '' ?>>Staff</option>
                                     <option value="agent" <?= ($row['role'] ?? '') == 'agent' ? 'selected' : '' ?>>Agent</option>
                                 </select>
+                                <?php endif; ?>
                                 <?php else: ?>
                                 <span class="role-badge role-<?= $row['role'] ?? 'staff' ?>">
                                     <?= ucfirst($row['role'] ?? 'Staff') ?>
@@ -900,18 +1015,17 @@ unset($_SESSION['success'], $_SESSION['error']);
                                 <?php endif; ?>
                             </td>
                             
-                            <!-- Status Column -->
+                            <!-- Status Column (same form as save — no nested forms) -->
                             <td>
                                 <?php if ($isSuperAdmin): ?>
-                                <form method="post" class="status-form" style="display: inline;">
                                     <input type="hidden" name="status_user_id" value="<?= $row['id'] ?>">
-                                    <button type="submit" name="toggle_status" 
+                                    <button type="submit" name="toggle_status" value="1"
                                             class="btn <?= $statusColor ?> status-btn"
                                             data-tooltip="Click to change status"
+                                            onclick="return confirm('Change this account status?')"
                                             style="min-width: 90px; display: inline-flex; align-items: center; gap: 5px; justify-content: center;">
                                         <?= $statusIcon ?> <?= ucfirst($status) ?>
                                     </button>
-                                </form>
                                 <?php else: ?>
                                 <span class="status-badge <?= $statusColor ?>" style="background: <?= $status == 'active' ? '#d4edda' : ($status == 'deactive' ? '#f8d7da' : '#fff3cd') ?>; color: <?= $status == 'active' ? '#155724' : ($status == 'deactive' ? '#721c24' : '#856404') ?>">
                                     <?= $statusIcon ?> <?= ucfirst($status) ?>
@@ -1052,12 +1166,13 @@ $(function() {
         $('.alert').fadeOut('slow');
     }, 3000);
     
-    // Show loading on form submit
+    // Show loading on form submit; ensure disabled selects post with the row
     $('.staff-form').on('submit', function() {
+        $(this).find(':input:disabled').prop('disabled', false);
         $('#loadingOverlay').fadeIn();
         return true;
     });
-    
+
     // Prevent double-click spam on status buttons
     $('.status-btn').on('click', function(e) {
         var $btn = $(this);
@@ -1066,6 +1181,10 @@ $(function() {
             return false;
         }
         $btn.data('clicked', true);
+        var $form = $btn.closest('form.staff-form');
+        if ($form.length) {
+            $form.find(':input:disabled').prop('disabled', false);
+        }
         setTimeout(function() {
             $btn.data('clicked', false);
         }, 1000);
