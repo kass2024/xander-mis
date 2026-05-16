@@ -1,0 +1,83 @@
+# --- User-requested paths ---
+/admin/
+/assets/
+/pdfs/
+/PHPMailer/
+/templates/
+/uploads/
+/vendor/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+parrot/
+parrot/.env
+
+# Apache
+.htaccess
+**/.htaccess
+
+# Database credentials (copy db.example.php → db.php on server)
+db.php
+database.php
+helpers/db.php
+
+# Stripe (keys still hardcoded — migrate to .env later)
+stripe-payment.php
+process-stripe-payment.php
+Stripe-check_transactions.php
+payment-success.php
+create-payment-intent.php
+strip-test.php
+
+# SMTP credentials
+helpers/mail_smtp.php
+
+# Logs & temp
+*.log
+logs/
+error_log
+**/error_log
+*.tmp
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
+
+# IDE / OS
+.idea/
+.vscode/
+.cursor/
+
+# Credentials & keys (broad patterns)
+*credentials*
+*secrets*
+*secret*.json
+*service-account*.json
+*.pem
+*.p12
+auth.json
+config.local.php
+local.php
+**/stripe-keys*
+
+# Google / Firebase service accounts & credential JSON
+*.json
+!composer.lock
+parrotchatsupport*.json
+
+# Temp & debug dumps
+/temp/
+/admission_letters/
+error_log.txt
+php_crash_log.txt
+curl_debug_output.html
+log.json
+
+# Large / generated
+node_modules/
+*.zip
+*.tar.gz
+*.pdf
+!docs/**/*.pdf
