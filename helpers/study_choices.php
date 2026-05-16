@@ -37,8 +37,46 @@ function pcvc_normalize_study_choices(array $choices): array
     return $normalized;
 }
 
+/**
+ * Create application_study_choices when missing (multi-choice per application).
+ */
+function pcvc_ensure_application_study_choices_table(mysqli $conn): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+
+    $r = $conn->query("SHOW TABLES LIKE 'application_study_choices'");
+    if ($r && $r->num_rows > 0) {
+        $done = true;
+        return;
+    }
+
+    $sql = "CREATE TABLE IF NOT EXISTS application_study_choices (
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        application_id INT UNSIGNED NOT NULL,
+        region_id INT UNSIGNED NOT NULL,
+        university_id INT UNSIGNED NOT NULL,
+        program_level_id INT UNSIGNED NOT NULL,
+        program_id INT UNSIGNED NOT NULL,
+        created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_asc_application (application_id),
+        KEY idx_asc_university (university_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+
+    if (!$conn->query($sql)) {
+        throw new RuntimeException('Failed creating application_study_choices table: ' . $conn->error);
+    }
+
+    $done = true;
+}
+
 function pcvc_ensure_study_choice_schema(mysqli $conn): void
 {
+    pcvc_ensure_application_study_choices_table($conn);
+
     $legacyIndex = null;
     $stmt = $conn->prepare(
         "SELECT GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX SEPARATOR ',') AS cols

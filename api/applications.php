@@ -13,6 +13,12 @@ require_once __DIR__ . '/../helpers/application_assignment_column.php';
 if (isset($conn) && $conn instanceof mysqli) {
     pcvc_student_applications_ensure_schema($conn);
     pcvc_ensure_assigned_admin_column($conn);
+    try {
+        pcvc_ensure_application_study_choices_table($conn);
+        pcvc_ensure_study_choice_schema($conn);
+    } catch (Throwable $e) {
+        error_log('applications.php schema ensure: ' . $e->getMessage());
+    }
 }
 
 $action = $_GET['action'] ?? '';
@@ -204,9 +210,13 @@ if ($action === 'update_assignment' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         jsonResponse('Forbidden', false, 403);
     }
 
-    $chkAssignCol = $conn->query("SHOW COLUMNS FROM student_applications LIKE 'assigned_to_admin_id'");
-    if (!$chkAssignCol || $chkAssignCol->num_rows < 1) {
-        jsonResponse('Assignment is not available in this database.', false, 400);
+    pcvc_ensure_assigned_admin_column($conn);
+    if (!pcvc_has_assigned_admin_column($conn)) {
+        jsonResponse(
+            'Assign to staff is not available yet. The database could not add the assigned_to_admin_id column automatically. Please run the migration or contact your host.',
+            false,
+            500
+        );
     }
 
     $applicationId = (int) ($_POST['application_id'] ?? 0);
@@ -1169,11 +1179,8 @@ foreach ($studyChoicesForJobs as $choice) {
             }
     }
 
-    $hasAssignColForMeta = false;
-    $chkAm = $conn->query("SHOW COLUMNS FROM student_applications LIKE 'assigned_to_admin_id'");
-    if ($chkAm && $chkAm->num_rows > 0) {
-        $hasAssignColForMeta = true;
-    }
+    pcvc_ensure_assigned_admin_column($conn);
+    $hasAssignColForMeta = pcvc_has_assigned_admin_column($conn);
     $assignMetaId = 0;
     $assignMetaDisplay = PCVC_DEFAULT_ASSIGNED_PERSON_LABEL;
     if ($hasAssignColForMeta) {
@@ -1194,6 +1201,7 @@ foreach ($studyChoicesForJobs as $choice) {
         }
     }
     $canEditAssignmentMeta = $hasAssignColForMeta && $canDeleteApplicationMeta;
+    $canAddStudyChoiceMeta = $canDeleteApplicationMeta;
 
     /**
      * ==================================================
@@ -1270,6 +1278,7 @@ foreach ($studyChoicesForJobs as $choice) {
     "jobs_created" => $jobsCreated, // 👈 ADD THIS
     "can_delete_application" => $canDeleteApplicationMeta,
     "can_edit_assignment" => $canEditAssignmentMeta,
+    "can_add_study_choice" => $canAddStudyChoiceMeta,
     "assigned_to_admin_id" => $assignMetaId,
     "assigned_display" => $assignMetaDisplay
 ]

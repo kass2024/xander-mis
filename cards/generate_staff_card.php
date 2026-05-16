@@ -51,9 +51,12 @@ function pcvc_staff_card_environment_errors(): array
     }
 
     $templates = [
+        __DIR__ . '/templates/staff-card-template.pdf',
+        __DIR__ . '/templates/staff-card-template.pdf.pdf',
         __DIR__ . '/templates/PARROT-STAFF CARD TEMPLATE.pdf',
         __DIR__ . '/templates/XANDER-STAFF CARD TEMPLATE.pdf',
-        __DIR__ . '/templates/staff-card-template.pdf',
+        __DIR__ . '/../templates/staff-card-template.pdf',
+        __DIR__ . '/../templates/staff-card-template.pdf.pdf',
     ];
     $found = false;
     foreach ($templates as $path) {
@@ -77,9 +80,12 @@ function pcvc_staff_card_resolve_template(): ?string
 {
     foreach (
         [
+            __DIR__ . '/templates/staff-card-template.pdf',
+            __DIR__ . '/templates/staff-card-template.pdf.pdf',
             __DIR__ . '/templates/PARROT-STAFF CARD TEMPLATE.pdf',
             __DIR__ . '/templates/XANDER-STAFF CARD TEMPLATE.pdf',
-            __DIR__ . '/templates/staff-card-template.pdf',
+            __DIR__ . '/../templates/staff-card-template.pdf',
+            __DIR__ . '/../templates/staff-card-template.pdf.pdf',
         ] as $path
     ) {
         if (is_file($path)) {
