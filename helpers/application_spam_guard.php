@@ -73,6 +73,48 @@ function pcvc_spam_guard_should_check(array $fields): bool
     return false;
 }
 
+/**
+ * Names from CV/passport AI extraction (or app already has those docs) are always trusted.
+ *
+ * @param array<string, mixed> $post
+ */
+function pcvc_spam_trust_extracted_names(array $post, ?mysqli $conn = null): bool
+{
+    if (!empty($post['names_from_documents']) && (string) $post['names_from_documents'] === '1') {
+        return true;
+    }
+
+    if (!empty($post['smart_identity_submit']) && (string) $post['smart_identity_submit'] === '1') {
+        return true;
+    }
+
+    $appId = (int) ($post['application_id'] ?? 0);
+    if ($appId <= 0 || !($conn instanceof mysqli)) {
+        return false;
+    }
+
+    $stmt = $conn->prepare(
+        'SELECT valid_passport, cv_resume FROM student_applications WHERE id = ? LIMIT 1'
+    );
+    if (!$stmt) {
+        return false;
+    }
+
+    $stmt->bind_param('i', $appId);
+    $stmt->execute();
+    $passport = null;
+    $cv = null;
+    $stmt->bind_result($passport, $cv);
+    $ok = $stmt->fetch();
+    $stmt->close();
+
+    if (!$ok) {
+        return false;
+    }
+
+    return trim((string) $passport) !== '' || trim((string) $cv) !== '';
+}
+
 function pcvc_spam_name_token_looks_random(string $token): bool
 {
     $token = trim($token);
@@ -110,15 +152,20 @@ function pcvc_spam_name_token_looks_random(string $token): bool
         }
 
         $vowels = preg_match_all('/[aeiouyAEIOUY]/u', $letters);
-        if ($vowels / max(1, $letterLen) < 0.12) {
+        $vowelRatio = $vowels / max(1, $letterLen);
+        if ($vowelRatio < 0.12) {
             return true;
         }
 
         $chars = function_exists('mb_str_split')
             ? mb_str_split(mb_strtolower($letters, 'UTF-8'))
             : preg_split('//u', mb_strtolower($letters, 'UTF-8'), -1, PREG_SPLIT_NO_EMPTY);
-        if (is_array($chars) && count($chars) >= 12 && count(array_unique($chars)) / count($chars) > 0.72) {
-            return true;
+        if (is_array($chars) && count($chars) >= 12) {
+            $uniqueRatio = count(array_unique($chars)) / count($chars);
+            // High uniqueness alone is not enough — bots often lack vowels (real surnames do not).
+            if ($uniqueRatio > 0.72 && $vowelRatio < 0.22) {
+                return true;
+            }
         }
     }
 
@@ -131,7 +178,7 @@ function pcvc_spam_name_token_looks_random(string $token): bool
  * @param array<string, string> $fields
  * @return array{is_spam: bool, reason: string, method: string}|null
  */
-function pcvc_spam_heuristic_verdict(array $fields): ?array
+function pcvc_spam_heuristic_verdict(array $fields, bool $trustExtractedNames = false): ?array
 {
     $email = $fields['email'] ?? '';
     if ($email !== '') {
@@ -145,6 +192,10 @@ function pcvc_spam_heuristic_verdict(array $fields): ?array
                 ];
             }
         }
+    }
+
+    if ($trustExtractedNames) {
+        return null;
     }
 
     foreach (['first_name', 'last_name'] as $key) {
@@ -174,7 +225,7 @@ function pcvc_spam_heuristic_verdict(array $fields): ?array
  * @param array<string, string> $fields
  * @return array{is_spam: bool, reason: string, method: string, confidence: int}
  */
-function pcvc_spam_ai_verdict(array $fields): array
+function pcvc_spam_ai_verdict(array $fields, bool $trustExtractedNames = false): array
 {
     $fallback = [
         'is_spam'    => false,
@@ -182,6 +233,10 @@ function pcvc_spam_ai_verdict(array $fields): array
         'method'     => 'ai_skipped',
         'confidence' => 0,
     ];
+
+    if ($trustExtractedNames) {
+        return $fallback;
+    }
 
     if (!function_exists('xander_env_get') || (string) xander_env_get('SPAM_GUARD_AI_ENABLED', '1') === '0') {
         return $fallback;
@@ -210,6 +265,7 @@ Reply with JSON only: {"is_spam":boolean,"confidence":0-100,"reason":"short stri
 Mark is_spam true for: bot submissions, randomly generated names (long alphanumeric strings),
 disposable/fake emails, obvious test junk, incomplete profiles that are clearly automated spam.
 Mark is_spam false for genuine human applicants even if some fields are empty (draft).
+Never mark is_spam true only because a name is long, unusual, or from another country.
 SYS;
 
     $user = "Application fields:\n" . $payload;
@@ -272,13 +328,33 @@ SYS;
  * @param array<string, string> $fields
  * @return array{is_spam: bool, reason: string, method: string, confidence: int}
  */
-function pcvc_spam_evaluate(array $fields, bool $useAi = true): array
+function pcvc_spam_evaluate(array $fields, bool $useAi = true, bool $trustExtractedNames = false): array
 {
     if (!pcvc_spam_guard_should_check($fields)) {
         return ['is_spam' => false, 'reason' => '', 'method' => 'none', 'confidence' => 0];
     }
 
-    $heuristic = pcvc_spam_heuristic_verdict($fields);
+    if ($trustExtractedNames) {
+        $emailOnly = ['email' => $fields['email'] ?? ''];
+        $heuristic = pcvc_spam_heuristic_verdict($emailOnly, false);
+        if ($heuristic !== null && $heuristic['is_spam']) {
+            return [
+                'is_spam'    => true,
+                'reason'     => $heuristic['reason'],
+                'method'     => $heuristic['method'],
+                'confidence' => 100,
+            ];
+        }
+
+        return [
+            'is_spam'    => false,
+            'reason'     => '',
+            'method'     => 'document_names_trusted',
+            'confidence' => 0,
+        ];
+    }
+
+    $heuristic = pcvc_spam_heuristic_verdict($fields, false);
     if ($heuristic !== null && $heuristic['is_spam']) {
         return [
             'is_spam'    => true,
@@ -289,7 +365,7 @@ function pcvc_spam_evaluate(array $fields, bool $useAi = true): array
     }
 
     if ($useAi) {
-        $ai = pcvc_spam_ai_verdict($fields);
+        $ai = pcvc_spam_ai_verdict($fields, false);
         if ($ai['is_spam']) {
             return $ai;
         }
@@ -304,9 +380,10 @@ function pcvc_spam_evaluate(array $fields, bool $useAi = true): array
  * @param array<string, mixed> $post
  * @return array{is_spam: bool, reason: string, method: string}
  */
-function pcvc_spam_check_post(array $post): array
+function pcvc_spam_check_post(array $post, ?mysqli $conn = null): array
 {
-    $verdict = pcvc_spam_evaluate(pcvc_spam_fields_from_post($post));
+    $trustNames = pcvc_spam_trust_extracted_names($post, $conn);
+    $verdict = pcvc_spam_evaluate(pcvc_spam_fields_from_post($post), true, $trustNames);
 
     return [
         'is_spam' => (bool) $verdict['is_spam'],
@@ -359,7 +436,8 @@ function pcvc_spam_purge_database(mysqli $conn, int $limit = 200, bool $dryRun =
 
     $sql = "
         SELECT id, first_name, last_name, email, area_code, phone_number,
-               gender, dob, nationality, city, address_line1, submitted, app_start, created_at
+               gender, dob, nationality, city, address_line1, submitted, app_start, created_at,
+               valid_passport, cv_resume
         FROM student_applications
         WHERE TRIM(COALESCE(email, '')) <> ''
            OR TRIM(COALESCE(first_name, '')) <> ''
@@ -388,6 +466,7 @@ function pcvc_spam_purge_database(mysqli $conn, int $limit = 200, bool $dryRun =
         $bind = [
             'id', 'first_name', 'last_name', 'email', 'area_code', 'phone_number',
             'gender', 'dob', 'nationality', 'city', 'address_line1', 'submitted', 'app_start', 'created_at',
+            'valid_passport', 'cv_resume',
         ];
         $refs = [];
         $row = [];
@@ -412,7 +491,10 @@ function pcvc_spam_purge_database(mysqli $conn, int $limit = 200, bool $dryRun =
         $hasContact = ($fields['email'] !== '' || $fields['phone_number'] !== '');
         $looksLikeDraftBot = $profileEmpty && $hasContact && (int) ($row['submitted'] ?? 0) === 0;
 
-        if (!$verdict['is_spam'] && $looksLikeDraftBot) {
+        $hasIdentityDoc = trim((string) ($row['valid_passport'] ?? '')) !== ''
+            || trim((string) ($row['cv_resume'] ?? '')) !== '';
+
+        if (!$verdict['is_spam'] && $looksLikeDraftBot && !$hasIdentityDoc) {
             $nameSpam = pcvc_spam_name_token_looks_random($fields['first_name'])
                 || pcvc_spam_name_token_looks_random($fields['last_name']);
             if ($nameSpam) {

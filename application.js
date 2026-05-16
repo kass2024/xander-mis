@@ -171,6 +171,10 @@ function buildApplicationFormData(options = {}) {
     fd.set("application_id", String(currentApplicationId));
   }
 
+  if (options.namesFromDocuments === true) {
+    fd.set("names_from_documents", "1");
+  }
+
   return fd;
 }
 
@@ -478,6 +482,19 @@ function applyAutofillFields(fields) {
     emergency_phone_number:
       form.querySelector('[name="emergency_phone_number"]')?.value ||
       fields.emergency_phone_number,
+  });
+}
+
+function applicationHasUploadedIdentityDocs() {
+  const docFields = ["valid_passport", "cv_resume"];
+  const status = window.uploadStatus || {};
+  if (docFields.some((name) => Array.isArray(status[name]) && status[name].length > 0)) {
+    return true;
+  }
+  return docFields.some((name) => {
+    const zone = document.querySelector(`.doc-dropzone[data-field="${name}"]`);
+    const input = zone?.querySelector('input[type="file"]');
+    return Boolean(input?.classList?.contains("is-valid"));
   });
 }
 
@@ -1364,7 +1381,11 @@ async function saveStep() {
       }
     }
 
-   const fd = buildApplicationFormData({ includeStep: true, stepValue: step });
+   const fd = buildApplicationFormData({
+      includeStep: true,
+      stepValue: step,
+      namesFromDocuments: applicationHasUploadedIdentityDocs()
+    });
 
     console.log("FormData entries:");
     for (const [k, v] of fd.entries()) {
@@ -1440,6 +1461,7 @@ async function submitForm(options = {}) {
     const fd = buildApplicationFormData({ includeStep: true, stepValue: step, final: true });
     if (options.identityOnlySubmit) {
       fd.set("smart_identity_submit", "1");
+      fd.set("names_from_documents", "1");
     }
     const res = await fetch(API, { method: "POST", body: fd });
     const rawText = await res.text();

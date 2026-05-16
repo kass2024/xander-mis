@@ -804,10 +804,11 @@ if ($isFinal === 1) {
         json_error('Please correct the highlighted fields and try again.', $fieldErrors, 400);
     }
 
-    $spamVerdict = pcvc_spam_check_post($_POST);
+    $trustDocNames = pcvc_spam_trust_extracted_names($_POST, $conn);
+    $spamVerdict = pcvc_spam_check_post($_POST, $conn);
     if ($spamVerdict['is_spam']) {
         $spamAppId = (int) ($_POST['application_id'] ?? 0);
-        if ($spamAppId > 0) {
+        if ($spamAppId > 0 && !$trustDocNames) {
             pcvc_spam_delete_application($conn, $spamAppId);
         }
         json_error(
