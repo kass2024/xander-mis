@@ -44,9 +44,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
      * SECURITY: Prepared statement (UPDATED to include status column)
      */
     $stmt = $conn->prepare(
-        "SELECT id, password_hash, full_name, role, status
-         FROM admins
-         WHERE username = ?"
+        "SELECT a.id, a.password_hash, a.full_name, a.role, a.status, a.office_id, o.office_name
+         FROM admins a
+         LEFT JOIN offices o ON o.id = a.office_id
+         WHERE a.username = ?"
     );
 
     if (!$stmt) {
@@ -104,7 +105,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['admin_id']  = $admin['id'];
                 $_SESSION['username']  = $username;
                 $_SESSION['name']      = $admin['full_name'];
-                $_SESSION['role']      = $admin['role'];
+                $_SESSION['role']       = $admin['role'];
+                $_SESSION['office_id']  = (int) ($admin['office_id'] ?? 0);
+                $_SESSION['office_name'] = trim((string) ($admin['office_name'] ?? ''));
 
                 $clr = $conn->prepare('UPDATE admins SET password_reset_token = NULL, password_reset_expires = NULL WHERE id = ?');
                 if ($clr) {

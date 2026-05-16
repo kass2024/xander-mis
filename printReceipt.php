@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/includes/receipt_branding.php';
 
 class ReceiptGenerator
 {
@@ -11,6 +12,7 @@ class ReceiptGenerator
     private string $packageTitle = 'N/A';
     private string $currency = '';
     private array $items = [];
+    private array $branding = [];
 
     public function __construct(mysqli $conn)
     {
@@ -25,6 +27,7 @@ public function generate(string $receiptNo): void
 
     $this->receiptNo = $receiptNo;
 
+    $this->branding = xander_get_receipt_branding($this->conn);
     $this->fetchReceipt();
     $this->fetchStudentInfo();
     $this->fetchPackageInfo();
@@ -99,16 +102,42 @@ public function generate(string $receiptNo): void
             SELECT fi.name, ap.amount_paid
             FROM application_payments ap
             JOIN fee_items fi ON fi.id = ap.fee_item_id
+            WHERE ap.receipt_no = ?
+              AND ap.status = 'PAID'
+            ORDER BY ap.id
+        ");
+        $stmt->bind_param('s', $this->receiptNo);
+        $stmt->execute();
+        $this->items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        if (!empty($this->items)) {
+            return;
+        }
+
+        $createdAt = (string) ($this->receipt['created_at'] ?? '');
+        $appId = (int) ($this->receipt['application_id'] ?? 0);
+        if ($appId <= 0 || $createdAt === '') {
+            return;
+        }
+
+        $stmt = $this->conn->prepare("
+            SELECT fi.name, ap.amount_paid
+            FROM application_payments ap
+            JOIN fee_items fi ON fi.id = ap.fee_item_id
             WHERE ap.application_id = ?
               AND ap.status = 'PAID'
-              AND ap.paid_at >= (
-                    SELECT created_at
-                    FROM payment_receipts
-                    WHERE receipt_no = ?
-                    LIMIT 1
+              AND (ap.receipt_no IS NULL OR ap.receipt_no = '')
+              AND ap.paid_at >= ?
+              AND ap.paid_at < (
+                SELECT COALESCE(MIN(pr.created_at), '9999-12-31 23:59:59')
+                FROM payment_receipts pr
+                WHERE pr.application_id = ?
+                  AND pr.created_at > ?
               )
+            ORDER BY ap.id
         ");
-        $stmt->bind_param('is', $this->receipt['application_id'], $this->receiptNo);
+        $stmt->bind_param('issi', $appId, $createdAt, $appId, $createdAt);
         $stmt->execute();
         $this->items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
@@ -195,18 +224,49 @@ body {
     text-align: center;
 }
 
+.header-dual {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2mm;
+    text-align: center;
+}
+
+.header-dual .partner {
+    flex: 1;
+    min-width: 0;
+}
+
+.header-dual .partner-hera .name {
+    font-size: 8px;
+}
+
+.header-dual .logo {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 1mm;
+}
+
+.header-dual .name {
+    font-weight: bold;
+    font-size: 7px;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
 .logo {
     width: 24px;
+    height: 24px;
+    object-fit: contain;
 }
 
 .company .name {
     font-weight: bold;
-    font-size: 11px;
+    font-size: 9px;
+    line-height: 1.2;
     text-transform: uppercase;
-}
-
-.company .sub {
-    font-size: 10px;
 }
 
 /* TITLE */
@@ -275,13 +335,7 @@ td {
 
 <div class="receipt">
 
-    <div class="header">
-        <img src="XANDER GLOBAL SCHOLARS LOGO.png" class="logo" alt="Logo">
-        <div class="company">
-            <div class="name">XANDER GLOBAL</div>
-            <div class="sub">SCHOLARS LTD</div>
-        </div>
-    </div>
+    <?= xander_receipt_render_header_print($this->branding) ?>
 
     <div class="title">OFFICIAL PAYMENT RECEIPT</div>
 

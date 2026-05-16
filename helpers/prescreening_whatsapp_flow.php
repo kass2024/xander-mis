@@ -759,9 +759,58 @@ function xander_prescreening_notify_staff_whatsapp(array $row, string $reference
  */
 function xander_prescreening_finalize_submission(mysqli $conn, array $row, string $waPhone): string
 {
-    $userId = 'wa-' . $waPhone . '-' . time();
+    require_once __DIR__ . '/prescreening_invite.php';
+    require_once __DIR__ . '/prescreening_save.php';
+
+    $pending = xander_prescreening_find_pending_by_whatsapp($conn, $waPhone);
+    $userId = $pending ? (string) $pending['user_id'] : ('wa-' . $waPhone . '-' . time());
     $reference = 'PS-' . strtoupper(substr(md5($userId), 0, 8));
     $submittedAt = date('Y-m-d H:i:s');
+
+    if ($pending && empty($pending['submitted_at'])) {
+        xander_prescreening_save_submission(
+            $conn,
+            $userId,
+            'whatsapp',
+            (string) ($row['student_name'] ?? $pending['student_name'] ?? ''),
+            (string) ($row['student_email'] ?? $pending['student_email'] ?? ''),
+            (string) ($row['whatsapp_number'] ?? $pending['whatsapp_number'] ?? ''),
+            [
+                'education_level' => (string) ($row['education_level'] ?? ''),
+                'course_program' => (string) ($row['course_program'] ?? ''),
+                'country_interest' => (string) ($row['country_interest'] ?? ''),
+                'open_other_countries' => (string) ($row['open_other_countries'] ?? ''),
+                'budget_tuition' => (string) ($row['budget_tuition'] ?? ''),
+                'funds_application_visa' => (string) ($row['funds_application_visa'] ?? ''),
+                'sponsor' => (string) ($row['sponsor'] ?? ''),
+                'afford_deposit' => (string) ($row['afford_deposit'] ?? ''),
+                'has_valid_passport' => (string) ($row['has_valid_passport'] ?? ''),
+                'academic_docs_ready' => (string) ($row['academic_docs_ready'] ?? ''),
+                'english_level' => (string) ($row['english_level'] ?? ''),
+                'english_test_taken' => (string) ($row['english_test_taken'] ?? ''),
+                'visa_denied' => (string) ($row['visa_denied'] ?? ''),
+                'planned_intake' => (string) ($row['planned_intake'] ?? ''),
+                'ready_to_apply' => (string) ($row['ready_to_apply'] ?? ''),
+            ],
+            [
+                'doc_valid_passport' => (string) ($row['doc_valid_passport'] ?? ''),
+                'doc_degree_transcripts' => (string) ($row['doc_degree_transcripts'] ?? ''),
+                'doc_high_school' => (string) ($row['doc_high_school'] ?? ''),
+                'doc_cv_resume' => (string) ($row['doc_cv_resume'] ?? ''),
+                'doc_recommendation' => (string) ($row['doc_recommendation'] ?? ''),
+                'doc_personal_statement' => (string) ($row['doc_personal_statement'] ?? ''),
+                'doc_english_certificate' => (string) ($row['doc_english_certificate'] ?? ''),
+                'doc_birth_certificate' => (string) ($row['doc_birth_certificate'] ?? ''),
+                'doc_payment_proof' => (string) ($row['doc_payment_proof'] ?? ''),
+            ],
+            null,
+            false
+        );
+        xander_send_prescreening_notifications($row, $reference, true);
+        xander_prescreening_notify_staff_whatsapp($row, $reference);
+
+        return $reference;
+    }
 
     $sql = "INSERT INTO prescreening_submissions (
         user_id, source, student_name, student_email, whatsapp_number,

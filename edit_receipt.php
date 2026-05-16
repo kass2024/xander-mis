@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/includes/receipt_branding.php';
+
+$receiptBranding = xander_get_receipt_branding($conn);
 
 /* =====================================================
    INPUT
@@ -208,7 +211,7 @@ $items = getReceiptItems(
 
 <style>
 body{background:#f3eded;font-family:"Courier New",monospace;padding:20px}
-.card{max-width:420px;margin:auto;background:#fff;padding:18px;border-radius:14px;box-shadow:0 4px 10px rgba(0,0,0,.12);font-size:13px}
+.card{max-width:480px;margin:auto;background:#fff;padding:18px;border-radius:14px;box-shadow:0 4px 10px rgba(0,0,0,.12);font-size:13px}
 .actions{display:flex;gap:8px;margin-bottom:12px}
 .actions button,.actions a{padding:8px 12px;border-radius:8px;font-size:12px;text-decoration:none;color:#fff}
 .save{background:#16a34a;border:none}
@@ -220,6 +223,7 @@ td{padding:2px 0}
 .amount{text-align:right}
 input[type=number]{width:100%;text-align:right}
 .total{border-top:1px dashed #000;margin-top:8px;padding-top:6px;font-weight:bold}
+<?php echo xander_receipt_brand_css_screen(); ?>
 </style>
 </head>
 
@@ -232,10 +236,7 @@ input[type=number]{width:100%;text-align:right}
     <a href="receipt_viewer.php" class="back">Back</a>
 </div>
 
-<strong>Parrot Canada</strong><br>
-Visa Consultant<br>
-POS Receipt<br>
-<?= htmlspecialchars($receipt['created_at']) ?>
+<?= xander_receipt_render_header_screen($receiptBranding, (string) $receipt['created_at']) ?>
 
 <hr>
 

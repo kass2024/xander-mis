@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 session_start();
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/includes/contract_admin_helpers.php';
 
 /* =====================================================
    1. ADMIN AUTH
@@ -33,22 +34,7 @@ $showError = isset($_GET['error']) && !empty($_GET['error']);
 /* =====================================================
    5. FETCH SIGNED CONTRACTS
 ===================================================== */
-$sql = "
-    SELECT
-        c.id AS contract_id,
-        c.contract_token,
-        c.status,
-        c.signed_at,
-        c.sent_at,
-        s.first_name,
-        s.last_name,
-        s.email
-    FROM student_contracts c
-    LEFT JOIN student_applications s
-        ON s.id = c.student_id
-    WHERE c.status = 'signed'
-    ORDER BY c.id DESC
-";
+$sql = xander_admin_signed_contracts_sql('student_contracts', 'student_signatures');
 
 $result = $conn->query($sql);
 
@@ -394,7 +380,7 @@ tr:last-child td {
 
 <?php $i = 1; while ($row = $result->fetch_assoc()): ?>
 <?php 
-    $fullName = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
+    $fullName = trim((string) ($row['student_name'] ?? ''));
     $fullName = !empty($fullName) ? $fullName : 'Unknown Student';
     $hasBeenSent = !empty($row['sent_at']);
 ?>

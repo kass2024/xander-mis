@@ -6,10 +6,14 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers/prescreening_schema.php';
 require_once __DIR__ . '/helpers/prescreening_notify.php';
 
-xander_ensure_prescreening_table($conn);
+xander_ensure_prescreening_schema($conn);
 
 $rows = [];
-$res = $conn->query('SELECT * FROM prescreening_submissions ORDER BY submitted_at DESC, id DESC LIMIT 500');
+$res = $conn->query(
+    'SELECT * FROM prescreening_submissions
+     ORDER BY COALESCE(submitted_at, created_at) DESC, id DESC
+     LIMIT 500'
+);
 if ($res) {
     while ($r = $res->fetch_assoc()) {
         $rows[] = $r;
@@ -37,6 +41,7 @@ $docLabels = xander_prescreening_document_labels();
     .list-item:hover, .list-item.active { background: #eef4ff; }
     .badge-ok { background: #d1e7dd; color: #0f5132; }
     .badge-warn { background: #fff3cd; color: #664d03; }
+    .badge-pending { background: #e2e8f0; color: #475569; }
   </style>
 </head>
 <body>
@@ -75,11 +80,14 @@ function renderList(filter) {
     const el = document.createElement('div');
     el.className = 'list-item';
     el.dataset.idx = String(i);
+    const done = !!r.submitted_at;
     const wa = r.whatsapp_sent == 1;
     const em = r.email_sent == 1;
-    el.innerHTML = '<strong>' + esc(r.student_name) + '</strong><br><small>' + esc(r.submitted_at || r.created_at) + '</small><br>'
-      + '<span class="badge ' + (em ? 'badge-ok' : 'badge-warn') + ' me-1">Email</span>'
-      + '<span class="badge ' + (wa ? 'badge-ok' : 'badge-warn') + '">WhatsApp</span>';
+    const ch = esc(r.invite_channel || r.source || '');
+    el.innerHTML = '<strong>' + esc(r.student_name || '—') + '</strong><br><small>' + esc(r.submitted_at || r.created_at) + '</small><br>'
+      + '<span class="badge ' + (done ? 'badge-ok' : 'badge-pending') + ' me-1">' + (done ? 'Complete' : 'Pending') + '</span>'
+      + (ch ? '<span class="badge badge-warn me-1">' + ch + '</span>' : '')
+      + (done ? '<span class="badge ' + (em ? 'badge-ok' : 'badge-warn') + ' me-1">Notify</span>' : '');
     el.onclick = () => showDetail(i, el);
     list.appendChild(el);
   });
@@ -108,13 +116,17 @@ function showDetail(idx, el) {
   });
   dHtml += '</ul>';
 
+  const pending = !r.submitted_at;
   document.getElementById('detail').innerHTML = `
-    <h4>${esc(r.student_name)}</h4>
-    <p><strong>Source:</strong> ${esc(r.source || 'admin')}<br>
+    <h4>${esc(r.student_name || '—')}</h4>
+    <p><strong>Status:</strong> ${pending ? 'Pending invite' : 'Complete'}<br>
+    <strong>Source:</strong> ${esc(r.source || '—')}<br>
+    <strong>Channel:</strong> ${esc(r.invite_channel || '—')}<br>
     <strong>Email:</strong> ${esc(r.student_email || '—')}<br>
-    <strong>WhatsApp:</strong> ${esc(r.whatsapp_number)}<br>
+    <strong>WhatsApp:</strong> ${esc(r.whatsapp_number || '—')}<br>
     <strong>Reference:</strong> ${esc(r.user_id)}<br>
     <strong>Submitted:</strong> ${esc(r.submitted_at || '—')}</p>
+    ${pending ? '<p class="text-muted">Waiting for student to complete the form via email link or WhatsApp.</p>' : ''}
     <h5>Answers</h5>${qHtml}
     <h5>Documents</h5>${dHtml}
   `;

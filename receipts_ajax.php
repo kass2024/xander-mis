@@ -2,6 +2,9 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/includes/receipt_branding.php';
+
+$receiptBranding = xander_get_receipt_branding($conn);
 
 /* =====================================================
    SAFETY (AJAX CONTEXT)
@@ -134,22 +137,44 @@ function getCustomerName(mysqli $conn, int $appId): string
         : 'Unknown';
 }
 
-function getReceiptItems(mysqli $conn, int $appId, string $date): array
+function getReceiptItems(mysqli $conn, string $receiptNo, int $appId, string $createdAt): array
 {
     $stmt = $conn->prepare("
-        SELECT
-            fi.name,
-            ap.amount_paid
+        SELECT fi.name, ap.amount_paid
+        FROM application_payments ap
+        JOIN fee_items fi ON fi.id = ap.fee_item_id
+        WHERE ap.receipt_no = ?
+          AND ap.status = 'PAID'
+        ORDER BY ap.id
+    ");
+    $stmt->bind_param('s', $receiptNo);
+    $stmt->execute();
+    $items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+
+    if (!empty($items)) {
+        return $items;
+    }
+
+    // Legacy rows recorded before receipt_no was stored on payments
+    $stmt = $conn->prepare("
+        SELECT fi.name, ap.amount_paid
         FROM application_payments ap
         JOIN fee_items fi ON fi.id = ap.fee_item_id
         WHERE ap.application_id = ?
           AND ap.status = 'PAID'
+          AND (ap.receipt_no IS NULL OR ap.receipt_no = '')
           AND ap.paid_at >= ?
+          AND ap.paid_at < (
+            SELECT COALESCE(MIN(pr.created_at), '9999-12-31 23:59:59')
+            FROM payment_receipts pr
+            WHERE pr.application_id = ?
+              AND pr.created_at > ?
+          )
+        ORDER BY ap.id
     ");
-
-    $stmt->bind_param('is', $appId, $date);
+    $stmt->bind_param('issi', $appId, $createdAt, $appId, $createdAt);
     $stmt->execute();
-
     $items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 
@@ -170,7 +195,7 @@ if (empty($receipts)) {
 foreach ($receipts as $r):
 
     $appId  = (int)$r['application_id'];
-    $items  = getReceiptItems($conn, $appId, $r['created_at']);
+    $items  = getReceiptItems($conn, (string) $r['receipt_no'], $appId, (string) $r['created_at']);
     $name   = getCustomerName($conn, $appId);
     $cancel = ($r['status'] === 'CANCELED');
 
@@ -180,12 +205,7 @@ foreach ($receipts as $r):
 <div class="receipt-card <?= $cancel ? 'canceled' : '' ?>">
 
     <div class="header">
-        <div>
-            <strong>Parrot Canada</strong><br>
-            Visa Consultant<br>
-            POS Receipt<br>
-            <?= date('Y-m-d H:i:s', strtotime($r['created_at'])) ?>
-        </div>
+        <?= xander_receipt_render_header_screen($receiptBranding, date('Y-m-d H:i:s', strtotime($r['created_at']))) ?>
 
         <div class="actions">
             <a class="btn-print" target="_blank"

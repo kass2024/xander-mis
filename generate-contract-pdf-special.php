@@ -224,19 +224,16 @@ $stmt = $conn->prepare("
         c.contract_token,
         c.selected_package_code,
 
-        /* ✅ SINGLE SOURCE OF TRUTH */
-        TRIM(s.first_name) AS full_name,
-
-        s.email,
-        s.dob,
-        s.nationality,
-        s.passport_number,
-        s.phone_number,
+        sig.student_name AS full_name,
+        sig.student_email AS email,
+        sig.client_dob AS dob,
+        sig.client_nationality AS nationality,
+        sig.client_passport AS passport_number,
+        sig.client_phone AS phone_number,
 
         sig.signed_date,
         sig.signature_image
     FROM student_contracts_special c
-    INNER JOIN student_applications s ON s.id = c.student_id
     INNER JOIN student_signatures_special sig ON sig.contract_id = c.id
     WHERE c.id = ?
     LIMIT 1

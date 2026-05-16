@@ -1272,7 +1272,7 @@ $fee_items = [];
 $packages_summary = [];
 
 if (!$momo_mode) {
-    $packages_result = $conn->query("SELECT * FROM fee_packages ORDER BY title ASC");
+    $packages_result = $conn->query("SELECT * FROM fee_packages ORDER BY display_order ASC, id ASC");
     if (!$packages_result) {
         error_log('Failed to fetch packages: ' . $conn->error);
         $registration_error = $debug_mode

@@ -31,61 +31,105 @@ try {
     require_once __DIR__ . '/db.php';
     require_once __DIR__ . '/helpers/prescreening_whatsapp_schema.php';
     require_once __DIR__ . '/helpers/prescreening_whatsapp_flow.php';
+    require_once __DIR__ . '/helpers/prescreening_invite.php';
 
     xander_ensure_prescreening_whatsapp_tables($conn);
 
+    $channel = strtolower(trim((string) ($_POST['send_via'] ?? 'whatsapp')));
+    if (!in_array($channel, ['email', 'whatsapp', 'both'], true)) {
+        invite_respond(['status' => 'error', 'message' => 'Invalid delivery channel.']);
+    }
+
     $phone = trim((string) ($_POST['whatsapp_number'] ?? ''));
     $name = trim((string) ($_POST['student_name'] ?? ''));
+    $email = trim((string) ($_POST['student_email'] ?? ''));
+    $sendEmailNow = ($_POST['send_email_now'] ?? '1') !== '0';
 
-    xander_whatsapp_track('invite_request', [
-        'phone_raw' => $phone,
-        'student_name' => $name !== '' ? $name : '(empty)',
-    ]);
-
+    if ($name === '') {
+        invite_respond(['status' => 'error', 'message' => 'Student name is required.']);
+    }
     if ($phone === '') {
         invite_respond(['status' => 'error', 'message' => 'Student WhatsApp number is required.']);
     }
-
-    if (! function_exists('curl_init')) {
-        xander_whatsapp_track('invite_error', ['reason' => 'curl_missing']);
-        invite_respond(['status' => 'error', 'message' => 'Server cannot call WhatsApp API (PHP cURL missing).']);
+    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        invite_respond(['status' => 'error', 'message' => 'Valid student email is required.']);
     }
 
-    $result = xander_prescreening_admin_send_invite($conn, $phone, $name);
+    $invite = xander_prescreening_create_invite($conn, $name, $email, $phone, $channel);
 
-    if (!$result['sent']) {
-        xander_whatsapp_track('invite_api_failed', [
-            'to' => $result['to'] ?? '',
-            'error' => $result['error'] ?? '',
-        ]);
-        invite_respond([
-            'status' => 'error',
-            'message' => $result['error'] !== '' ? $result['error'] : 'Failed to send WhatsApp invite.',
-            'to' => $result['to'] ?? '',
-            'log_url' => 'api/prescreening-invite-log.php',
-        ]);
-    }
-
-    $lang = (string) ($result['template_lang'] ?? '');
-    $wamid = (string) ($result['message_id'] ?? '');
-    $session = xander_prescreening_load_session($conn, $result['to']);
-    $deliveryMsg = xander_prescreening_invite_status_message($session);
-
-    invite_respond([
+    $out = [
         'status' => 'success',
-        'message' => $deliveryMsg !== '' ? $deliveryMsg : 'Template invite queued with Meta. Waiting for webhook delivery status.',
-        'to' => $result['to'],
-        'method' => 'template',
-        'template_lang' => $lang,
-        'message_id' => $wamid,
-        'delivery_status' => $session['last_delivery_status'] ?? 'api_accepted',
-        'log_url' => 'api/prescreening-invite-log.php',
-    ]);
+        'message' => 'Invite created.',
+        'channel' => $channel,
+        'link' => $invite['url'],
+        'token' => $invite['token'],
+        'user_id' => $invite['user_id'],
+        'whatsapp' => null,
+        'email' => null,
+    ];
+
+    $errors = [];
+
+    if ($channel === 'whatsapp' || $channel === 'both') {
+        if (!function_exists('curl_init')) {
+            $errors[] = 'WhatsApp: PHP cURL missing.';
+        } else {
+            xander_whatsapp_track('invite_request', [
+                'phone_raw' => $phone,
+                'student_name' => $name,
+                'channel' => $channel,
+            ]);
+            $result = xander_prescreening_admin_send_invite($conn, $phone, $name);
+            if (!$result['sent']) {
+                $errors[] = $result['error'] !== '' ? $result['error'] : 'WhatsApp invite failed.';
+                $out['whatsapp'] = ['sent' => false, 'error' => end($errors)];
+            } else {
+                $session = xander_prescreening_load_session($conn, $result['to']);
+                $out['whatsapp'] = [
+                    'sent' => true,
+                    'to' => $result['to'],
+                    'message_id' => $result['message_id'] ?? '',
+                    'delivery_status' => $session['last_delivery_status'] ?? 'api_accepted',
+                ];
+                $out['message'] = 'WhatsApp template sent.';
+            }
+        }
+    }
+
+    if ($channel === 'email' || $channel === 'both') {
+        if ($sendEmailNow) {
+            $mailRes = xander_prescreening_send_invite_email($email, $name, $invite['url']);
+            $out['email'] = ['sent' => $mailRes['ok'], 'error' => $mailRes['error']];
+            if (!$mailRes['ok']) {
+                $errors[] = 'Email: ' . $mailRes['error'];
+            } elseif ($out['message'] === 'Invite created.') {
+                $out['message'] = 'Email sent with pre-screening link.';
+            } else {
+                $out['message'] .= ' Email sent.';
+            }
+        } else {
+            $out['email'] = ['sent' => false, 'skipped' => true];
+            if ($channel === 'email') {
+                $out['message'] = 'Link ready — copy or send email when ready.';
+            }
+        }
+    }
+
+    if ($errors !== []) {
+        $out['status'] = ($out['whatsapp']['sent'] ?? false) || ($out['email']['sent'] ?? false) ? 'partial' : 'error';
+        $out['message'] = implode(' ', $errors);
+        if ($out['status'] === 'partial') {
+            $out['message'] .= ' Link: ' . $invite['url'];
+        }
+    }
+
+    $out['log_url'] = 'api/prescreening-invite-log.php';
+    invite_respond($out, $out['status'] === 'error' ? 400 : 200);
 } catch (Throwable $e) {
-    xander_whatsapp_track('invite_exception', ['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()]);
+    xander_whatsapp_track('invite_exception', ['error' => $e->getMessage()]);
     error_log('[send_prescreening_invite] ' . $e->getMessage());
     invite_respond([
         'status' => 'error',
-        'message' => 'Server error while sending invite. Check api/prescreening-invite-log.php or cPanel error log.',
+        'message' => 'Server error while sending invite.',
     ], 500);
 }

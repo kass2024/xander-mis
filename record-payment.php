@@ -4,8 +4,12 @@ declare(strict_types=1);
 /* =====================================================
    0. BOOTSTRAP (NO OUTPUT EVER)
 ===================================================== */
+ob_start();
 require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/generateReceiptPdf.php';
+require_once __DIR__ . '/includes/receipt_branding.php';
+ob_end_clean();
+xander_receipt_ensure_session();
+$receiptBranding = xander_get_receipt_branding($conn);
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -62,6 +66,10 @@ $packageId     = (int) ($data['package_id'] ?? 0);
 $method        = trim((string) ($data['payment_method'] ?? ''));
 $comment       = trim((string) ($data['comment'] ?? ''));
 $items         = $data['items'] ?? [];
+$requestId     = trim((string) ($data['request_id'] ?? ''));
+if (strlen($requestId) > 100) {
+    $requestId = substr($requestId, 0, 100);
+}
 
 /* =====================================================
    3. VALIDATION
@@ -86,11 +94,53 @@ if (
 }
 
 /* =====================================================
+   3b. IDEMPOTENCY (same browser submit twice)
+===================================================== */
+if ($requestId !== '') {
+    $stmt = $conn->prepare(
+        "SELECT receipt_no
+         FROM application_payments
+         WHERE reference = ? AND status = 'PAID' AND receipt_no IS NOT NULL AND receipt_no <> ''
+         ORDER BY id DESC
+         LIMIT 1"
+    );
+    $stmt->bind_param('s', $requestId);
+    $stmt->execute();
+    $existing = stmt_fetch_assoc($stmt);
+    $stmt->close();
+
+    if ($existing && !empty($existing['receipt_no'])) {
+        $dupReceiptNo = (string) $existing['receipt_no'];
+        $dupTotal = 0.0;
+        $stmt = $conn->prepare(
+            "SELECT total_amount FROM payment_receipts WHERE receipt_no = ? LIMIT 1"
+        );
+        $stmt->bind_param('s', $dupReceiptNo);
+        $stmt->execute();
+        $stmt->bind_result($dupTotal);
+        $stmt->fetch();
+        $stmt->close();
+
+        echo json_encode([
+            'success'     => true,
+            'message'     => 'Payment already recorded',
+            'receipt_no'  => $dupReceiptNo,
+            'total_paid'  => number_format((float) $dupTotal, 2, '.', ''),
+            'items_count' => count($items),
+            'duplicate'   => true,
+        ]);
+        exit;
+    }
+}
+
+/* =====================================================
    4. START TRANSACTION
 ===================================================== */
 $conn->begin_transaction();
 
 try {
+
+    $receiptNo = 'RCT-' . date('Ymd-His') . '-' . random_int(100, 999);
 
     /* =================================================
        5. ENSURE PACKAGE ASSIGNMENT
@@ -131,7 +181,7 @@ try {
         }
 
         $stmt = $conn->prepare(
-            "SELECT title, amount FROM fee_items WHERE id = ? AND package_id = ? LIMIT 1"
+            "SELECT name, amount FROM fee_items WHERE id = ? AND package_id = ? LIMIT 1"
         );
         $stmt->bind_param('ii', $feeItemId, $packageId);
         $stmt->execute();
@@ -160,17 +210,28 @@ try {
         $stmt = $conn->prepare(
             "INSERT INTO application_payments
              (application_id, source_table, fee_item_id, amount_paid,
-              payment_method, payment_comment, status, paid_at)
-             VALUES (?, ?, ?, ?, ?, ?, 'PAID', NOW())"
+              payment_method, payment_comment, reference, receipt_no, status, paid_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PAID', NOW())"
         );
-        $stmt->bind_param('isidss', $applicationId, $sourceTable, $feeItemId, $amount, $method, $comment);
+        $paymentRef = $requestId;
+        $stmt->bind_param(
+            'isidssss',
+            $applicationId,
+            $sourceTable,
+            $feeItemId,
+            $amount,
+            $method,
+            $comment,
+            $paymentRef,
+            $receiptNo
+        );
         $stmt->execute();
         $stmt->close();
 
         $totalRecorded += $amount;
 
         $receiptItems[] = [
-            'label'  => (string)($item['title'] ?? ('Item ' . $feeItemId)),
+            'label'  => (string)($item['name'] ?? ('Item ' . $feeItemId)),
             'amount' => $amount
         ];
     }
@@ -184,16 +245,17 @@ try {
          LEFT JOIN application_payments p
            ON p.fee_item_id = fi.id
           AND p.application_id = ?
+          AND p.source_table = ?
           AND p.status = 'PAID'
          WHERE fi.package_id = ?"
     );
-    $stmt->bind_param('ii', $applicationId, $packageId);
+    $stmt->bind_param('isi', $applicationId, $sourceTable, $packageId);
     $stmt->execute();
     $totals = stmt_fetch_assoc($stmt);
     $stmt->close();
 
-    if ((float)$totals['paid'] >= (float)$totals['expected']) {
-        $stmt = $conn->prepare("UPDATE {$sourceTable} SET app_paid = 1 WHERE application_id = ?");
+    if ((float) ($totals['paid'] ?? 0) >= (float) ($totals['expected'] ?? 0) && (float) ($totals['expected'] ?? 0) > 0) {
+        $stmt = $conn->prepare("UPDATE {$sourceTable} SET app_paid = 1 WHERE id = ? LIMIT 1");
         $stmt->bind_param('i', $applicationId);
         $stmt->execute();
         $stmt->close();
@@ -202,15 +264,13 @@ try {
     /* =================================================
        8. RECEIPT RECORD
     ================================================= */
-    $receiptNo = 'RCT-' . date('Ymd-His') . '-' . random_int(100, 999);
-
-    $receiptHtml = generateReceiptHtml([
+    $receiptHtml = xander_receipt_render_stored_html([
         'receipt_no' => $receiptNo,
         'student_id' => $applicationId,
         'items'      => $receiptItems,
         'total'      => $totalRecorded,
-        'method'     => $method
-    ]);
+        'method'     => $method,
+    ], $receiptBranding);
 
     $stmt = $conn->prepare(
         "INSERT INTO payment_receipts
@@ -242,6 +302,7 @@ try {
     /* =================================================
        10. ASYNC BACKGROUND TASKS
     ================================================= */
+    require_once __DIR__ . '/generateReceiptPdf.php';
     generateReceiptPdf($receiptHtml, $receiptNo);
 
     $emailUrl = 'https://xanderglobalscholars.com/sendReceiptEmail.php';
@@ -273,52 +334,4 @@ try {
         'error'   => $e->getMessage()
     ]);
     exit;
-}
-
-/* =====================================================
-   RECEIPT HTML GENERATOR (UNCHANGED)
-===================================================== */
-function generateReceiptHtml(array $data): string
-{
-    ob_start(); ?>
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Receipt</title>
-<style>
-@page { size: 80mm auto; margin: 0; }
-body { width: 80mm; margin: 0; padding: 5mm; font-family: monospace; font-size: 12px; }
-.center { text-align: center; }
-.line { border-top: 1px dashed #000; margin: 6px 0; }
-table { width: 100%; border-collapse: collapse; }
-td { padding: 2px 0; }
-.right { text-align: right; }
-</style>
-</head>
-<body>
-<div class="center"><strong>XANDER GLOBAL SCHOLARS</strong><br>OFFICIAL PAYMENT RECEIPT</div>
-<div class="center" style="margin-top:4px;">
-    <span>Website: https://xanderglobalscholars.com</span><br>
-    <span>Email: admission@xanderglobalscholars.com</span>
-</div>
-<div class="line"></div>
-Receipt: <?= htmlspecialchars($data['receipt_no']) ?><br>
-Student ID: <?= htmlspecialchars((string)$data['student_id']) ?><br>
-Date: <?= date('Y-m-d H:i') ?><br>
-<div class="line"></div>
-<table>
-<?php foreach ($data['items'] as $row): ?>
-<tr><td><?= htmlspecialchars($row['label']) ?></td><td class="right"><?= number_format($row['amount'], 2) ?></td></tr>
-<?php endforeach; ?>
-</table>
-<div class="line"></div>
-<table><tr><td><strong>TOTAL</strong></td><td class="right"><strong><?= number_format($data['total'], 2) ?></strong></td></tr></table>
-<div class="line"></div>
-Payment: <?= htmlspecialchars($data['method']) ?><br>
-<div class="center">Thank you<br>Keep this receipt</div>
-</body>
-</html>
-<?php
-    return ob_get_clean();
 }

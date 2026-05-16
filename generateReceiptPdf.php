@@ -54,4 +54,3 @@ function generateReceiptPdf(string $receiptHtml, string $receiptNo): void
     file_put_contents($pdfFile . '.html', $receiptHtml);
     error_log("Receipt HTML saved (PDF lib missing): $receiptNo");
 }
-?>

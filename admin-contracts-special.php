@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 session_start();
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/includes/contract_admin_helpers.php';
 
 /* =====================================================
    1. ADMIN AUTH
@@ -27,22 +28,7 @@ $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
 /* =====================================================
    4. FETCH SIGNED CONTRACTS (LOGIC UNCHANGED)
 ===================================================== */
-$sql = "
-    SELECT
-        c.id AS contract_id,
-        c.contract_token,
-        c.status,
-        c.signed_at,
-        c.sent_at,
-        s.first_name,
-        s.last_name,
-        s.email
-    FROM student_contracts_special c
-    LEFT JOIN student_applications s
-        ON s.id = c.student_id
-    WHERE c.status = 'signed'
-    ORDER BY c.id DESC
-";
+$sql = xander_admin_signed_contracts_sql('student_contracts_special', 'student_signatures_special');
 
 $result = $conn->query($sql);
 
@@ -196,6 +182,12 @@ function sendContract(form, btn){
 
 <body>
 
+<?php if (!empty($_GET['deleted'])): ?>
+<p style="background:#d1e7dd;color:#0f5132;padding:10px 14px;border-radius:8px;margin-bottom:16px;">Contract deleted from database.</p>
+<?php elseif (!empty($_GET['error']) && $_GET['error'] === 'delete_failed'): ?>
+<p style="background:#f8d7da;color:#842029;padding:10px 14px;border-radius:8px;margin-bottom:16px;">Could not delete contract. Please try again.</p>
+<?php endif; ?>
+
 <div class="container">
 
 <div class="header">
@@ -232,7 +224,7 @@ function sendContract(form, btn){
 <td><?= $i++ ?></td>
 
 <td>
-<?= htmlspecialchars(trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''))) ?>
+<?= htmlspecialchars(trim((string) ($row['student_name'] ?? ''))) ?>
 </td>
 
 <td><?= htmlspecialchars($row['email'] ?? '—') ?></td>

@@ -5,6 +5,8 @@ ob_start(); // 🔑 CRITICAL: buffer all output
 
 require_once __DIR__ . "/db.php";
 require_once __DIR__ . "/vendor/autoload.php";
+require_once __DIR__ . "/includes/contract_signature_schema.php";
+require_once __DIR__ . "/includes/contract_package_map.php";
 
 header("Content-Type: application/json");
 
@@ -109,6 +111,12 @@ if (!str_starts_with($signature, 'data:image/png;base64,')) {
     fail("Invalid signature format", 400);
 }
 
+if (!getPackageDetails($pkgCode)) {
+    fail("Invalid fee package selection", 400);
+}
+
+xander_ensure_contract_signature_columns($conn);
+
 /* =====================================================
    4. LOAD CONTRACT (NO LOCK YET)
 ===================================================== */
@@ -163,115 +171,37 @@ try {
     logMsg("Contract locked", ["contract_id" => $contractId]);
 
     /* =====================================================
-       6.2 UPSERT STUDENT (MANUAL OR AUTOFILL)
-    ===================================================== */
-    $stmt = $conn->prepare("
-        SELECT id
-        FROM student_applications
-        WHERE email = ?
-        LIMIT 1
-    ");
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $existing = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-
-    if ($existing) {
-        $studentId = (int)$existing['id'];
-
-        $stmt = $conn->prepare("
-       UPDATE student_applications SET
-    first_name      = ?,
-    dob             = ?,
-    nationality     = ?,
-    passport_number = ?,
-    phone_number    = ?,
-    country         = ?,
-    address         = ?,
-    client_type     = ?,
-    updated_at      = NOW()
-WHERE id = ?
-
-        ");
-       $stmt->bind_param(
-    "ssssssssi",
-    $fullName,
-    $dob,
-    $nationality,
-    $passport,
-    $phone,
-    $country,
-    $address,
-    $clientTypes,
-    $studentId
-);
-
-        $stmt->execute();
-        $stmt->close();
-    } else {
-        $stmt = $conn->prepare("
-            INSERT INTO student_applications
-(
-  email,
-  first_name,
-  dob,
-  nationality,
-  passport_number,
-  phone_number,
-  country,
-  address,
-  client_type,
-  created_at
-)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-
-        ");
-$stmt->bind_param(
-    "sssssssss",
-    $email,
-    $fullName,
-    $dob,
-    $nationality,
-    $passport,
-    $phone,
-    $country,
-    $address,
-    $clientTypes
-);
-
-
-        $stmt->execute();
-        $studentId = $stmt->insert_id;
-        $stmt->close();
-    }
-
-    logMsg("Student saved", ["student_id" => $studentId]);
-
-    /* =====================================================
-       6.3 SAVE SIGNATURE
+       6.2 SAVE SIGNATURE (client snapshot — not student_applications)
     ===================================================== */
     $stmt = $conn->prepare("
         INSERT INTO student_signatures
-        (contract_id, student_name, student_email, signed_date, signature_image, created_at)
-        VALUES (?, ?, ?, ?, ?, NOW())
+        (contract_id, student_name, student_email, signed_date, signature_image,
+         client_dob, client_nationality, client_passport, client_phone, client_type, client_country, client_address, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     ");
     $stmt->bind_param(
-        "issss",
+        "isssssssssss",
         $contractId,
-        $name,
+        $fullName,
         $email,
         $signedDate,
-        $signature
+        $signature,
+        $dob,
+        $nationality,
+        $passport,
+        $phone,
+        $clientTypes,
+        $country,
+        $address
     );
     $stmt->execute();
     $stmt->close();
 
     /* =====================================================
-       6.4 FINALIZE CONTRACT
+       6.3 FINALIZE CONTRACT
     ===================================================== */
     $stmt = $conn->prepare("
         UPDATE student_contracts SET
-            student_id             = ?,
             status                 = 'signed',
             signed_at              = NOW(),
             selected_package_code  = ?,
@@ -279,8 +209,7 @@ $stmt->bind_param(
         WHERE id = ?
     ");
     $stmt->bind_param(
-        "issi",
-        $studentId,
+        "ssi",
         $pkgCode,
         $pkgLabel,
         $contractId
@@ -333,6 +262,5 @@ respond([
     "success"      => true,
     "status"       => "signed",
     "contract_id"  => $contractId,
-    "student_id"   => $studentId,
     "pdf_path"     => $pdfPath
 ]);

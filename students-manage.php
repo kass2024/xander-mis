@@ -586,11 +586,40 @@ usort($all_applicants, function($a, $b) {
     }
 
     .btn-share-access,
+    .btn-record-payment,
     .btn-delete-app{
       width: 100%;
       min-width: 0;
       white-space: nowrap;
       box-shadow: 0 8px 18px rgba(2, 6, 23, 0.10);
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .btn-record-payment {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.55rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #fff;
+      background: linear-gradient(135deg, #059669, #047857);
+      border: 1px solid rgba(4, 120, 87, 0.85);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    .btn-record-payment:hover:not(:disabled) {
+      filter: brightness(1.02);
+      transform: translateY(-1px);
+    }
+
+    .btn-record-payment:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
     }
 
     .btn-share-access {
@@ -939,7 +968,7 @@ usort($all_applicants, function($a, $b) {
       position: fixed;
       bottom: 20px;
       right: 20px;
-      z-index: 9999;
+      z-index: 20000;
     }
 
     .toast {
@@ -1036,7 +1065,6 @@ usort($all_applicants, function($a, $b) {
           $statusOptions = [
             'incomplete_app' => 'Incomplete App',
             'submitted' => 'Submitted',
-            'app_paid' => 'App Paid',
             'admit' => 'Admit',
             'i20_sent' => 'I-20 Sent',
             'sevis_paid' => 'Sevis Paid',
@@ -1059,7 +1087,10 @@ usort($all_applicants, function($a, $b) {
                 break;
               }
             }
-            
+            if ($currentStatus === null && !empty($s['app_paid'])) {
+              $currentStatusText = 'Paid';
+            }
+
             // Format phone number
             $phone = $s['phone_number'] ?? '';
             if (!empty($s['area_code']) && !empty($s['phone_number']) && strpos($phone, $s['area_code']) === false) {
@@ -1180,9 +1211,23 @@ usort($all_applicants, function($a, $b) {
               </textarea>
             </td>
 
-            <!-- Actions: Share access + Delete -->
+            <!-- Actions: Record payment, Share access, Delete -->
             <td class="col-actions text-center">
               <div class="action-stack">
+                <?php
+                  $rowFullName = trim(ucfirst((string)($s['first_name'] ?? '')) . ' ' . ucfirst((string)($s['last_name'] ?? '')));
+                  $rowTable = (string)($s['source'] ?? 'student_applications');
+                ?>
+                <button type="button"
+                        class="btn-record-payment"
+                        data-pay-id="<?= (int) $s['id'] ?>"
+                        data-pay-table="<?= htmlspecialchars($rowTable, ENT_QUOTES, 'UTF-8') ?>"
+                        data-pay-name="<?= htmlspecialchars($rowFullName, ENT_QUOTES, 'UTF-8') ?>"
+                        data-pay-email="<?= htmlspecialchars(trim((string)($s['email'] ?? '')), ENT_QUOTES, 'UTF-8') ?>"
+                        title="Record application payment">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V6m0 12v-2m9-4a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  Record payment
+                </button>
                 <?php $rowEmail = trim((string)($s['email'] ?? '')); ?>
                 <?php if ($rowEmail !== '' && filter_var($rowEmail, FILTER_VALIDATE_EMAIL)): ?>
                   <button type="button"
@@ -1278,6 +1323,7 @@ usort($all_applicants, function($a, $b) {
           <input type="hidden" id="pay_student_id" name="student_id">
           <input type="hidden" id="pay_table" name="table">
           <input type="hidden" id="pay_package_id" name="package_id">
+          <input type="hidden" id="pay_request_id" name="request_id">
 
           <!-- Student Info -->
           <div class="row mb-3">
@@ -1356,6 +1402,16 @@ usort($all_applicants, function($a, $b) {
             </div>
           </div>
 
+          <div id="paymentSuccessAlert" class="alert alert-success d-none mt-3 mb-0" role="alert">
+            <strong>Payment saved.</strong>
+            <div id="paymentSuccessDetail" class="small mt-1 mb-0"></div>
+          </div>
+
+          <div id="paymentErrorAlert" class="alert alert-danger d-none mt-3 mb-0" role="alert">
+            <strong>Payment could not be saved.</strong>
+            <div id="paymentErrorDetail" class="small mt-1 mb-0"></div>
+          </div>
+
           <!-- Payment Progress -->
           <div id="paymentProgressWrapper" class="mt-4 d-none">
             <div class="small fw-semibold mb-1" id="paymentProgressText">Processing payment...</div>
@@ -1367,7 +1423,7 @@ usort($all_applicants, function($a, $b) {
 
         <!-- Footer -->
         <div class="modal-footer bg-light rounded-bottom-4">
-          <button type="submit" class="btn btn-success px-4 fw-semibold">💾 Record Payment</button>
+          <button type="submit" id="btnRecordPayment" class="btn btn-success px-4 fw-semibold">💾 Record Payment</button>
           <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
         </div>
       </div>
@@ -1421,7 +1477,7 @@ usort($all_applicants, function($a, $b) {
 </div>
 
 <!-- Success Toast -->
-<div class="toast-container">
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
   <div id="successToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
     <div class="toast-header">
       <strong class="me-auto">✅ Success</strong>
@@ -1527,15 +1583,13 @@ usort($all_applicants, function($a, $b) {
 
 <script>
 $(function() {
-  // Show loading overlay
-  function showLoading() {
-    $('#loadingOverlay').fadeIn();
-  }
-  
-  // Hide loading overlay
-  function hideLoading() {
-    $('#loadingOverlay').fadeOut();
-  }
+  // Global loading overlay (used by payment modal and other actions)
+  window.showLoading = function () {
+    $('#loadingOverlay').stop(true, true).fadeIn(150);
+  };
+  window.hideLoading = function () {
+    $('#loadingOverlay').stop(true, true).fadeOut(150);
+  };
 
   // SEARCH
   $('#searchInput').on('keyup', function(){
@@ -1684,61 +1738,6 @@ $(function() {
         document.getElementById('admissionModal'),
         { backdrop: 'static', keyboard: false }
       ).show();
-      return;
-    }
-
-    // Special handling for App Paid (payment modal)
-    if (flag === 'app_paid') {
-      statusText.text(label);
-      dropdown.find('.status-check').removeClass('active');
-      item.find('.status-check').addClass('active');
-      showLoading();
-      const row = dropdown.closest('tr');
-      const fullName = row.find('td').eq(1).text().trim();
-      const email = row.find('td[data-field="email"]').text().trim();
-      $('#pay_student_id').val(id);
-      $('#pay_table').val(table);
-      $('#pay_name').text(fullName);
-      $('#pay_email').text(email);
-      hideLoading();
-      $('#expected_total').val('Loading...');
-      $('#paid_total').val('Loading...');
-      $('#remaining_total').val('Loading...');
-      const paymentModal = new bootstrap.Modal(
-        document.getElementById('paymentModal'),
-        { backdrop: 'static', keyboard: false }
-      );
-      paymentModal.show();
-      $('#package_select')
-        .prop('disabled', false)
-        .html('<option disabled selected>Loading packages...</option>');
-      $('#expected_total').val('');
-      $('#paid_total').val('');
-      $('#remaining_total').val('');
-      $.getJSON('load-payment-info.php', { student_id: id })
-        .done(function (data) {
-          if (!data || typeof data !== 'object') {
-            alert('Invalid payment response from server');
-            return;
-          }
-          if (data.error) {
-            alert(data.error);
-            return;
-          }
-          if (!Array.isArray(data.packages)) {
-            alert('No packages found');
-            return;
-          }
-          let pkgOptions = '<option value="" disabled selected>Select Package</option>';
-          data.packages.forEach(pkg => {
-            pkgOptions += '<option value="' + pkg.id + '">' + pkg.name + ' (' + pkg.currency + ' ' + Number(pkg.total_amount).toFixed(2) + ')</option>';
-          });
-          $('#package_select').html(pkgOptions);
-        })
-        .fail(function (xhr) {
-          console.error(xhr.responseText);
-          alert('Failed to load payment packages');
-        });
       return;
     }
 
@@ -1981,14 +1980,127 @@ $('#admissionModal').on('hidden.bs.modal', function () {
 });
 
 /* =========================================================
+   RECORD PAYMENT MODAL
+========================================================= */
+function openRecordPaymentModal(studentId, table, fullName, email) {
+  const id = parseInt(String(studentId || ''), 10);
+  if (!id) {
+    alert('Invalid applicant id.');
+    return;
+  }
+
+  $('#pay_student_id').val(id);
+  $('#pay_table').val(table || 'student_applications');
+  $('#pay_name').text(fullName || '—');
+  $('#pay_email').text(email || '—');
+  $('#pay_package_id').val('');
+  $('#package_select').prop('disabled', false).html('<option disabled selected>Loading packages...</option>');
+  $('#expected_total, #paid_total, #remaining_total').val('Loading...');
+  $('#feeItemsWrapper').html('<div class="text-muted text-center py-4">Select a package to load fee items</div>');
+  $('#payment_grand_total').val('0.00');
+  $('select[name="payment_method"]').val('Bank Transfer');
+  $('input[name="comment"]').val('');
+  $('#paymentErrorAlert, #paymentSuccessAlert').addClass('d-none');
+  $('#paymentErrorDetail, #paymentSuccessDetail').text('');
+  $('#pay_request_id').val(
+    (window.crypto && window.crypto.randomUUID)
+      ? window.crypto.randomUUID()
+      : ('pay-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10))
+  );
+
+  const paymentModal = new bootstrap.Modal(
+    document.getElementById('paymentModal'),
+    { backdrop: 'static', keyboard: false }
+  );
+  paymentModal.show();
+
+  $.getJSON('load-payment-info.php', { student_id: id })
+    .done(function (data) {
+      if (!data || typeof data !== 'object') {
+        alert('Invalid payment response from server');
+        return;
+      }
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+      if (!Array.isArray(data.packages) || !data.packages.length) {
+        alert('No packages found');
+        return;
+      }
+      let pkgOptions = '<option value="" disabled selected>Select Package</option>';
+      data.packages.forEach(function (pkg) {
+        pkgOptions += '<option value="' + pkg.id + '">' + pkg.name + ' (' + pkg.currency + ' ' + Number(pkg.total_amount).toFixed(2) + ')</option>';
+      });
+      $('#package_select').html(pkgOptions);
+      $('#expected_total, #paid_total, #remaining_total').val('');
+    })
+    .fail(function (xhr) {
+      console.error(xhr.responseText);
+      alert('Failed to load payment packages');
+    });
+}
+
+$(document).on('click', '.btn-record-payment', function (e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const btn = $(this);
+  openRecordPaymentModal(
+    btn.data('pay-id'),
+    btn.data('pay-table'),
+    btn.data('pay-name'),
+    btn.data('pay-email')
+  );
+});
+
+/* =========================================================
    PAYMENT MODAL — PER ITEM PAYMENT (FINAL / ERROR-PROOF)
 ========================================================= */
 (() => {
   let paymentCurrency = '';
   let itemPayments = {};
   let isSubmitting = false;
+  let paymentSubmitController = null;
 
   const modalEl = document.getElementById('paymentModal');
+
+  function setPageLoading(on) {
+    if (on) {
+      if (typeof window.showLoading === 'function') window.showLoading();
+    } else if (typeof window.hideLoading === 'function') {
+      window.hideLoading();
+    }
+  }
+
+  function hidePaymentError() {
+    $('#paymentErrorAlert').addClass('d-none');
+    $('#paymentErrorDetail').text('');
+  }
+
+  function hidePaymentSuccess() {
+    $('#paymentSuccessAlert').addClass('d-none');
+    $('#paymentSuccessDetail').text('');
+  }
+
+  function showPaymentError(message, detail) {
+    hidePaymentSuccess();
+    const parts = [message || 'Payment failed'];
+    if (detail) parts.push(String(detail));
+    $('#paymentErrorDetail').text(parts.join(' — '));
+    $('#paymentErrorAlert').removeClass('d-none');
+    const alertEl = document.getElementById('paymentErrorAlert');
+    if (alertEl) alertEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function showPaymentSuccess(message, detail) {
+    hidePaymentError();
+    const parts = [message || 'Payment recorded successfully'];
+    if (detail) parts.push(String(detail));
+    $('#paymentSuccessDetail').text(parts.join(' — '));
+    $('#paymentSuccessAlert').removeClass('d-none');
+    const alertEl = document.getElementById('paymentSuccessAlert');
+    if (alertEl) alertEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 
   /* =====================================================
      RESET MODAL
@@ -2005,6 +2117,13 @@ $('#admissionModal').on('hidden.bs.modal', function () {
     $('input[name="comment"]').val('');
     itemPayments = {};
     isSubmitting = false;
+    $('#pay_request_id').val('');
+    if (paymentSubmitController) {
+      paymentSubmitController.abort();
+      paymentSubmitController = null;
+    }
+    hidePaymentError();
+    hidePaymentSuccess();
   });
 
   /* =====================================================
@@ -2017,6 +2136,8 @@ $('#admissionModal').on('hidden.bs.modal', function () {
 
     $('#pay_package_id').val(packageId);
     itemPayments = {};
+    hidePaymentError();
+    hidePaymentSuccess();
 
     $('#feeItemsWrapper').html('<div class="text-muted text-center py-4">Loading fee items…</div>');
 
@@ -2096,79 +2217,189 @@ $('#admissionModal').on('hidden.bs.modal', function () {
   }
 
   /* =========================================================
-   SUBMIT PAYMENT
+   SUBMIT PAYMENT (fetch — reliable on iOS Safari)
   ========================================================= */
-  $('#paymentForm').on('submit', function (e) {
-    e.preventDefault();
+  function parsePaymentJson(raw) {
+    if (!raw || !String(raw).trim()) {
+      return null;
+    }
+    const text = String(raw).trim();
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      const start = text.indexOf('{');
+      const end = text.lastIndexOf('}');
+      if (start >= 0 && end > start) {
+        return JSON.parse(text.slice(start, end + 1));
+      }
+      throw e;
+    }
+  }
 
+  function handlePaymentSuccess(resp) {
+    const msg = (resp && resp.message) ? resp.message : 'Payment recorded successfully';
+    const receipt = (resp && resp.receipt_no) ? ('Receipt: ' + resp.receipt_no) : '';
+    const total = (resp && resp.total_paid) ? ('Total paid: ' + resp.total_paid) : '';
+
+    finishPaymentProgress(true);
+    setPageLoading(false);
+    showPaymentSuccess(msg, [receipt, total].filter(Boolean).join(' · '));
+
+    const rowId = $('#pay_student_id').val();
+    const $row = $('tr[data-row-id="' + rowId + '"]');
+    if ($row.length) {
+      $row.find('.status-dropdown-toggle .status-text').text('Paid');
+    }
+
+    if (resp && resp.receipt_no) {
+      $(document).trigger('payment-recorded', [resp]);
+    }
+
+    if (typeof window.showSuccessToast === 'function') {
+      window.showSuccessToast(msg);
+    }
+
+    setTimeout(function () {
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      if (modal) modal.hide();
+    }, 900);
+  }
+
+  async function submitRecordPayment() {
     if (isSubmitting) return;
+    isSubmitting = true;
+
+    const packageId = $('#pay_package_id').val();
+    hidePaymentError();
+    hidePaymentSuccess();
+
+    if (!packageId) {
+      isSubmitting = false;
+      showPaymentError('Please select a package first.');
+      return;
+    }
     if (!Object.keys(itemPayments).length) {
-      alert('Please enter at least one item payment');
+      isSubmitting = false;
+      showPaymentError('Please enter at least one item payment amount for a fee item.');
       return;
     }
 
-    isSubmitting = true;
-    showLoading();
+    let requestId = $('#pay_request_id').val();
+    if (!requestId) {
+      requestId = (window.crypto && window.crypto.randomUUID)
+        ? window.crypto.randomUUID()
+        : ('pay-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10));
+      $('#pay_request_id').val(requestId);
+    }
+
+    const $btn = $('#btnRecordPayment').prop('disabled', true);
+    setPageLoading(true);
     startPaymentProgress();
+
+    if (paymentSubmitController) {
+      paymentSubmitController.abort();
+    }
+    paymentSubmitController = new AbortController();
 
     const payload = {
       student_id: $('#pay_student_id').val(),
       table: $('#pay_table').val(),
-      package_id: $('#pay_package_id').val(),
+      package_id: packageId,
       payment_method: $('select[name="payment_method"]').val(),
       comment: $('input[name="comment"]').val(),
+      request_id: requestId,
       items: itemPayments
     };
 
-    $.ajax({
-      url: 'record-payment.php',
-      method: 'POST',
-      data: JSON.stringify(payload),
-      contentType: 'application/json',
-      dataType: 'json',
-      success: function (resp) {
-        updatePaymentProgress(60, 'Generating receipt & sending email...');
-        isSubmitting = false;
+    let succeeded = false;
 
-        if (resp && resp.success === true) {
-          setTimeout(() => {
-            finishPaymentProgress(true);
-            hideLoading();
-            showSuccessToast(resp.message || 'Payment recorded successfully');
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            if (modal) modal.hide();
-          }, 800);
-        } else {
-          finishPaymentProgress(false);
-          hideLoading();
-          alert(resp?.message || 'Payment failed');
-        }
-      },
-      error: function (xhr) {
-        isSubmitting = false;
-        finishPaymentProgress(false);
-        hideLoading();
-        console.error('Payment error:', xhr.responseText);
-        alert('Server error. Please try again.');
+    try {
+      const res = await fetch('record-payment.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload),
+        credentials: 'same-origin',
+        signal: paymentSubmitController.signal
+      });
+
+      const raw = await res.text();
+      let resp = null;
+      try {
+        resp = parsePaymentJson(raw);
+      } catch (parseErr) {
+        throw new Error(raw ? raw.slice(0, 280) : 'Invalid server response');
       }
-    });
+
+      updatePaymentProgress(60, 'Saving receipt...');
+
+      if (!res.ok || !resp || resp.success !== true) {
+        const msg = (resp && resp.message) ? resp.message : ('Payment failed (HTTP ' + res.status + ')');
+        const detail = (resp && resp.error) ? resp.error : (raw && !resp ? raw.slice(0, 400) : '');
+        showPaymentError(msg, detail);
+        finishPaymentProgress(false);
+        if (typeof window.showWarningToast === 'function') {
+          window.showWarningToast(msg);
+        }
+        return;
+      }
+
+      succeeded = true;
+      handlePaymentSuccess(resp);
+    } catch (err) {
+      if (err && err.name === 'AbortError') {
+        return;
+      }
+      finishPaymentProgress(false);
+      setPageLoading(false);
+      console.error('Payment error:', err);
+      const msg = err && err.message ? err.message : 'Server error. Please try again.';
+      if ($('#paymentErrorAlert').hasClass('d-none')) {
+        showPaymentError(msg);
+      }
+      if (typeof window.showWarningToast === 'function') {
+        window.showWarningToast(msg);
+      }
+    } finally {
+      if (!succeeded) {
+        isSubmitting = false;
+        $btn.prop('disabled', false);
+      }
+      paymentSubmitController = null;
+    }
+  }
+
+  $('#paymentForm').on('submit', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    submitRecordPayment();
   });
 
   /* =====================================================
      SUCCESS TOAST
   ===================================================== */
   window.showSuccessToast = function (msg) {
+    const text = '✅ ' + (msg || 'Payment recorded successfully');
     const toast = document.getElementById('successToast');
-    if (!toast) return alert(msg);
-    toast.querySelector('.toast-body').innerText = '✅ ' + msg;
-    new bootstrap.Toast(toast).show();
+    if (!toast) {
+      alert(text);
+      return;
+    }
+    toast.querySelector('.toast-body').innerText = text;
+    bootstrap.Toast.getOrCreateInstance(toast, { delay: 6000 }).show();
   };
 
   window.showWarningToast = function (msg) {
+    const text = '⚠ ' + (msg || 'Something went wrong');
     const toast = document.getElementById('warningToast');
-    if (!toast) return alert(msg);
-    toast.querySelector('.toast-body').innerText = msg;
-    new bootstrap.Toast(toast).show();
+    if (!toast) {
+      alert(text);
+      return;
+    }
+    toast.querySelector('.toast-body').innerText = text;
+    bootstrap.Toast.getOrCreateInstance(toast, { delay: 8000 }).show();
   };
 })();
 
@@ -2176,15 +2407,23 @@ $('#admissionModal').on('hidden.bs.modal', function () {
    AUTO RECEIPT PRINT TRIGGER
 ===================================================== */
 (function () {
-  $(document).ajaxSuccess(function (event, xhr, settings, response) {
-    if (!settings.url || !settings.url.includes('record-payment.php')) return;
-    if (!response || response.success !== true || !response.receipt_no) return;
-
+  function openReceiptPrint(receiptNo) {
+    if (!receiptNo) return;
     setTimeout(function () {
-      const printUrl = 'printReceipt.php?receipt_no=' + encodeURIComponent(response.receipt_no);
+      const printUrl = 'printReceipt.php?receipt_no=' + encodeURIComponent(receiptNo);
       const win = window.open(printUrl, '_blank');
       if (!win) alert('⚠️ Please allow popups to print the receipt.');
     }, 300);
+  }
+
+  $(document).on('payment-recorded', function (_e, resp) {
+    if (resp && resp.receipt_no) openReceiptPrint(resp.receipt_no);
+  });
+
+  $(document).ajaxSuccess(function (event, xhr, settings, response) {
+    if (!settings.url || !settings.url.includes('record-payment.php')) return;
+    if (!response || response.success !== true || !response.receipt_no) return;
+    openReceiptPrint(response.receipt_no);
   });
 })();
 

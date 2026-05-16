@@ -6,6 +6,7 @@ use Dompdf\Options;
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/includes/contract_package_map.php';
 
 /* =====================================================
    SAFE ESCAPE
@@ -25,180 +26,6 @@ function checkbox(bool $checked): string
 }
 
 /* =====================================================
-   ARTICLE 5 – PACKAGE MAP (SINGLE SOURCE OF TRUTH)
-   ALIGNED WITH FINAL HTML CONTRACT (EXACT MATCH)
-===================================================== */
-function getPackageDetails(string $code): array
-{
-    $packages = [
-
-        /* =========================
-           5. FEES & PAYMENT TERMS - Study Services
-        ========================== */
-
-        /* -----------------------------------------
-           🎓 Study Services 
-        ----------------------------------------- */
-        'p501' => [
-            'title' => 'USA & Canada (Without Loan) – €1,500',
-            'lines' => [
-                '€350 – Pre-admission',
-                '€1150 – After visa approval',
-            ],
-            'total' => '€1,500',
-        ],
-
-        'p502' => [
-            'title' => 'Education Loan Processing (USA & Canada) – €1,500',
-            'lines' => [
-                '€550 – Pre-admission',
-                '€950 – After visa approval',
-            ],
-            'total' => '€1,500',
-        ],
-
-        'p503' => [
-            'title' => 'Europe Study – €1,500',
-            'lines' => [
-                '€350 – Pre-admission',
-                '€1150 – After visa approval',
-            ],
-            'total' => '€1,500',
-        ],
-
-        'p504' => [
-            'title' => 'Europe Study Full scholarships – €1,500',
-            'lines' => [
-                '€600 – Pre-admission',
-                '€900 – After visa approval',
-            ],
-            'total' => '€1,500',
-        ],
-
-        'p505' => [
-            'title' => 'High School Placement (USA, Canada & Europe) – €4,000',
-            'lines' => [
-                '€2500 – Pre-admission',
-                '€1500 – After visa approval',
-            ],
-            'total' => '€4,000',
-        ],
-
-        'p506' => [
-            'title' => 'South Korea and China Study – €3,000',
-            'lines' => [
-                '€1500 – Pre-admission',
-                '€1500 – After visa approval',
-            ],
-            'total' => '€3,000',
-        ],
-
-        /* =========================
-           🌍 Visit Visa Services
-        ========================== */
-        'p507' => [
-            'title' => 'USA & Canada Visit Visa – €4,000',
-            'lines' => [
-                '€2,600 Pre-admission',
-                '€1,400 After visa approval',
-            ],
-            'total' => '€4,000',
-        ],
-
-        'p508' => [
-            'title' => 'Europe Visit Visa – €2,500',
-            'lines' => [
-                '€1,625 Pre-admission',
-                '€875 After visa approval',
-            ],
-            'total' => '€2,500',
-        ],
-
-        /* =========================
-           🔁 Credit Transfer Services
-        ========================== */
-        'p509' => [
-            'title' => 'Bachelor’s Degree – €1,500',
-            'lines' => [
-                '€975 Pre-admission',
-                '€525 After visa approval',
-            ],
-            'total' => '€1,500',
-        ],
-
-        'p510' => [
-            'title' => 'Master’s Degree – €1,700',
-            'lines' => [
-                '65%: €1,105',
-                '35%: €595',
-            ],
-            'total' => '€1,700',
-        ],
-
-        'p511' => [
-            'title' => 'PhD Level – €2,400',
-            'lines' => [
-                '65%: €1,560',
-                '35%: €840',
-            ],
-            'total' => '€2,400',
-        ],
-
-        /* =========================
-           🌏 Asia Visit Visa Services
-        ========================== */
-        'p512' => [
-            'title' => 'Documentation Support Only – €1,200',
-            'lines' => [
-                '65%: €780',
-                '35%: €420',
-            ],
-            'total' => '€1,200',
-        ],
-
-        'p513' => [
-            'title' => 'Application Processing Only – €800',
-            'lines' => [
-                '65%: €520',
-                '35%: €280',
-            ],
-            'total' => '€800',
-        ],
-
-        'p514' => [
-            'title' => 'Full Service Package – €2,000',
-            'lines' => [
-                '65%: €1,300',
-                '35%: €700',
-            ],
-            'total' => '€2,000',
-        ],
-
-        /* =========================
-           💼 Job Seeker Services
-        ========================== */
-        'p515' => [
-            'title' => 'Expedited Processing (1-2 months) – €2,500',
-            'lines' => [
-                '50% (€1,250) before application',
-                '50% (€1,250) after visa approval',
-            ],
-            'total' => '€2,500',
-        ],
-
-        'p516' => [
-            'title' => 'Standard Processing (2-5months) – €1,500',
-            'lines' => [
-                '50% (€750) before application',
-                '50% (€750) before embassy appointment',
-            ],
-            'total' => '€1,500',
-        ],
-    ];
-
-    return $packages[$code] ?? [];
-}
-/* =====================================================
    GENERATE FINAL SIGNED CONTRACT PDF
 ===================================================== */
 function generateContractPDF(int $contractId): string
@@ -213,21 +40,20 @@ $stmt = $conn->prepare("
     c.contract_token,
     c.selected_package_code,
 
-    TRIM(s.first_name) AS full_name,
-    s.email,
-    s.dob,
-    s.nationality,
-    s.passport_number,
-    s.phone_number,
-    s.country,
-    s.address,
-    s.client_type,
+    sig.student_name AS full_name,
+    sig.student_email AS email,
+    sig.client_dob AS dob,
+    sig.client_nationality AS nationality,
+    sig.client_passport AS passport_number,
+    sig.client_phone AS phone_number,
+    sig.client_country AS country,
+    sig.client_address AS address,
+    sig.client_type,
 
     sig.signed_date,
     sig.signature_image
 
     FROM student_contracts c
-    INNER JOIN student_applications s ON s.id = c.student_id
     INNER JOIN student_signatures sig ON sig.contract_id = c.id
     WHERE c.id = ?
     LIMIT 1

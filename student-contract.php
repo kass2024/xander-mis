@@ -56,6 +56,7 @@ if (!$contract) {
  * 4. Contract state flag (DO NOT EXIT)
  */
 $isSigned = ($contract['status'] === 'signed');
+$selectedPackageCode = (string) ($contract['selected_package_code'] ?? '');
 
 /* =====================================================
    LOAD STUDENT DATA FOR SERVER-SIDE RENDERING (SAFE)
@@ -322,68 +323,6 @@ button {
     display: none;
   }
 }
-/* =========================
-   SUBMIT OVERLAY
-========================= */
-.submit-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
-
-.submit-overlay.hidden {
-  display: none;
-}
-
-.submit-box {
-  background: #ffffff;
-  padding: 28px 26px;
-  width: 90%;
-  max-width: 360px;
-  border-radius: 16px;
-  text-align: center;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.25);
-}
-
-.submit-title {
-  font-weight: 700;
-  margin-bottom: 14px;
-}
-
-.submit-hint {
-  font-size: 13px;
-  color: #475569;
-  margin-top: 10px;
-}
-
-/* =========================
-   PROGRESS BAR
-========================= */
-.progress-track {
-  width: 100%;
-  height: 10px;
-  background: #e5e7eb;
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.progress-bar {
-  width: 0%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    #2563eb,
-    #4f46e5
-  );
-  border-radius: 999px;
-  transition: width 0.35s ease;
-}
-
 </style>
 
 
@@ -677,210 +616,11 @@ immigration authorities, lenders, and other third-party entities.
 
 <h2>5. FEES & PAYMENT TERMS</h2>
 
-<p>
-All fees cover professional consulting, documentation support, administrative processing, and coordination services.
-<br>
-<strong>Government fees, embassy charges, biometric fees, tuition Deposits, courier fees, legal fees, and third-party costs are paid separately and are non-refundable.</strong>
-</p>
-
-<p>🎓 Study Services</p>
-
-<!-- =========================
-     PACKAGES (ONE ACTIVE ONLY)
-========================= -->
-
-<div class="package-item">
-  <label class="package-label">
-    <input type="radio" name="package" onclick="showPkg('p501')">
-    5.1 USA & Canada (Without Loan) – €1,500
-  </label>
-  <div id="p501" class="package-details">
-    • €350 – Pre-admission<br>
-    • €1150 – After visa approval
-  </div>
-</div>
-
-<div class="package-item">
-  <label class="package-label">
-    <input type="radio" name="package" onclick="showPkg('p502')">
-    5.2 Education Loan Processing (USA & Canada) – €1,500
-  </label>
-  <div id="p502" class="package-details">
-    • €550 – Pre-admission<br>
-    • €950 – After visa approval
-  </div>
-</div>
-
-<div class="package-item">
-  <label class="package-label">
-    <input type="radio" name="package" onclick="showPkg('p503')">
-    5.3 Europe Study – €1,500
-  </label>
-  <div id="p503" class="package-details">
-    • €350 – Pre-admission<br>
-    • €1150 – After visa approval
-  </div>
-</div>
-
-<div class="package-item">
-  <label class="package-label">
-    <input type="radio" name="package" onclick="showPkg('p504')">
-    5.4 Europe Study Full scholarships – €1,500
-  </label>
-  <div id="p504" class="package-details">
-    • €600 – Pre-admission<br>
-    • €900 – After visa approval
-  </div>
-</div>
-
-<div class="package-item">
-  <label class="package-label">
-    <input type="radio" name="package" onclick="showPkg('p505')">
-    5.5 High School Placement (USA, Canada & Europe) – €4,000
-  </label>
-  <div id="p505" class="package-details">
-    • €2500 – Pre-admission<br>
-    • €1500 – After visa approval
-  </div>
-</div>
-
-<div class="package-item">
-  <label class="package-label">
-    <input type="radio" name="package" onclick="showPkg('p506')">
-    5.6 South Korea and China Study – €3,000
-  </label>
-  <div id="p506" class="package-details">
-    • €1500 – Pre-admission<br>
-    • €1500 – After visa approval
-  </div>
-</div>
-
-<p>________________________________________</p>
-<p>🌍 Visit Visa Services</p>
-
-<div class="package-item">
-  <label class="package-label">
-    <input type="radio" name="package" onclick="showPkg('p507')">
-    5.7 USA & Canada Visit Visa – €4,000
-  </label>
-  <div id="p507" class="package-details">
-    • €2,600 Pre-admission<br>
-    • €1,400 After visa approval
-  </div>
-</div>
-
-<div class="package-item">
-  <label class="package-label">
-    <input type="radio" name="package" onclick="showPkg('p508')">
-    5.8 Europe Visit Visa – €2,500
-  </label>
-  <div id="p508" class="package-details">
-    • €1,625 Pre-admission<br>
-    • €875 After visa approval
-  </div>
-</div>
-
-<p>________________________________________</p>
-<p>🔁 Credit Transfer Services</p>
-
-<div class="package-item">
-  <label class="package-label">
-    <input type="radio" name="package" onclick="showPkg('p509')">
-    5.9 Bachelor's Degree – €1,500
-  </label>
-  <div id="p509" class="package-details">
-    • €975 Pre-admission<br>
-    • €525 After visa approval
-  </div>
-</div>
-
-<div class="package-item">
-  <label class="package-label">
-    <input type="radio" name="package" onclick="showPkg('p510')">
-    5.10 Master's Degree – €1,700
-  </label>
-  <div id="p510" class="package-details">
-    • 65%: €1,105<br>
-    • 35%: €595
-  </div>
-</div>
-
-<div class="package-item">
-  <label class="package-label">
-    <input type="radio" name="package" onclick="showPkg('p511')">
-    5.11 PhD Level – €2,400
-  </label>
-  <div id="p511" class="package-details">
-    • 65%: €1,560<br>
-    • 35%: €840
-  </div>
-</div>
-
-<p>________________________________________</p>
-<p>🌏 Asia Visit Visa Services (65% upfront / 35% later)</p>
-
-<div class="package-item">
-  <label class="package-label">
-    <input type="radio" name="package" onclick="showPkg('p512')">
-    5.12 Documentation Support Only – €1,200
-  </label>
-  <div id="p512" class="package-details">
-    • 65%: €780<br>
-    • 35%: €420
-  </div>
-</div>
-
-<div class="package-item">
-  <label class="package-label">
-    <input type="radio" name="package" onclick="showPkg('p513')">
-    5.13 Application Processing Only – €800
-  </label>
-  <div id="p513" class="package-details">
-    • 65%: €520<br>
-    • 35%: €280
-  </div>
-</div>
-
-<div class="package-item">
-  <label class="package-label">
-    <input type="radio" name="package" onclick="showPkg('p514')">
-    5.14 Full Service Package – €2,000
-  </label>
-  <div id="p514" class="package-details">
-    • 65%: €1,300<br>
-    • 35%: €700
-  </div>
-</div>
-
-<p>________________________________________</p>
-<p>💼 Job Seeker Services</p>
-
-<div class="package-item">
-  <label class="package-label">
-    <input type="radio" name="package" onclick="showPkg('p515')">
-    5.15 Expedited Processing (1-2 months) – €2,500
-  </label>
-  <div id="p515" class="package-details">
-    • 50% (€1,250) before application<br>
-    • 50% (€1,250) after visa approval
-  </div>
-</div>
-
-<div class="package-item">
-  <label class="package-label">
-    <input type="radio" name="package" onclick="showPkg('p516')">
-    5.16 Standard Processing (2-5 months) – €1,500
-  </label>
-  <div id="p516" class="package-details">
-    • 50% (€750) before application<br>
-    • 50% (€750) before embassy appointment
-  </div>
-</div>
-
-<p>
-⚠ Failure to pay may result in suspension or termination of services.
-</p>
-<input type="hidden" id="selected_package_code" value="">
+<?php
+require_once __DIR__ . '/includes/contract_fee_packages.php';
+renderContractFeePackagesSection($isSigned, $selectedPackageCode);
+?>
+<!-- PACKAGES_END -->
 <div class="hr"></div>
 <h2>6. PROCESSING TIMELINE</h2>
 
@@ -1145,20 +885,7 @@ and supersedes all prior agreements.
 
 </div>
 </section>
-<!-- =========================
-     SUBMIT PROGRESS OVERLAY
-========================= -->
-<div id="submitOverlay" class="submit-overlay hidden">
-  <div class="submit-box">
-    <p class="submit-title">Submitting Signature…</p>
-
-    <div class="progress-track">
-      <div id="progressBar" class="progress-bar"></div>
-    </div>
-
-    <p class="submit-hint">Please do not refresh or close this page</p>
-  </div>
-</div>
+<?php include __DIR__ . '/includes/contract_signing_overlay.php'; ?>
 
 <?php include 'footer.php'; ?>
 
@@ -1374,31 +1101,20 @@ function getClientTypes() {
 /* ==========================
    SUBMIT PROGRESS CONTROLLER
 ========================== */
-const submitOverlay = document.getElementById('submitOverlay');
-const progressBar   = document.getElementById('progressBar');
-const submitBtnUI   = document.getElementById('signContract');
-
-let progressTimer = null;
+const submitBtnUI = document.getElementById('signContract');
 
 function startSubmitProgress() {
-  if (!submitOverlay || !progressBar) return;
-
-  submitOverlay.classList.remove('hidden');
-  submitBtnUI.disabled = true;
-  progressBar.style.width = '0%';
-
-  let value = 0;
-  progressTimer = setInterval(() => {
-    if (value < 90) {
-      value += Math.random() * 6;
-      progressBar.style.width = Math.min(value, 90) + '%';
-    }
-  }, 300);
+  if (window.ContractSigningUI) {
+    ContractSigningUI.start({ submitBtn: submitBtnUI, message: 'Securing your signature…' });
+  } else if (submitBtnUI) {
+    submitBtnUI.disabled = true;
+  }
 }
 
 function finishSubmitProgress() {
-  clearInterval(progressTimer);
-  if (progressBar) progressBar.style.width = '100%';
+  if (window.ContractSigningUI) {
+    ContractSigningUI.finish();
+  }
 }
 
   /* ==========================
@@ -1487,6 +1203,10 @@ if (!payload.selected_package_label) {
   return;
 }
 
+if (window.ContractSigningUI) {
+  ContractSigningUI.setMessage('Saving contract & generating PDF…');
+}
+
 /* ==========================
    SUBMIT TO BACKEND
 ========================== */
@@ -1514,44 +1234,38 @@ fetch("submit-signature.php", {
   return data;
 })
 .then(data => {
-  finishSubmitProgress();
-
-  // ✅ SUCCESS
   if (data.success) {
-    alert(
-      "Contract signed successfully.\n\n" +
-      "You can now download or view the signed agreement."
-    );
-    window.location.reload();
+    if (window.ContractSigningUI) {
+      ContractSigningUI.finishAndReload(
+        data.message || "Contract signed successfully.\nYou can download or view your signed agreement.",
+        3000
+      );
+    } else {
+      alert("Contract signed successfully.\n\nYou can now download or view the signed agreement.");
+      window.location.reload();
+    }
     return;
   }
 
-  // ⚠️ EXPECTED CASE: already signed
   if (data.error && data.error.toLowerCase().includes("already signed")) {
-    alert(
-      "This contract has already been signed.\n\n" +
-      "You can now download or view the signed agreement."
-    );
-    window.location.reload();
+    if (window.ContractSigningUI) {
+      ContractSigningUI.finishAndReload("This contract was already signed.", 2500);
+    } else {
+      alert("This contract has already been signed.\n\nYou can now download or view the signed agreement.");
+      window.location.reload();
+    }
     return;
   }
 
-  // ❌ OTHER BACKEND ERRORS
+  if (window.ContractSigningUI) ContractSigningUI.hide({ submitBtn: submitBtnUI });
+  else if (submitBtnUI) submitBtnUI.disabled = false;
   alert(data.error || "Submission failed.");
-
 })
 .catch(err => {
   console.error("Signature submission error:", err);
-    // ❌ STOP PROGRESS & UNLOCK UI
-  clearInterval(progressTimer);
-  submitOverlay.classList.add('hidden');
-  submitBtnUI.disabled = false;
-
-
-  alert(
-    "Unable to submit at this time.\n" +
-    "Please check your connection and try again."
-  );
+  if (window.ContractSigningUI) ContractSigningUI.hide({ submitBtn: submitBtnUI });
+  else if (submitBtnUI) submitBtnUI.disabled = false;
+  alert("Unable to submit at this time.\nPlease check your connection and try again.");
 });
 
 

@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 require_once __DIR__ . '/db.php';
 
 // Handle form submission for student registration
@@ -89,8 +91,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_payment'])) {
 
 // Get student data from URL parameter instead of session
 $selected_student = null;
-$registration_error = $_GET['error'] ?? null;
-$registered_new = $_GET['registered'] ?? null;
+$registration_error = isset($_GET['error']) ? (string) $_GET['error'] : null;
+$registered_new = isset($_GET['registered']) && (string) $_GET['registered'] !== '';
 
 if (isset($_GET['student_id'])) {
     $student_id = (int)$_GET['student_id'];
@@ -102,7 +104,7 @@ if (isset($_GET['student_id'])) {
 }
 
 // Fetch packages from database (using fee_packages table)
-$packages = $conn->query("SELECT * FROM fee_packages ORDER BY title ASC");
+$packages = $conn->query("SELECT * FROM fee_packages ORDER BY display_order ASC, id ASC");
 
 // Fetch fee items for each package (using fee_items table)
 $fee_items = [];
@@ -280,7 +282,9 @@ include 'header.php';
                         </button>
                     </form>
                 </div>
-            <?php else: ?>
+            <?php endif; ?>
+        </div>
+    <?php else: ?>
         <!-- Selected Student Info Display -->
         <div class="student-info-section">
             <div class="student-card">
@@ -288,7 +292,7 @@ include 'header.php';
                     <i class="fas fa-user-graduate"></i>
                 </div>
                 <div class="student-details">
-                    <h3><?= htmlspecialchars($selected_student['first_name'] . ' . $selected_student['last_name']) ?></h3>
+                    <h3><?= htmlspecialchars(trim(($selected_student['first_name'] ?? '') . ' ' . ($selected_student['last_name'] ?? ''))) ?></h3>
                     <p><i class="fas fa-envelope"></i> <?= htmlspecialchars($selected_student['email']) ?></p>
                     <?php if ($selected_student['phone_number']): ?>
                         <p><i class="fas fa-phone"></i> <?= htmlspecialchars($selected_student['area_code'] . ' ' . $selected_student['phone_number']) ?></p>
@@ -346,7 +350,8 @@ include 'header.php';
                     </button>
                 </form>
             </div>
-        <?php endif; ?>
+        </div>
+    <?php endif; ?>
     
     <!-- Quick Actions Section -->
     <div class="payment-section">
@@ -978,4 +983,3 @@ function calculateTotal() {
     }
 }
 </style>
-?>

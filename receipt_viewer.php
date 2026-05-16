@@ -83,7 +83,7 @@ body{
 ========================= */
 .receipt-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(340px,1fr));
+    grid-template-columns:repeat(auto-fill,minmax(380px,1fr));
     gap:22px;
 }
 
@@ -207,6 +207,10 @@ td{
     66%{content:" Loading.."}
     100%{content:" Loading..."}
 }
+<?php
+require_once __DIR__ . '/includes/receipt_branding.php';
+echo xander_receipt_brand_css_screen();
+?>
 </style>
 </head>
 

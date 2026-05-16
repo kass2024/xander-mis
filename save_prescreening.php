@@ -30,6 +30,7 @@ try {
 
     require_once __DIR__ . '/db.php';
     require_once __DIR__ . '/helpers/prescreening_schema.php';
+    require_once __DIR__ . '/helpers/prescreening_save.php';
     require_once __DIR__ . '/helpers/prescreening_notify.php';
     require_once __DIR__ . '/helpers/prescreening_whatsapp_flow.php';
     require_once __DIR__ . '/helpers/prescreening_whatsapp_schema.php';
@@ -63,67 +64,22 @@ try {
         prescreening_respond(['status' => 'error', 'message' => 'Invalid student email address.']);
     }
 
-    $fields = [
-        'education_level' => trim((string) ($_POST['education_level'] ?? '')),
-        'course_program' => trim((string) ($_POST['course_program'] ?? '')),
-        'country_interest' => trim((string) ($_POST['country_interest'] ?? '')),
-        'open_other_countries' => trim((string) ($_POST['open_other_countries'] ?? '')),
-        'budget_tuition' => trim((string) ($_POST['budget_tuition'] ?? '')),
-        'funds_application_visa' => trim((string) ($_POST['funds_application_visa'] ?? '')),
-        'sponsor' => trim((string) ($_POST['sponsor'] ?? '')),
-        'afford_deposit' => trim((string) ($_POST['afford_deposit'] ?? '')),
-        'has_valid_passport' => trim((string) ($_POST['has_valid_passport'] ?? '')),
-        'academic_docs_ready' => trim((string) ($_POST['academic_docs_ready'] ?? '')),
-        'english_level' => trim((string) ($_POST['english_level'] ?? '')),
-        'english_test_taken' => trim((string) ($_POST['english_test_taken'] ?? '')),
-        'visa_denied' => trim((string) ($_POST['visa_denied'] ?? '')),
-        'planned_intake' => trim((string) ($_POST['planned_intake'] ?? '')),
-        'ready_to_apply' => trim((string) ($_POST['ready_to_apply'] ?? '')),
-    ];
-
-    $requiredQuestions = [
-        'education_level', 'course_program', 'country_interest', 'budget_tuition',
-        'funds_application_visa', 'sponsor', 'afford_deposit', 'has_valid_passport',
-        'academic_docs_ready', 'english_level', 'visa_denied', 'planned_intake', 'ready_to_apply',
-    ];
-    foreach ($requiredQuestions as $rq) {
-        if (($fields[$rq] ?? '') === '') {
-            prescreening_respond(['status' => 'error', 'message' => 'Please answer all required pre-screening questions.']);
-        }
+    $parsed = xander_prescreening_parse_form_payload($_POST, $_FILES, 'user');
+    if ($parsed['errors'] !== []) {
+        prescreening_respond(['status' => 'error', 'message' => $parsed['errors'][0]]);
     }
-
-    $docKeys = array_keys(xander_prescreening_document_labels());
-    $uploadDir = __DIR__ . '/uploads/prescreening/';
-    if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
+    $fields = $parsed['fields'];
+    $docPaths = $parsed['docPaths'];
+    $existingRow = null;
+    $load = $conn->prepare('SELECT * FROM prescreening_submissions WHERE user_id = ? LIMIT 1');
+    if ($load) {
+        $load->bind_param('s', $userId);
+        $load->execute();
+        $existingRow = $load->get_result()->fetch_assoc();
+        $load->close();
     }
-
-    $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'];
-    $maxSize = 10 * 1024 * 1024;
-    $docPaths = [];
-
-    foreach ($docKeys as $docKey) {
-        if (!isset($_FILES[$docKey]) || (int) ($_FILES[$docKey]['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
-            $docPaths[$docKey] = trim((string) ($_POST[$docKey . '_existing'] ?? ''));
-            continue;
-        }
-        if ((int) $_FILES[$docKey]['error'] !== UPLOAD_ERR_OK) {
-            prescreening_respond(['status' => 'error', 'message' => 'Upload failed for ' . $docKey]);
-        }
-        $file = $_FILES[$docKey];
-        if ((int) $file['size'] > $maxSize) {
-            prescreening_respond(['status' => 'error', 'message' => 'File too large (max 10MB per document).']);
-        }
-        $ext = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
-        if (!in_array($ext, $allowedExt, true)) {
-            prescreening_respond(['status' => 'error', 'message' => 'Invalid file type for ' . $docKey]);
-        }
-        $filename = $userId . '_' . $docKey . '_' . time() . '.' . $ext;
-        $dest = $uploadDir . $filename;
-        if (!move_uploaded_file((string) $file['tmp_name'], $dest)) {
-            prescreening_respond(['status' => 'error', 'message' => 'Could not save uploaded file.']);
-        }
-        $docPaths[$docKey] = 'uploads/prescreening/' . $filename;
+    if (is_array($existingRow)) {
+        $docPaths = xander_prescreening_merge_doc_paths_from_row($existingRow, $docPaths);
     }
 
     $adminId = (int) ($_SESSION['admin_id'] ?? $_SESSION['id'] ?? 0);

@@ -1202,18 +1202,6 @@ button {
     <input type="hidden" id="signatureData">
   </div>
 
-  <!-- PROGRESS -->
-  <div id="signatureProgress" style="display:none;margin-top:10px;">
-    <div style="height:8px;background:#e5e7eb;border-radius:999px;">
-      <div id="signatureProgressBar"
-           style="height:100%;width:0%;background:#2563eb;"></div>
-    </div>
-    <div id="signatureProgressText"
-         style="font-size:12px;text-align:center;margin-top:4px;">
-      Submitting signature…
-    </div>
-  </div>
-
 </div>
 
 
@@ -1494,6 +1482,7 @@ function stopDraw() {
      SEND TO BACKEND
   ========================== */
 function submitSignature(signature, name, date, selectedPackage) {
+  const submitBtnUI = document.getElementById('signContract');
 
   /* ==========================
      1. HARD SAFETY CHECKS
@@ -1501,6 +1490,12 @@ function submitSignature(signature, name, date, selectedPackage) {
   if (!signature || !name || !date || !selectedPackage) {
     alert("Missing required data. Please review the form and try again.");
     return;
+  }
+
+  if (window.ContractSigningUI) {
+    ContractSigningUI.start({ submitBtn: submitBtnUI, message: 'Securing your signature…' });
+  } else if (submitBtnUI) {
+    submitBtnUI.disabled = true;
   }
 
   /* ==========================
@@ -1560,6 +1555,10 @@ if (!payload.selected_package_label) {
   return;
 }
 
+if (window.ContractSigningUI) {
+  ContractSigningUI.setMessage('Saving contract & generating PDF…');
+}
+
 /* ==========================
    SUBMIT TO BACKEND
 ========================== */
@@ -1587,38 +1586,38 @@ fetch("submit-signature-special.php", {
   return data;
 })
 .then(data => {
-
-  // ✅ SUCCESS
   if (data.success) {
-    alert(
-      "Contract signed successfully.\n\n" +
-      "You can now download or view the signed agreement."
-    );
-    window.location.reload();
+    if (window.ContractSigningUI) {
+      ContractSigningUI.finishAndReload(
+        data.message || "Contract signed successfully.\nYou can download or view your signed agreement.",
+        3000
+      );
+    } else {
+      alert("Contract signed successfully.\n\nYou can now download or view the signed agreement.");
+      window.location.reload();
+    }
     return;
   }
 
-  // ⚠️ EXPECTED CASE: already signed
   if (data.error && data.error.toLowerCase().includes("already signed")) {
-    alert(
-      "This contract has already been signed.\n\n" +
-      "You can now download or view the signed agreement."
-    );
-    window.location.reload();
+    if (window.ContractSigningUI) {
+      ContractSigningUI.finishAndReload("This contract was already signed.", 2500);
+    } else {
+      alert("This contract has already been signed.\n\nYou can now download or view the signed agreement.");
+      window.location.reload();
+    }
     return;
   }
 
-  // ❌ OTHER BACKEND ERRORS
+  if (window.ContractSigningUI) ContractSigningUI.hide({ submitBtn: submitBtnUI });
+  else if (submitBtnUI) submitBtnUI.disabled = false;
   alert(data.error || "Submission failed.");
-
 })
 .catch(err => {
   console.error("Signature submission error:", err);
-
-  alert(
-    "Unable to submit at this time.\n" +
-    "Please check your connection and try again."
-  );
+  if (window.ContractSigningUI) ContractSigningUI.hide({ submitBtn: submitBtnUI });
+  else if (submitBtnUI) submitBtnUI.disabled = false;
+  alert("Unable to submit at this time.\nPlease check your connection and try again.");
 });
 
 
@@ -1851,183 +1850,8 @@ window.showPkg = function (id) {
 
 })();
 </script>
-<script>
-(function () {
-  'use strict';
-
-  const canvas = document.querySelector('.signature-canvas');
-  if (!canvas) return;
-
-  const ctx = canvas.getContext('2d');
-  const btnClear = document.getElementById('clearSignature');
-  const btnSubmit = document.getElementById('signContract');
-
-  const inputName = document.getElementById('sig_student_name');
-  const inputDate = document.getElementById('sig_signed_date');
-
-  const progressBox  = document.getElementById('signatureProgress');
-  const progressBar  = document.getElementById('signatureProgressBar');
-  const progressText = document.getElementById('signatureProgressText');
-
-  let drawing = false;
-  let progressTimer = null;
-
-  /* ============================
-     CANVAS SETUP
-  ============================ */
-  function resizeCanvas() {
-    const ratio = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * ratio;
-    canvas.height = rect.height * ratio;
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#111827';
-  }
-
-  resizeCanvas();
-  window.addEventListener('resize', resizeCanvas);
-
-  function pos(e) {
-    const r = canvas.getBoundingClientRect();
-    const t = e.touches ? e.touches[0] : e;
-    return { x: t.clientX - r.left, y: t.clientY - r.top };
-  }
-
-  canvas.addEventListener('mousedown', e => {
-    drawing = true;
-    const p = pos(e);
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
-  });
-
-canvas.addEventListener('mousemove', e => {
-  if (!drawing) return;
-  e.preventDefault();
-
-  const p = pos(e);
-  points.push(p);
-
-  // Not enough points yet → simple line
-  if (points.length < 3) {
-    ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    return;
-  }
-
-  // Last 3 points
-  const p0 = points[points.length - 3];
-  const p1 = points[points.length - 2];
-  const p2 = points[points.length - 1];
-
-  // Midpoint between p1 and p2
-  const midX = (p1.x + p2.x) / 2;
-  const midY = (p1.y + p2.y) / 2;
-
-  ctx.beginPath();
-  ctx.moveTo(p0.x, p0.y);
-  ctx.quadraticCurveTo(p1.x, p1.y, midX, midY);
-  ctx.stroke();
-});
 
 
-  canvas.addEventListener('mouseup', () => drawing = false);
-  canvas.addEventListener('mouseleave', () => drawing = false);
-
-  canvas.addEventListener('touchstart', e => {
-    drawing = true;
-    const p = pos(e);
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
-  }, { passive:false });
-
-  canvas.addEventListener('touchmove', e => {
-    if (!drawing) return;
-    e.preventDefault();
-    const p = pos(e);
-    ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-  }, { passive:false });
-
-  canvas.addEventListener('touchend', () => drawing = false);
-
-  btnClear.addEventListener('click', () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  });
-
-  function hasSignature() {
-    return ctx.getImageData(0,0,canvas.width,canvas.height)
-      .data.some(v => v !== 0);
-  }
-
-  /* ============================
-     PROGRESS HELPERS
-  ============================ */
-  function startProgress() {
-    btnSubmit.disabled = true;
-    progressBox.style.display = 'block';
-    progressBar.style.width = '10%';
-    progressText.textContent = 'Submitting signature…';
-
-    let p = 10;
-    progressTimer = setInterval(() => {
-      p += Math.random() * 12;
-      if (p >= 90) {
-        p = 90;
-        clearInterval(progressTimer);
-      }
-      progressBar.style.width = p + '%';
-    }, 400);
-  }
-
-  function finishProgress(success) {
-    clearInterval(progressTimer);
-    progressBar.style.width = '100%';
-    progressBar.style.background = success ? '#16a34a' : '#dc2626';
-    progressText.textContent = success
-      ? 'Signature submitted successfully'
-      : 'Submission failed';
-  }
-
-  /* ============================
-     SUBMIT HANDLER
-  ============================ */
-  btnSubmit.addEventListener('click', () => {
-
-    if (!inputName.value.trim()) {
-      alert('Please enter your name.');
-      return;
-    }
-
-    if (!inputDate.value) {
-      alert('Please select a signing date.');
-      return;
-    }
-
-    if (!hasSignature()) {
-      alert('Please draw your signature.');
-      return;
-    }
-
-    startProgress();
-
-    // 👇 KEEP YOUR EXISTING submitSignature() CALL
-    submitSignature(
-      canvas.toDataURL('image/png'),
-      inputName.value.trim(),
-      inputDate.value,
-      window.getSelectedPackage?.()
-    );
-  });
-
-  // OPTIONAL: expose hooks for backend response
-  window.signatureSubmitSuccess = () => finishProgress(true);
-  window.signatureSubmitError   = () => finishProgress(false);
-
-})();
-</script>
-
-
+<?php include __DIR__ . '/includes/contract_signing_overlay.php'; ?>
 </body>
 </html>

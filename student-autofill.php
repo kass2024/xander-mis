@@ -41,14 +41,18 @@ $sql = "
         s.last_name,
         s.email,
         s.dob,
-
-        /* ✅ FIX: COUNTRY NAME INSTEAD OF ID */
         c.name AS nationality,
-
         s.passport_number,
-        s.phone_number
+        s.phone_number,
+        COALESCE(c_res.name, NULLIF(TRIM(s.country), '')) AS country_residence,
+        COALESCE(
+            NULLIF(TRIM(s.address), ''),
+            NULLIF(TRIM(s.address_line1), ''),
+            TRIM(CONCAT_WS(', ', NULLIF(TRIM(s.address_line1), ''), NULLIF(TRIM(s.city), '')))
+        ) AS address
     FROM student_applications s
     LEFT JOIN countries c ON c.id = s.nationality
+    LEFT JOIN countries c_res ON c_res.id = s.country OR c_res.id = s.country_id
     WHERE s.email LIKE ?
     ORDER BY
         CASE WHEN s.email = ? THEN 0 ELSE 1 END,
@@ -92,7 +96,9 @@ echo json_encode([
         'email'           => $student['email'] ?? '',
         'dob'             => $student['dob'] ?? '',
         'nationality'     => $student['nationality'] ?? '',
-        'passport_number' => $student['passport_number'] ?? '',
-        'phone_number'    => $student['phone_number'] ?? ''
+        'passport_number'    => $student['passport_number'] ?? '',
+        'phone_number'       => $student['phone_number'] ?? '',
+        'country_residence'  => $student['country_residence'] ?? '',
+        'address'            => $student['address'] ?? '',
     ]
 ]);

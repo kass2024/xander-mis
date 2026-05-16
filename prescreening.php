@@ -10,24 +10,7 @@ if (empty($_SESSION['id']) && empty($_SESSION['admin_id'])) {
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers/prescreening_schema.php';
 
-xander_ensure_prescreening_table($conn);
-
-$userId = 'user-' . time() . '-' . random_int(1000, 9999);
-if (!empty($_GET['id']) && preg_match('/^user-[0-9]+-[0-9]+$/', (string) $_GET['id'])) {
-    $userId = (string) $_GET['id'];
-}
-
-$docLabels = [
-    'doc_valid_passport' => 'Valid Passport',
-    'doc_degree_transcripts' => 'Degree / Academic Transcripts',
-    'doc_high_school' => 'High School Certificate',
-    'doc_cv_resume' => 'CV / Resume',
-    'doc_recommendation' => 'Recommendation Letter(s)',
-    'doc_personal_statement' => 'Personal Statement / Motivation Letter',
-    'doc_english_certificate' => 'English Proficiency Certificate',
-    'doc_birth_certificate' => 'Birth Certificate',
-    'doc_payment_proof' => 'Application / Payment Proof',
-];
+xander_ensure_prescreening_schema($conn);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -38,277 +21,192 @@ $docLabels = [
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
   <style>
-    body { background: #f4f6fb; font-family: 'Segoe UI', system-ui, sans-serif; }
-    .wrap { max-width: 920px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
-    .card-panel { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(15,23,42,.08); padding: 1.5rem; margin-bottom: 1.25rem; }
-    .card-panel h2 { font-size: 1.15rem; color: #0b1f3f; margin-bottom: 1rem; border-bottom: 2px solid #f0a500; padding-bottom: .5rem; }
-    .q-num { color: #f0a500; font-weight: 600; margin-right: .35rem; }
-    .btn-whatsapp { background: #25d366; border: none; color: #fff; font-weight: 600; }
-    .btn-whatsapp:hover { background: #1da851; color: #fff; }
-    #statusBox { display: none; }
-    details summary { list-style: none; }
-    details summary::-webkit-details-marker { display: none; }
+    :root { --brand: #1d4ed8; --wa: #25d366; --ink: #0f172a; }
+    body { background: #f1f5f9; font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 1.25rem 1rem 2.5rem; }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+    .top h1 { font-size: 1.35rem; font-weight: 700; color: var(--ink); margin: 0; }
+    .card { background: #fff; border-radius: 14px; box-shadow: 0 2px 16px rgba(15,23,42,.06); padding: 1.25rem; border: 1px solid #e2e8f0; }
+    .channel-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1rem; }
+    .channel-tabs input { position: absolute; opacity: 0; pointer-events: none; }
+    .channel-tabs label {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px 8px; border-radius: 10px; border: 2px solid #e2e8f0;
+      font-size: .85rem; font-weight: 600; cursor: pointer; transition: .15s;
+    }
+    .channel-tabs input:checked + label { border-color: var(--brand); background: #eff6ff; color: var(--brand); }
+    .channel-tabs input[value="whatsapp"]:checked + label { border-color: var(--wa); background: #ecfdf5; color: #15803d; }
+    .channel-tabs input[value="both"]:checked + label { border-color: #7c3aed; background: #f5f3ff; color: #6d28d9; }
+    .link-box {
+      display: none; margin-top: 1rem; padding: 12px; background: #f8fafc;
+      border-radius: 10px; border: 1px dashed #cbd5e1;
+    }
+    .link-box.show { display: block; }
+    .link-box input { font-size: .8rem; font-family: ui-monospace, monospace; }
+    .btn-send { font-weight: 600; padding: .65rem 1.25rem; }
+    .btn-wa { background: var(--wa); border: none; color: #fff; }
+    .btn-wa:hover { background: #1da851; color: #fff; }
+    .btn-email { background: var(--brand); border: none; color: #fff; }
+    .btn-email:hover { background: #1e40af; color: #fff; }
+    .btn-both { background: #6d28d9; border: none; color: #fff; }
+    .btn-both:hover { background: #5b21b6; color: #fff; }
+    #statusBox { display: none; margin-bottom: 1rem; }
+    .foot-links { margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 10px; font-size: .85rem; }
+    .foot-links a { color: #64748b; text-decoration: none; }
+    .foot-links a:hover { color: var(--brand); }
+    details.admin-form { margin-top: 1rem; }
+    details.admin-form summary { cursor: pointer; font-weight: 600; color: #475569; font-size: .9rem; }
   </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="mb-3">
-    <h1 class="h3 text-primary fw-bold"><i class="bi bi-clipboard-check me-2"></i>Quick Pre-screening</h1>
-    <p class="text-muted mb-0">Start from the sidebar: send a WhatsApp <strong>template invite</strong>. The student replies <strong>START</strong>, answers 15 questions, and uploads 9 documents (same as web). Results go to staff WhatsApp <strong>+1 270 438 7305</strong> and <strong>+254 711 807 646</strong>.</p>
-    <p class="text-muted small mt-2 mb-0">Meta webhook stays on <strong>xanderbot.site</strong>; pre-screening data is saved on this server (cPanel). Setup: <a href="api/webhook-health.php" target="_blank">webhook-health</a> · <a href="api/prescreening-invite-log.php" target="_blank">invite log</a></p>
+  <div class="top">
+    <h1><i class="bi bi-lightning-charge-fill text-warning"></i> Pre-screening</h1>
+    <a href="prescreening-report.php" class="btn btn-sm btn-outline-primary" target="_top">Submissions</a>
   </div>
 
   <div id="statusBox" class="alert" role="alert"></div>
 
-  <div class="card-panel border border-success border-2">
-    <h2><i class="bi bi-whatsapp text-success me-1"></i> Step 1 — Send WhatsApp template invite</h2>
-    <p class="text-muted small">Uses approved template <code>xander_prescreening_invite</code> (paid <strong>business-initiated</strong> message — no 24-hour window). Student replies <strong>START</strong> to begin. Number must include <strong>country code</strong> (+250…, +1…). After Send, check <a href="api/prescreening-invite-log.php" target="_blank">invite log</a> for <code>last_delivery_status</code> (sent/delivered/failed).</p>
-    <form id="inviteForm" class="row g-3 align-items-end">
-      <div class="col-md-5">
-        <label class="form-label">Student name (template greeting)</label>
-        <input type="text" name="student_name" class="form-control" placeholder="Full name">
+  <div class="card">
+    <form id="inviteForm">
+      <div class="channel-tabs">
+        <div>
+          <input type="radio" name="send_via" id="ch_email" value="email">
+          <label for="ch_email"><i class="bi bi-envelope"></i> Email</label>
+        </div>
+        <div>
+          <input type="radio" name="send_via" id="ch_wa" value="whatsapp" checked>
+          <label for="ch_wa"><i class="bi bi-whatsapp"></i> WhatsApp</label>
+        </div>
+        <div>
+          <input type="radio" name="send_via" id="ch_both" value="both">
+          <label for="ch_both"><i class="bi bi-send"></i> Both</label>
+        </div>
       </div>
-      <div class="col-md-5">
-        <label class="form-label">Student WhatsApp <span class="text-danger">*</span></label>
-        <input type="tel" name="whatsapp_number" class="form-control" placeholder="Student +250… (not staff +254711…)" required pattern="^\+[0-9\s\-().]{10,20}$" title="Student personal WhatsApp with +country code">
+
+      <div class="row g-2 mb-2">
+        <div class="col-12">
+          <input type="text" name="student_name" class="form-control" placeholder="Student full name *" required>
+        </div>
+        <div class="col-md-6">
+          <input type="email" name="student_email" class="form-control" placeholder="Email *" required>
+        </div>
+        <div class="col-md-6">
+          <input type="tel" name="whatsapp_number" class="form-control" placeholder="WhatsApp +250… *" required
+                 pattern="^\+[0-9\s\-().]{10,20}$" title="+country code">
+        </div>
       </div>
-      <div class="col-md-2">
-        <button type="submit" class="btn btn-whatsapp w-100" id="inviteBtn"><i class="bi bi-send me-1"></i>Send</button>
+
+      <div class="form-check mb-2" id="emailNowWrap" style="display:none">
+        <input class="form-check-input" type="checkbox" name="send_email_now" id="sendEmailNow" value="1" checked>
+        <label class="form-check-label small" for="sendEmailNow">Send link by email now</label>
+      </div>
+
+      <button type="submit" class="btn btn-send btn-wa w-100" id="inviteBtn">
+        <i class="bi bi-send me-1"></i> Send invite
+      </button>
+
+      <div class="link-box" id="linkBox">
+        <label class="form-label small text-muted mb-1">Student link (unique)</label>
+        <div class="input-group input-group-sm">
+          <input type="text" class="form-control" id="inviteLink" readonly>
+          <button type="button" class="btn btn-outline-secondary" id="copyLinkBtn" title="Copy"><i class="bi bi-clipboard"></i></button>
+          <button type="button" class="btn btn-outline-primary" id="emailLinkBtn" title="Send email"><i class="bi bi-envelope"></i></button>
+        </div>
       </div>
     </form>
+
+    <div class="foot-links">
+      <a href="api/webhook-health.php" target="_blank">Webhook</a>
+      <a href="api/prescreening-invite-log.php" target="_blank">Invite log</a>
+    </div>
   </div>
 
-  <details class="card-panel">
-    <summary class="h2 mb-0" style="cursor:pointer"><i class="bi bi-ui-checks me-1"></i> Step 2 — Web form (admin fills)</summary>
-
-  <form id="prescreenForm" enctype="multipart/form-data" novalidate class="mt-3">
-    <input type="hidden" name="user_id" value="<?= htmlspecialchars($userId, ENT_QUOTES, 'UTF-8') ?>">
-
-    <div class="card-panel">
-      <h2>Student contact</h2>
-      <div class="row g-3">
-        <div class="col-md-4">
-          <label class="form-label">Student full name <span class="text-danger">*</span></label>
-          <input type="text" name="student_name" class="form-control" required>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Student email</label>
-          <input type="email" name="student_email" class="form-control" placeholder="student@example.com">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Student WhatsApp number <span class="text-danger">*</span></label>
-          <input type="tel" name="whatsapp_number" class="form-control" placeholder="+country code & number" required pattern="^\+[0-9\s\-().]{10,20}$" title="Include + and country code">
-          <small class="text-muted">International format with + and country code (any country).</small>
-        </div>
-      </div>
+  <details class="admin-form card mt-3">
+    <summary class="p-3">Admin: fill form manually</summary>
+    <div class="p-3 pt-0 border-top">
+      <p class="small text-muted mb-2">Staff completes the form on behalf of a student.</p>
+      <a href="prescreening-admin-form.php" class="btn btn-sm btn-outline-secondary" target="_top">Open admin form</a>
     </div>
-
-    <div class="card-panel">
-      <h2>Pre-screening questions</h2>
-      <div class="mb-3">
-        <label class="form-label"><span class="q-num">1.</span> Highest level of education? <span class="text-danger">*</span></label>
-        <input type="text" name="education_level" class="form-control" required>
-      </div>
-      <div class="mb-3">
-        <label class="form-label"><span class="q-num">2.</span> Course or program? <span class="text-danger">*</span></label>
-        <input type="text" name="course_program" class="form-control" required>
-      </div>
-      <div class="mb-3">
-        <label class="form-label"><span class="q-num">3.</span> Country of interest? <span class="text-danger">*</span></label>
-        <input type="text" name="country_interest" class="form-control" required>
-      </div>
-      <div class="mb-3">
-        <label class="form-label"><span class="q-num">4.</span> Open to India, Cyprus, Malta (under $15k/year)?</label>
-        <textarea name="open_other_countries" class="form-control" rows="2"></textarea>
-      </div>
-      <div class="mb-3">
-        <label class="form-label"><span class="q-num">5.</span> Tuition budget per year? <span class="text-danger">*</span></label>
-        <input type="text" name="budget_tuition" class="form-control" required>
-      </div>
-      <div class="row g-3 mb-3">
-        <div class="col-md-6">
-          <label class="form-label"><span class="q-num">6.</span> Funds for application/visa fees? <span class="text-danger">*</span></label>
-          <select name="funds_application_visa" class="form-select" required>
-            <option value="">— Select —</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label"><span class="q-num">7.</span> Sponsor? <span class="text-danger">*</span></label>
-          <select name="sponsor" class="form-select" required>
-            <option value="">— Select —</option>
-            <option value="Self">Self</option>
-            <option value="Parent">Parent</option>
-            <option value="Sponsor">Sponsor</option>
-          </select>
-        </div>
-      </div>
-      <div class="row g-3 mb-3">
-        <div class="col-md-6">
-          <label class="form-label"><span class="q-num">8.</span> Afford deposit and accommodation? <span class="text-danger">*</span></label>
-          <select name="afford_deposit" class="form-select" required>
-            <option value="">— Select —</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label"><span class="q-num">9.</span> Valid passport? <span class="text-danger">*</span></label>
-          <select name="has_valid_passport" class="form-select" required>
-            <option value="">— Select —</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
-        </div>
-      </div>
-      <div class="mb-3">
-        <label class="form-label"><span class="q-num">10.</span> Academic documents ready? <span class="text-danger">*</span></label>
-        <select name="academic_docs_ready" class="form-select" required>
-          <option value="">— Select —</option>
-          <option value="Yes">Yes</option>
-          <option value="No">No</option>
-          <option value="Partially">Partially</option>
-        </select>
-      </div>
-      <div class="row g-3 mb-3">
-        <div class="col-md-6">
-          <label class="form-label"><span class="q-num">11.</span> English level? <span class="text-danger">*</span></label>
-          <select name="english_level" class="form-select" required>
-            <option value="">— Select —</option>
-            <option value="Basic">Basic</option>
-            <option value="Good">Good</option>
-            <option value="Test done">Test done</option>
-          </select>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label"><span class="q-num">12.</span> IELTS/TOEFL/Duolingo?</label>
-          <input type="text" name="english_test_taken" class="form-control">
-        </div>
-      </div>
-      <div class="row g-3 mb-3">
-        <div class="col-md-6">
-          <label class="form-label"><span class="q-num">13.</span> Ever denied a visa? <span class="text-danger">*</span></label>
-          <select name="visa_denied" class="form-select" required>
-            <option value="">— Select —</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label"><span class="q-num">14.</span> Planned intake? <span class="text-danger">*</span></label>
-          <input type="text" name="planned_intake" class="form-control" required>
-        </div>
-      </div>
-      <div class="mb-0">
-        <label class="form-label"><span class="q-num">15.</span> Ready to apply now? <span class="text-danger">*</span></label>
-        <select name="ready_to_apply" class="form-select" required>
-          <option value="">— Select —</option>
-          <option value="Yes">Yes</option>
-          <option value="No">No</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="card-panel">
-      <h2>Documents (email and WhatsApp)</h2>
-      <?php foreach ($docLabels as $key => $label): ?>
-        <div class="mb-3">
-          <label class="form-label"><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></label>
-          <input type="file" name="<?= htmlspecialchars($key, ENT_QUOTES, 'UTF-8') ?>" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
-        </div>
-      <?php endforeach; ?>
-    </div>
-
-    <div class="d-flex flex-wrap gap-2">
-      <button type="submit" class="btn btn-whatsapp btn-lg" id="submitBtn">
-        <i class="bi bi-whatsapp me-1"></i> Send to WhatsApp and Email
-      </button>
-      <a href="prescreening-report.php" class="btn btn-outline-secondary" target="_top">View submissions</a>
-    </div>
-  </form>
   </details>
 </div>
 
 <script>
 (function () {
+  const form = document.getElementById('inviteForm');
+  const btn = document.getElementById('inviteBtn');
   const statusBox = document.getElementById('statusBox');
+  const linkBox = document.getElementById('linkBox');
+  const linkInput = document.getElementById('inviteLink');
+  const emailWrap = document.getElementById('emailNowWrap');
+  const channelInputs = form.querySelectorAll('input[name="send_via"]');
+  let lastToken = '';
+
+  function channel() {
+    return form.querySelector('input[name="send_via"]:checked')?.value || 'whatsapp';
+  }
+
+  function syncUi() {
+    const ch = channel();
+    btn.className = 'btn btn-send w-100 ' + (ch === 'email' ? 'btn-email' : ch === 'both' ? 'btn-both' : 'btn-wa');
+    btn.innerHTML = '<i class="bi bi-send me-1"></i> ' + (ch === 'email' ? 'Create link & send email' : ch === 'both' ? 'Send WhatsApp + email' : 'Send WhatsApp template');
+    emailWrap.style.display = (ch === 'email' || ch === 'both') ? 'block' : 'none';
+  }
+  channelInputs.forEach(r => r.addEventListener('change', syncUi));
+  syncUi();
+
   function showStatus(kind, msg) {
     statusBox.style.display = 'block';
     statusBox.className = 'alert alert-' + kind;
     statusBox.textContent = msg;
   }
 
-  const inviteForm = document.getElementById('inviteForm');
-  const inviteBtn = document.getElementById('inviteBtn');
-  if (inviteForm && inviteBtn) {
-    inviteForm.addEventListener('submit', async function (e) {
-      e.preventDefault();
-      if (!inviteForm.checkValidity()) { inviteForm.reportValidity(); return; }
-      inviteBtn.disabled = true;
-      try {
-        const res = await fetch('send_prescreening_invite.php', { method: 'POST', body: new FormData(inviteForm), credentials: 'same-origin' });
-        const raw = await res.text();
-        let data;
-        try { data = JSON.parse(raw); } catch (e) {
-          showStatus('danger', 'Server error (not JSON). Check cPanel error log or api/prescreening-invite-log.php');
-          console.error(raw);
-          return;
-        }
-        let msg = data.message || 'Done.';
-        if (data.status === 'success' && data.to) {
-          msg += ' → +' + String(data.to).replace(/^\+/, '');
-        }
-        if (data.message_id) {
-          msg += ' (wamid logged; delivery status in invite log)';
-        }
-        if (data.status === 'error' && data.log_url) {
-          msg += ' See invite log.';
-        }
-        showStatus(data.status === 'success' ? 'success' : 'danger', msg);
-        if (data.status === 'success') {
-          inviteForm.reset();
-          setTimeout(async function () {
-            try {
-              const lr = await fetch('api/prescreening-invite-log.php', { credentials: 'same-origin' });
-              const log = await lr.json();
-              const first = (log.whatsapp_sessions || [])[0];
-              if (first && first.display_status) {
-                showStatus('success', first.display_status);
-              }
-            } catch (e) { /* ignore */ }
-          }, 8000);
-        }
-      } catch (err) {
-        showStatus('danger', 'Network error: ' + (err.message || ''));
-      } finally {
-        inviteBtn.disabled = false;
-      }
-    });
-  }
+  document.getElementById('copyLinkBtn')?.addEventListener('click', function () {
+    if (!linkInput.value) return;
+    navigator.clipboard.writeText(linkInput.value).then(() => showStatus('success', 'Link copied.'));
+  });
 
-  const form = document.getElementById('prescreenForm');
-  const submitBtn = document.getElementById('submitBtn');
-  if (!form || !submitBtn) return;
+  document.getElementById('emailLinkBtn')?.addEventListener('click', async function () {
+    if (!lastToken) { showStatus('warning', 'Send an invite first to generate a link.'); return; }
+    btn.disabled = true;
+    try {
+      const fd = new FormData();
+      fd.set('token', lastToken);
+      const res = await fetch('send_prescreening_link_email.php', { method: 'POST', body: fd, credentials: 'same-origin' });
+      const data = await res.json();
+      showStatus(data.status === 'success' ? 'success' : 'danger', data.message || 'Done');
+    } catch (e) {
+      showStatus('danger', 'Network error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
     if (!form.checkValidity()) { form.reportValidity(); return; }
-    submitBtn.disabled = true;
+    btn.disabled = true;
+    const fd = new FormData(form);
+    if (!fd.has('send_email_now')) fd.set('send_email_now', '0');
     try {
-      const res = await fetch('save_prescreening.php', { method: 'POST', body: new FormData(form), credentials: 'same-origin' });
-      const data = await res.json();
-      let msg = data.message || 'Done.';
-      if (data.reference) msg += ' Reference: ' + data.reference;
-      showStatus(data.status === 'success' ? 'success' : (data.status === 'partial' ? 'warning' : 'danger'), msg);
-      if (data.status === 'success') {
-        form.reset();
-        document.querySelector('input[name="user_id"]').value = 'user-' + Date.now() + '-' + Math.floor(1000 + Math.random() * 9000);
+      const res = await fetch('send_prescreening_invite.php', { method: 'POST', body: fd, credentials: 'same-origin' });
+      const raw = await res.text();
+      let data;
+      try { data = JSON.parse(raw); } catch (err) {
+        showStatus('danger', 'Server error (not JSON).');
+        return;
       }
+      if (data.link) {
+        linkInput.value = data.link;
+        linkBox.classList.add('show');
+      }
+      if (data.token) lastToken = data.token;
+      const kind = data.status === 'success' ? 'success' : (data.status === 'partial' ? 'warning' : 'danger');
+      showStatus(kind, data.message || 'Done');
     } catch (err) {
       showStatus('danger', 'Network error.');
     } finally {
-      submitBtn.disabled = false;
+      btn.disabled = false;
     }
   });
 })();

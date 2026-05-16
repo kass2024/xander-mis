@@ -3,21 +3,26 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/prescreening_schema.php';
 
+/** Submissions + WhatsApp tables (webhooks, WA flow). */
 function xander_ensure_prescreening_whatsapp_tables(mysqli $conn): void
 {
-    xander_ensure_prescreening_table($conn);
+    xander_ensure_prescreening_schema($conn);
+}
 
-    $r = @$conn->query("SHOW COLUMNS FROM prescreening_submissions LIKE 'source'");
-    if ($r && $r->num_rows === 0) {
-        @$conn->query("ALTER TABLE prescreening_submissions ADD COLUMN source VARCHAR(16) NOT NULL DEFAULT 'admin' AFTER user_id");
-    }
-
+/** WhatsApp-only tables (called from xander_ensure_prescreening_schema). */
+function xander_ensure_prescreening_whatsapp_tables_only(mysqli $conn): void
+{
     $sqlSession = "CREATE TABLE IF NOT EXISTS whatsapp_prescreening_sessions (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT,
         wa_phone VARCHAR(20) NOT NULL,
         current_step VARCHAR(64) NOT NULL DEFAULT 'idle',
         answers_json MEDIUMTEXT NULL,
         doc_index INT UNSIGNED NOT NULL DEFAULT 0,
+        last_wamid VARCHAR(128) NULL DEFAULT NULL,
+        last_delivery_status VARCHAR(32) NULL DEFAULT NULL,
+        last_delivery_error_code INT NULL DEFAULT NULL,
+        last_delivery_error_message VARCHAR(512) NULL DEFAULT NULL,
+        last_delivery_at DATETIME NULL DEFAULT NULL,
         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
@@ -42,22 +47,18 @@ function xander_ensure_prescreening_whatsapp_tables(mysqli $conn): void
 /** Track Meta wamid + delivery webhook status per invite session. */
 function xander_prescreening_ensure_delivery_columns(mysqli $conn): void
 {
+    if (!xander_prescreening_table_exists($conn, 'whatsapp_prescreening_sessions')) {
+        return;
+    }
+
     $columns = [
-        'last_wamid' => 'VARCHAR(128) NULL DEFAULT NULL',
-        'last_delivery_status' => 'VARCHAR(32) NULL DEFAULT NULL',
-        'last_delivery_error_code' => 'INT NULL DEFAULT NULL',
-        'last_delivery_error_message' => 'VARCHAR(512) NULL DEFAULT NULL',
-        'last_delivery_at' => 'DATETIME NULL DEFAULT NULL',
+        'last_wamid' => ['VARCHAR(128) NULL DEFAULT NULL', 'doc_index'],
+        'last_delivery_status' => ['VARCHAR(32) NULL DEFAULT NULL', 'last_wamid'],
+        'last_delivery_error_code' => ['INT NULL DEFAULT NULL', 'last_delivery_status'],
+        'last_delivery_error_message' => ['VARCHAR(512) NULL DEFAULT NULL', 'last_delivery_error_code'],
+        'last_delivery_at' => ['DATETIME NULL DEFAULT NULL', 'last_delivery_error_message'],
     ];
-    foreach ($columns as $name => $definition) {
-        $r = @$conn->query("SHOW COLUMNS FROM whatsapp_prescreening_sessions LIKE '" . $conn->real_escape_string($name) . "'");
-        if ($r && $r->num_rows === 0) {
-            @$conn->query(
-                'ALTER TABLE whatsapp_prescreening_sessions ADD COLUMN ' . $name . ' ' . $definition . ' AFTER doc_index'
-            );
-        }
-        if ($r) {
-            $r->free();
-        }
+    foreach ($columns as $name => [$def, $after]) {
+        xander_prescreening_add_column_if_missing($conn, 'whatsapp_prescreening_sessions', $name, $def, $after);
     }
 }
