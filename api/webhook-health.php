@@ -47,6 +47,12 @@ wh_add(
     $inviteLang !== '' ? $inviteLang : 'default en (xander_prescreening_invite)'
 );
 wh_add($checks, 'PRESCREENING_FORWARD_SECRET', xander_env_get('PRESCREENING_FORWARD_SECRET') !== '', 'must match xanderbot VPS .env');
+wh_add(
+    $checks,
+    'XANDER_AUTO_SCHEMA',
+    function_exists('xander_env_is_true') && xander_env_is_true('XANDER_AUTO_SCHEMA'),
+    xander_env_get('XANDER_AUTO_SCHEMA') !== '' ? xander_env_get('XANDER_AUTO_SCHEMA') : 'not set (optional)'
+);
 
 if (!xander_env_get('WHATSAPP_VERIFY_TOKEN') || !xander_env_get('WHATSAPP_ACCESS_TOKEN')) {
     $ok = false;
@@ -80,6 +86,18 @@ wh_add($checks, 'database', $dbOk, $dbDetail);
 foreach ($tables as $t => $exists) {
     wh_add($checks, 'table:' . $t, $exists, $exists ? 'ok' : 'missing');
     if (!$exists) {
+        $ok = false;
+    }
+}
+
+if ($dbOk && isset($conn) && $conn instanceof mysqli) {
+    $inviteCol = false;
+    $r = @$conn->query("SHOW COLUMNS FROM prescreening_submissions LIKE 'invite_token'");
+    if ($r && $r->num_rows > 0) {
+        $inviteCol = true;
+    }
+    wh_add($checks, 'column:invite_token', $inviteCol, $inviteCol ? 'ok' : 'run schema migrate');
+    if (!$inviteCol) {
         $ok = false;
     }
 }

@@ -107,6 +107,14 @@ function xander_env_get_from_dotenv_file(string $key): string
     return '';
 }
 
+/** True when .env value is 1, true, yes, or on (case-insensitive). */
+function xander_env_is_true(string $key): bool
+{
+    $v = strtolower(trim(xander_env_get($key)));
+
+    return in_array($v, ['1', 'true', 'yes', 'on'], true);
+}
+
 /**
  * Read a non-empty env value after .env is loaded. Prefers $_ENV, then getenv, then $_SERVER.
  * Falls back to a direct .env parse for known critical keys if still empty.
@@ -137,6 +145,7 @@ function xander_env_get(string $key): string
             'WHATSAPP_DEFAULT_COUNTRY_CODE' => true,
             'META_GRAPH_VERSION' => true,
             'WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG' => true,
+            'XANDER_AUTO_SCHEMA' => true,
         ];
     }
     if (isset($directKeys[$key])) {
