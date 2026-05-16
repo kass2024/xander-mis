@@ -266,7 +266,19 @@ $docLabels = [
           msg += ' See invite log.';
         }
         showStatus(data.status === 'success' ? 'success' : 'danger', msg);
-        if (data.status === 'success') inviteForm.reset();
+        if (data.status === 'success') {
+          inviteForm.reset();
+          setTimeout(async function () {
+            try {
+              const lr = await fetch('api/prescreening-invite-log.php', { credentials: 'same-origin' });
+              const log = await lr.json();
+              const first = (log.whatsapp_sessions || [])[0];
+              if (first && first.display_status) {
+                showStatus('success', first.display_status);
+              }
+            } catch (e) { /* ignore */ }
+          }, 8000);
+        }
       } catch (err) {
         showStatus('danger', 'Network error: ' + (err.message || ''));
       } finally {

@@ -492,10 +492,18 @@ function xander_whatsapp_user_hint(array $err): string
         return 'Free-form text only works inside Meta’s 24-hour customer-care window. For cold outreach, use an approved template (pre-screening invite already does).';
     }
     if ($code === 131031) {
-        return 'Meta blocked delivery (business account restriction). This is not a 24-hour window issue. Check WhatsApp Manager → Account quality / Business Support Home, then retry.';
+        return 'Meta Business Account is locked/restricted. Check Meta Account Quality in WhatsApp Manager / Business Support Home.';
     }
-    if ($code === 132000 || $code === 132005) {
+    if ($code === 132000) {
+        $m = strtolower($msg);
+        if (str_contains($m, 'param') || str_contains($m, 'localizable')) {
+            return 'Template parameter missing: student name is required by this template.';
+        }
+
         return 'WhatsApp template is missing or not approved in Meta Business Manager.';
+    }
+    if ($code === 132005) {
+        return 'WhatsApp template language does not match Meta (check WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG).';
     }
     if ($code === 190 || stripos($msg, 'OAuth') !== false) {
         return 'WhatsApp API authentication failed — check the access token.';
@@ -567,6 +575,36 @@ function xander_whatsapp_unique_language_codes(array $languageCodes, string $pre
 /**
  * @return array{http:int,body:string,json:?array,payload:array}
  */
+/** Last 4 digits only — safe for logs. */
+function xander_whatsapp_phone_last4(string $phone): string
+{
+    $digits = preg_replace('/\D+/', '', $phone) ?? '';
+
+    return strlen($digits) >= 4 ? substr($digits, -4) : '????';
+}
+
+/**
+ * @return array{code:int,subcode:int,message:string,title:string}|null
+ */
+function xander_whatsapp_meta_error(?array $json): ?array
+{
+    $e = xander_whatsapp_extract_error($json);
+    if (!$e) {
+        return null;
+    }
+    $title = '';
+    if (isset($json['error']) && is_array($json['error'])) {
+        $title = trim((string) ($json['error']['error_user_title'] ?? $json['error']['title'] ?? ''));
+    }
+
+    return [
+        'code' => $e['code'],
+        'subcode' => $e['subcode'],
+        'message' => $e['message'],
+        'title' => $title,
+    ];
+}
+
 function xander_whatsapp_post_template_message(
     string $url,
     string $token,
@@ -576,6 +614,14 @@ function xander_whatsapp_post_template_message(
     int $paramCount,
     array $templateBodyTexts
 ): array {
+    $inviteTemplate = defined('XANDER_WHATSAPP_PRESCREENING_INVITE_TEMPLATE')
+        ? XANDER_WHATSAPP_PRESCREENING_INVITE_TEMPLATE
+        : 'xander_prescreening_invite';
+    if ($templateName === $inviteTemplate && $paramCount < 1) {
+        $paramCount = 1;
+        $templateBodyTexts = [(string) ($templateBodyTexts[0] ?? 'Student')];
+    }
+
     $components = [];
     if ($paramCount > 0) {
         $bodyParams = [];
@@ -601,20 +647,35 @@ function xander_whatsapp_post_template_message(
     }
 
     $res = xander_whatsapp_graph_post($url, $token, $payload);
-    $logLine = '[whatsapp] template ' . $templateName . ' lang=' . $templateLang . ' to=' . ($payload['to'] ?? '')
-        . ' HTTP ' . $res['http'] . ' body: ' . $res['body'];
-    error_log($logLine);
+    $metaErr = xander_whatsapp_meta_error($res['json']);
+    $bodyParamCount = isset($payload['template']['components'][0]['parameters'])
+        ? count($payload['template']['components'][0]['parameters'])
+        : 0;
+    error_log('[whatsapp] template ' . $templateName . ' lang=' . $templateLang
+        . ' to_last4=' . xander_whatsapp_phone_last4((string) ($payload['to'] ?? ''))
+        . ' body_params=' . $bodyParamCount
+        . ' HTTP ' . $res['http']
+        . ($metaErr ? ' meta_code=' . $metaErr['code'] : ''));
     if (function_exists('xander_whatsapp_track')) {
         $wamid = xander_whatsapp_extract_message_id($res['json']);
-        xander_whatsapp_track($res['http'] >= 200 && $res['http'] < 300 ? 'graph_template_ok' : 'graph_template_fail', [
+        $trackCtx = [
             'template' => $templateName,
             'lang' => $templateLang,
-            'to' => $payload['to'] ?? '',
+            'to_last4' => xander_whatsapp_phone_last4((string) ($payload['to'] ?? '')),
+            'body_param_count' => $bodyParamCount,
             'http' => $res['http'],
             'wamid' => $wamid,
             'conversation' => 'business_initiated_template',
-            'body_preview' => mb_substr($res['body'], 0, 400),
-        ]);
+        ];
+        if ($metaErr) {
+            $trackCtx['meta_error_code'] = $metaErr['code'];
+            $trackCtx['meta_error_title'] = $metaErr['title'];
+            $trackCtx['meta_error_message'] = mb_substr($metaErr['message'], 0, 200);
+        }
+        xander_whatsapp_track(
+            $res['http'] >= 200 && $res['http'] < 300 ? 'graph_template_ok' : 'graph_template_fail',
+            $trackCtx
+        );
     }
     $res['payload'] = $payload;
 

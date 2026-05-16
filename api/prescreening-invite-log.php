@@ -48,6 +48,7 @@ if (is_file(dirname(__DIR__) . '/db.php')) {
         );
         if ($r) {
             while ($row = $r->fetch_assoc()) {
+                $row['display_status'] = xander_prescreening_invite_status_message($row);
                 $sessions[] = $row;
             }
             $r->free();
@@ -58,15 +59,18 @@ if (is_file(dirname(__DIR__) . '/db.php')) {
 $diagnosis = [];
 foreach ($sessions as $s) {
     $phone = (string) ($s['wa_phone'] ?? '');
-    $st = (string) ($s['last_delivery_status'] ?? '');
+    $st = strtolower((string) ($s['last_delivery_status'] ?? ''));
+    $code = (int) ($s['last_delivery_error_code'] ?? 0);
     if ($phone !== '' && in_array($phone, $staffNumbers, true)) {
-        $diagnosis[] = "Session {$phone} is a STAFF number (PRESCREENING_STAFF_WHATSAPP) — invites will not deliver reliably; use a student +250… number.";
+        $diagnosis[] = "Session …{$phone} (staff): use a student +250… number, not PRESCREENING_STAFF_WHATSAPP.";
     }
-    if ($st === 'accepted' || $st === 'api_accepted') {
-        $diagnosis[] = "Session {$phone}: status \"{$st}\" = Meta API only. VPS has NOT updated delivery yet — deploy xanderbot (forwardDeliveryStatus) and check: tail laravel.log | grep delivery_forward";
+    if ($st === 'api_accepted' || $st === 'accepted') {
+        $diagnosis[] = 'Session …' . substr($phone, -4) . ': API accepted — waiting for VPS webhook (sent/delivered/failed). Refresh in ~30s.';
     }
-    if ($st === 'failed' && !empty($s['last_delivery_error_code'])) {
-        $diagnosis[] = "Session {$phone}: Meta delivery FAILED (code {$s['last_delivery_error_code']}): " . ($s['last_delivery_error_message'] ?? '');
+    if ($st === 'failed' && $code === 131031) {
+        $diagnosis[] = 'Session …' . substr($phone, -4) . ': Meta reports 131031 (business restricted) on this delivery attempt.';
+    } elseif ($st === 'failed' && $code > 0) {
+        $diagnosis[] = 'Session …' . substr($phone, -4) . ": delivery failed ({$code}): " . ($s['last_delivery_error_message'] ?? '');
     }
 }
 if (!$hasDeliveryForward) {

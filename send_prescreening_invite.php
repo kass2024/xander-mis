@@ -66,19 +66,19 @@ try {
         ]);
     }
 
-    $method = (string) ($result['method'] ?? 'template');
     $lang = (string) ($result['template_lang'] ?? '');
     $wamid = (string) ($result['message_id'] ?? '');
-    $msg = 'Template invite queued with Meta (paid business-initiated; no 24h window needed). '
-        . 'Student must tap START when it arrives. '
-        . 'Final delivery (sent/delivered/failed) is logged when Meta webhooks xanderbot — refresh invite log in ~30s.';
+    $session = xander_prescreening_load_session($conn, $result['to']);
+    $deliveryMsg = xander_prescreening_invite_status_message($session);
+
     invite_respond([
         'status' => 'success',
-        'message' => $msg,
+        'message' => $deliveryMsg !== '' ? $deliveryMsg : 'Template invite queued with Meta. Waiting for webhook delivery status.',
         'to' => $result['to'],
-        'method' => $method,
+        'method' => 'template',
         'template_lang' => $lang,
         'message_id' => $wamid,
+        'delivery_status' => $session['last_delivery_status'] ?? 'api_accepted',
         'log_url' => 'api/prescreening-invite-log.php',
     ]);
 } catch (Throwable $e) {

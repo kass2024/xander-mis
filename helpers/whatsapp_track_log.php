@@ -24,11 +24,30 @@ function xander_whatsapp_track_log_paths(): array
     return $paths;
 }
 
+function xander_whatsapp_track_mask_phone_fields(array $context): array
+{
+    foreach (['to', 'from', 'recipient', 'phone_raw', 'recipient_id'] as $key) {
+        if (!isset($context[$key]) || !is_string($context[$key])) {
+            continue;
+        }
+        $digits = preg_replace('/\D+/', '', $context[$key]) ?? '';
+        $context[$key] = strlen($digits) >= 4 ? '***' . substr($digits, -4) : '[redacted]';
+    }
+
+    return $context;
+}
+
 function xander_whatsapp_track(string $action, array $context = []): void
 {
-    foreach (['secret', 'token', 'authorization', 'password', 'WHATSAPP_ACCESS_TOKEN'] as $key) {
+    $context = xander_whatsapp_track_mask_phone_fields($context);
+    foreach (['secret', 'token', 'authorization', 'password', 'WHATSAPP_ACCESS_TOKEN', 'APP_KEY'] as $key) {
         if (isset($context[$key])) {
             $context[$key] = '[redacted]';
+        }
+    }
+    foreach ($context as $key => $value) {
+        if (is_string($value) && preg_match('/\bEAA[A-Za-z0-9]{20,}/', $value)) {
+            $context[$key] = '[redacted_token]';
         }
     }
 

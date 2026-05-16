@@ -225,7 +225,8 @@ function xander_prescreening_record_invite_wamid(mysqli $conn, string $waPhone, 
     xander_prescreening_ensure_delivery_columns($conn);
     $stmt = $conn->prepare('
         UPDATE whatsapp_prescreening_sessions
-        SET last_wamid = ?, last_delivery_status = ?, last_delivery_at = NOW()
+        SET last_wamid = ?, last_delivery_status = ?, last_delivery_error_code = NULL,
+            last_delivery_error_message = NULL, last_delivery_at = NOW()
         WHERE wa_phone = ?
     ');
     if (!$stmt) {
@@ -235,6 +236,108 @@ function xander_prescreening_record_invite_wamid(mysqli $conn, string $waPhone, 
     $stmt->bind_param('sss', $wamid, $pending, $waPhone);
     $stmt->execute();
     $stmt->close();
+}
+
+/**
+ * User-facing status from latest API + webhook fields (not stale errors after a new invite).
+ */
+function xander_prescreening_invite_status_message(?array $session): string
+{
+    if (!$session) {
+        return '';
+    }
+    $st = strtolower(trim((string) ($session['last_delivery_status'] ?? '')));
+    $code = (int) ($session['last_delivery_error_code'] ?? 0);
+
+    if ($st === 'failed') {
+        if ($code === 131031) {
+            return 'Meta Business Account is locked/restricted. Check Meta Account Quality.';
+        }
+        if ($code === 132000) {
+            return 'Template parameter missing: student name is required by this template.';
+        }
+        $msg = trim((string) ($session['last_delivery_error_message'] ?? ''));
+
+        return $msg !== '' ? 'Delivery failed: ' . $msg : 'Delivery failed (see invite log).';
+    }
+    if (in_array($st, ['sent', 'delivered', 'read'], true)) {
+        return 'Template delivered to student WhatsApp (' . $st . ').';
+    }
+    if ($st === 'api_accepted' || $st === 'accepted') {
+        return 'Template invite queued with Meta. Waiting for webhook delivery status.';
+    }
+
+    return '';
+}
+
+/**
+ * Send xander_prescreening_invite with exactly one body {{1}} = student name.
+ *
+ * @return array{http:int,body:string,json:?array,sent:bool,error:string,message_id:string,template_lang:string}
+ */
+function xander_prescreening_send_invite_template(
+    string $to,
+    string $apiUrl,
+    string $token,
+    string $studentName,
+    string $templateLang
+): array {
+    $name = trim($studentName) !== '' ? trim($studentName) : 'Student';
+    $text = xander_notify_text_clip(xander_whatsapp_sanitize_user_text($name), 1024);
+
+    $payload = [
+        'messaging_product' => 'whatsapp',
+        'recipient_type' => 'individual',
+        'to' => $to,
+        'type' => 'template',
+        'template' => [
+            'name' => XANDER_WHATSAPP_PRESCREENING_INVITE_TEMPLATE,
+            'language' => ['code' => $templateLang],
+            'components' => [
+                [
+                    'type' => 'body',
+                    'parameters' => [
+                        ['type' => 'text', 'text' => $text],
+                    ],
+                ],
+            ],
+        ],
+    ];
+
+    $res = xander_whatsapp_graph_post($apiUrl, $token, $payload);
+    $metaErr = xander_whatsapp_meta_error($res['json']);
+    $ok = $res['http'] >= 200 && $res['http'] < 300 && xander_whatsapp_response_has_message_id($res['json']);
+    $wamid = xander_whatsapp_extract_message_id($res['json']) ?? '';
+
+    xander_whatsapp_track($ok ? 'graph_template_ok' : 'graph_template_fail', [
+        'template' => XANDER_WHATSAPP_PRESCREENING_INVITE_TEMPLATE,
+        'lang' => $templateLang,
+        'to_last4' => xander_whatsapp_phone_last4($to),
+        'student_name_present' => trim($studentName) !== '',
+        'body_param_count' => 1,
+        'http' => $res['http'],
+        'wamid' => $wamid,
+        'meta_error_code' => $metaErr['code'] ?? null,
+        'meta_error_title' => $metaErr['title'] ?? null,
+        'meta_error_message' => isset($metaErr['message']) ? mb_substr($metaErr['message'], 0, 200) : null,
+    ]);
+
+    $errMsg = '';
+    if (!$ok && $metaErr) {
+        $errMsg = xander_whatsapp_user_hint($metaErr);
+    } elseif (!$ok) {
+        $errMsg = 'Template could not be sent (HTTP ' . $res['http'] . ').';
+    }
+
+    return [
+        'http' => $res['http'],
+        'body' => $res['body'],
+        'json' => $res['json'],
+        'sent' => $ok,
+        'error' => $errMsg,
+        'message_id' => $wamid,
+        'template_lang' => $templateLang,
+    ];
 }
 
 /**
@@ -342,45 +445,47 @@ function xander_prescreening_admin_send_invite(mysqli $conn, string $phoneRaw, s
         return $out;
     }
 
+    $name = trim($studentName) !== '' ? trim($studentName) : 'Student';
+
     xander_whatsapp_track('invite_sending', [
         'to' => $to,
         'template' => XANDER_WHATSAPP_PRESCREENING_INVITE_TEMPLATE,
         'lang' => xander_prescreening_invite_template_lang(),
+        'student_name_present' => trim($studentName) !== '',
     ]);
 
-    $name = trim($studentName) !== '' ? trim($studentName) : 'Student';
-    $fallback = "Hello {$name}, Xander Global Scholars invites you to complete Quick Pre-Screening on WhatsApp. Reply *START* to begin (15 questions and documents). Type CANCEL to stop.";
+    $lastRes = null;
+    $sent = false;
+    foreach (xander_prescreening_invite_template_lang_candidates() as $lang) {
+        $lastRes = xander_prescreening_send_invite_template($to, $api['url'], $api['token'], $name, $lang);
+        if ($lastRes['sent']) {
+            $sent = true;
+            break;
+        }
+        $metaErr = xander_whatsapp_meta_error($lastRes['json']);
+        if ($metaErr && ($metaErr['code'] === 132001 || $metaErr['code'] === 132005)) {
+            continue;
+        }
+        if ($metaErr && $metaErr['code'] !== 132000) {
+            break;
+        }
+    }
 
-    $res = xander_whatsapp_send_template_or_session(
-        $to,
-        $api['url'],
-        $api['token'],
-        XANDER_WHATSAPP_PRESCREENING_INVITE_TEMPLATE,
-        xander_prescreening_invite_template_lang(),
-        1,
-        [$name],
-        $fallback,
-        [
-            'language_codes' => xander_prescreening_invite_template_lang_candidates(),
-            'allow_text_fallback' => false,
-        ]
-    );
-
-    if (!$res['sent']) {
-        $out['error'] = $res['error'] !== '' ? $res['error'] : 'Could not send WhatsApp invite template.';
+    if (!$sent) {
+        $out['error'] = $lastRes['error'] ?? 'Could not send WhatsApp invite template.';
         xander_whatsapp_track('invite_send_failed', [
             'to' => $to,
             'error' => $out['error'],
-            'method' => $res['method'] ?? '',
-            'meta_http' => isset($res['detail']) ? mb_substr((string) $res['detail'], 0, 500) : '',
+            'student_name_present' => trim($studentName) !== '',
+            'meta_http' => $lastRes['http'] ?? 0,
         ]);
 
         return $out;
     }
 
-    $out['method'] = (string) ($res['method'] ?? 'template');
-    $out['template_lang'] = (string) ($res['template_lang'] ?? xander_prescreening_invite_template_lang());
-    $out['message_id'] = (string) ($res['message_id'] ?? '');
+    $out['method'] = 'template';
+    $out['template_lang'] = (string) ($lastRes['template_lang'] ?? xander_prescreening_invite_template_lang());
+    $out['message_id'] = (string) ($lastRes['message_id'] ?? '');
 
     $answers = ['student_name' => $name];
     xander_prescreening_save_session($conn, $to, 'invited', $answers, 0);
