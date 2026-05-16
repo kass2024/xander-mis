@@ -45,8 +45,19 @@ if (!$result['sent']) {
     ]);
 }
 
+$method = (string) ($result['method'] ?? 'template');
+$lang = (string) ($result['template_lang'] ?? '');
+$msg = 'Pre-screening invite sent on WhatsApp (template'
+    . ($lang !== '' ? ' ' . $lang : '')
+    . '). The student should tap START or reply START to begin.';
+if ($method === 'text') {
+    $msg = 'Invite sent as plain text (template failed). Student must reply START within 24 hours if they have not messaged you recently.';
+}
+
 invite_respond([
     'status' => 'success',
-    'message' => 'Pre-screening invite sent on WhatsApp. The student should reply START to complete the form.',
+    'message' => $msg,
     'to' => $result['to'],
+    'method' => $method,
+    'template_lang' => $lang,
 ]);

@@ -25,14 +25,15 @@
  * block (set XANDER_WHATSAPP_STATUS_TEMPLATE_PARAMS=3 when your Meta template includes a third placeholder).
  * Session text (24h window) uses the same application details as email (study level, programs, universities, regions, destination).
  * API credentials: WHATSAPP_* in .env (loaded via env_load.php).
- * Optional: WHATSAPP_DEFAULT_COUNTRY_CODE — digits only, no + (e.g. 234, 1, 44). Used when the stored
- * number is national (leading 0) or 10 digits without country code.
+ * Optional: WHATSAPP_DEFAULT_COUNTRY_CODE — digits only (e.g. 250, 1, 234). Only for national-format
+ * numbers without +; international numbers (+country…) work for all countries without this setting.
  *
  * Notifications are sent only when staff chooses Email and/or WhatsApp in the UI (not automatic).
  * Mail transport: helpers/mail_smtp.php only.
  */
 require_once __DIR__ . '/mail_smtp.php';
 require_once __DIR__ . '/env_load.php';
+require_once __DIR__ . '/phone_whatsapp_normalize.php';
 
 /** Meta-approved WhatsApp template name; empty = WhatsApp option does nothing until set. */
 const XANDER_WHATSAPP_STATUS_TEMPLATE_NAME = '';
@@ -304,64 +305,6 @@ function xander_fetch_applicant_for_notify(mysqli $conn, string $table, int $id)
     ];
 }
 
-/**
- * Digits-only E.164 for WhatsApp Cloud API `to` (no + prefix).
- * Uses $defaultCountryDigits when the stored value is national (leading 0) or 10 digits without CC.
- *
- * @param string|null $defaultCountryDigits e.g. "234", "1", "44" from WHATSAPP_DEFAULT_COUNTRY_CODE
- */
-function xander_format_phone_for_whatsapp_e164(string $raw, ?string $defaultCountryDigits): ?string
-{
-    $digits = preg_replace('/\D+/', '', $raw);
-    if ($digits === null || $digits === '') {
-        return null;
-    }
-
-    $cc = $defaultCountryDigits !== null && $defaultCountryDigits !== ''
-        ? preg_replace('/\D+/', '', $defaultCountryDigits)
-        : '';
-    $cc = $cc === '' ? null : $cc;
-
-    $len = strlen($digits);
-
-    // National numbers with leading 0 (e.g. 0803… NG, 07… UK) → CC + national significant digits
-    if ($len >= 10 && $len <= 12 && $digits[0] === '0' && $cc !== null) {
-        $rest = substr($digits, 1);
-        if (strlen($rest) >= 9 && strlen($rest) <= 14) {
-            return $cc . $rest;
-        }
-    }
-
-    // Already includes country code (typical 11–15 digits, no leading 0)
-    if ($len >= 11 && $len <= 15 && $digits[0] !== '0') {
-        return $digits;
-    }
-
-    // 10-digit national without country: apply default CC (NANP or local convention)
-    if ($len === 10 && $digits[0] !== '0') {
-        if ($cc === '1') {
-            return '1' . $digits;
-        }
-        if ($cc !== null && $cc !== '1') {
-            return $cc . $digits;
-        }
-
-        return null;
-    }
-
-    // 8–9 digits: too short for reliable international send
-    if ($len < 10) {
-        return null;
-    }
-
-    // Fallback: 10–15 digit strings that did not match above
-    if ($len >= 10 && $len <= 15 && $digits[0] !== '0') {
-        return $digits;
-    }
-
-    return null;
-}
-
 function xander_send_student_status_email(string $toEmail, string $studentName, string $statusLabel, array $ctx, string $rejectionReason = ''): bool
 {
     if ($toEmail === '' || !filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
@@ -594,10 +537,75 @@ function xander_whatsapp_template_error_allows_text_fallback(?array $json): bool
 }
 
 /**
+ * @param array<int, string> $languageCodes Meta template language codes to try (e.g. en, en_US)
+ * @return array<int, string>
+ */
+function xander_whatsapp_unique_language_codes(array $languageCodes, string $preferred = ''): array
+{
+    $out = [];
+    foreach (array_merge($languageCodes, [$preferred, 'en', 'en_US', 'en_GB']) as $code) {
+        $code = trim((string) $code);
+        if ($code !== '' && !in_array($code, $out, true)) {
+            $out[] = $code;
+        }
+    }
+
+    return $out;
+}
+
+/**
+ * @return array{http:int,body:string,json:?array,payload:array}
+ */
+function xander_whatsapp_post_template_message(
+    string $url,
+    string $token,
+    string $to,
+    string $templateName,
+    string $templateLang,
+    int $paramCount,
+    array $templateBodyTexts
+): array {
+    $components = [];
+    if ($paramCount > 0) {
+        $bodyParams = [];
+        for ($i = 0; $i < $paramCount; $i++) {
+            $t = (string) ($templateBodyTexts[$i] ?? '');
+            $bodyParams[] = ['type' => 'text', 'text' => xander_notify_text_clip(xander_whatsapp_sanitize_user_text($t), 1024)];
+        }
+        $components[] = ['type' => 'body', 'parameters' => $bodyParams];
+    }
+
+    $payload = [
+        'messaging_product' => 'whatsapp',
+        'recipient_type' => 'individual',
+        'to' => $to,
+        'type' => 'template',
+        'template' => [
+            'name' => $templateName,
+            'language' => ['code' => $templateLang],
+        ],
+    ];
+    if (!empty($components)) {
+        $payload['template']['components'] = $components;
+    }
+
+    $res = xander_whatsapp_graph_post($url, $token, $payload);
+    error_log('[whatsapp] template ' . $templateName . ' lang=' . $templateLang . ' HTTP ' . $res['http'] . ' body: ' . $res['body']);
+    $res['payload'] = $payload;
+
+    return $res;
+}
+
+/**
  * Shared WhatsApp Cloud API: approved template first, then session text (24h window).
  *
+ * Options:
+ *   language_codes (string[]) — try each Meta language code until one succeeds
+ *   allow_text_fallback (bool) — default true; set false for cold outreach (template required)
+ *
  * @param array<int, string> $templateBodyTexts One entry per template variable (max 1024 chars each after sanitize)
- * @return array{sent:bool,method:string,error:string,detail:string}
+ * @param array{language_codes?:array<int,string>,allow_text_fallback?:bool} $options
+ * @return array{sent:bool,method:string,error:string,detail:string,template_lang?:string}
  */
 function xander_whatsapp_send_template_or_session(
     string $to,
@@ -607,63 +615,77 @@ function xander_whatsapp_send_template_or_session(
     string $templateLang,
     int $paramCount,
     array $templateBodyTexts,
-    string $sessionTextBody
+    string $sessionTextBody,
+    array $options = []
 ): array {
     $template = trim((string) $templateName);
-    $lang = $templateLang !== '' ? $templateLang : 'en_US';
+    $preferredLang = $templateLang !== '' ? $templateLang : 'en';
+    $allowTextFallback = !array_key_exists('allow_text_fallback', $options) || (bool) $options['allow_text_fallback'];
+    $langCodes = isset($options['language_codes']) && is_array($options['language_codes'])
+        ? xander_whatsapp_unique_language_codes($options['language_codes'], $preferredLang)
+        : xander_whatsapp_unique_language_codes([], $preferredLang);
     $tryTemplate = $template !== '';
+    $lastTemplateRes = null;
 
     if ($tryTemplate) {
-        $components = [];
-        if ($paramCount > 0) {
-            $bodyParams = [];
-            for ($i = 0; $i < $paramCount; $i++) {
-                $t = (string) ($templateBodyTexts[$i] ?? '');
-                $bodyParams[] = ['type' => 'text', 'text' => xander_notify_text_clip(xander_whatsapp_sanitize_user_text($t), 1024)];
+        foreach ($langCodes as $lang) {
+            $res = xander_whatsapp_post_template_message(
+                $url,
+                $token,
+                $to,
+                $template,
+                $lang,
+                $paramCount,
+                $templateBodyTexts
+            );
+            $lastTemplateRes = $res;
+
+            if ($res['http'] >= 200 && $res['http'] < 300 && xander_whatsapp_response_has_message_id($res['json'])) {
+                return [
+                    'sent' => true,
+                    'method' => 'template',
+                    'error' => '',
+                    'detail' => '',
+                    'template_lang' => $lang,
+                ];
             }
-            $components[] = ['type' => 'body', 'parameters' => $bodyParams];
+
+            if (xander_whatsapp_error_is_fatal_no_text_fallback($res['json'], $res['http'])) {
+                $err = xander_whatsapp_extract_error($res['json']) ?? ['code' => 0, 'subcode' => 0, 'message' => 'HTTP ' . $res['http']];
+
+                return [
+                    'sent' => false,
+                    'method' => 'template',
+                    'error' => xander_whatsapp_user_hint($err),
+                    'detail' => $res['body'],
+                    'template_lang' => $lang,
+                ];
+            }
+
+            $err = xander_whatsapp_extract_error($res['json']);
+            $isLangMismatch = $err && ($err['code'] === 132001 || $err['code'] === 132005);
+            if (!$isLangMismatch && !xander_whatsapp_template_error_allows_text_fallback($res['json']) && $res['http'] >= 400) {
+                return [
+                    'sent' => false,
+                    'method' => 'template',
+                    'error' => xander_whatsapp_user_hint($err ?? ['code' => 0, 'subcode' => 0, 'message' => 'HTTP ' . $res['http']]),
+                    'detail' => $res['body'],
+                    'template_lang' => $lang,
+                ];
+            }
         }
 
-        $payload = [
-            'messaging_product' => 'whatsapp',
-            'recipient_type' => 'individual',
-            'to' => $to,
-            'type' => 'template',
-            'template' => [
-                'name' => $template,
-                'language' => ['code' => $lang],
-            ],
-        ];
-        if (!empty($components)) {
-            $payload['template']['components'] = $components;
-        }
-
-        $res = xander_whatsapp_graph_post($url, $token, $payload);
-        error_log('[whatsapp] template HTTP ' . $res['http'] . ' body: ' . $res['body']);
-
-        if ($res['http'] >= 200 && $res['http'] < 300 && xander_whatsapp_response_has_message_id($res['json'])) {
-            return ['sent' => true, 'method' => 'template', 'error' => '', 'detail' => ''];
-        }
-
-        if (xander_whatsapp_error_is_fatal_no_text_fallback($res['json'], $res['http'])) {
-            $err = xander_whatsapp_extract_error($res['json']) ?? ['code' => 0, 'subcode' => 0, 'message' => 'HTTP ' . $res['http']];
+        if (!$allowTextFallback) {
+            $err = xander_whatsapp_extract_error($lastTemplateRes['json'] ?? null)
+                ?? ['code' => 0, 'subcode' => 0, 'message' => 'Template could not be sent.'];
 
             return [
                 'sent' => false,
                 'method' => 'template',
-                'error' => xander_whatsapp_user_hint($err),
-                'detail' => $res['body'],
-            ];
-        }
-
-        if (!xander_whatsapp_template_error_allows_text_fallback($res['json']) && $res['http'] >= 400) {
-            $err = xander_whatsapp_extract_error($res['json']) ?? ['code' => 0, 'subcode' => 0, 'message' => 'HTTP ' . $res['http']];
-
-            return [
-                'sent' => false,
-                'method' => 'template',
-                'error' => xander_whatsapp_user_hint($err),
-                'detail' => $res['body'],
+                'error' => xander_whatsapp_user_hint($err)
+                    . ' Check template language in Meta (set WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG in .env).',
+                'detail' => (string) ($lastTemplateRes['body'] ?? ''),
+                'template_lang' => $langCodes[0] ?? $preferredLang,
             ];
         }
     }
@@ -722,7 +744,7 @@ function xander_send_student_status_whatsapp(string $phoneRaw, string $studentNa
 
     $to = xander_format_phone_for_whatsapp_e164($phoneRaw, $defaultCcOrNull);
     if ($to === null) {
-        $empty['error'] = 'Invalid or incomplete phone number — add country code or set WHATSAPP_DEFAULT_COUNTRY_CODE in .env for national numbers.';
+        $empty['error'] = 'Invalid or incomplete phone number. ' . xander_whatsapp_phone_validation_hint();
         $empty['detail'] = 'format failed for: ' . $phoneRaw;
 
         return $empty;

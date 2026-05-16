@@ -16,6 +16,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/mail_smtp.php';
 require_once __DIR__ . '/env_load.php';
+require_once __DIR__ . '/phone_whatsapp_normalize.php';
 require_once __DIR__ . '/student_status_notify.php';
 
 const XANDER_WHATSAPP_PRESCREENING_TEMPLATE_NAME = 'xander_prescreening_received';
@@ -263,7 +264,7 @@ function xander_send_prescreening_notifications(array $row, string $reference, b
     $defaultCc = xander_env_get('WHATSAPP_DEFAULT_COUNTRY_CODE');
     $to = xander_format_phone_for_whatsapp_e164($phoneRaw, $defaultCc !== '' ? $defaultCc : null);
     if ($to === null) {
-        $waResult['error'] = 'Invalid WhatsApp number — include country code or set WHATSAPP_DEFAULT_COUNTRY_CODE in .env.';
+        $waResult['error'] = 'Invalid WhatsApp number. ' . xander_whatsapp_phone_validation_hint();
 
         return ['email' => $emailResult, 'whatsapp' => $waResult];
     }

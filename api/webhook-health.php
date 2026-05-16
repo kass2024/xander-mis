@@ -39,6 +39,13 @@ wh_add($checks, 'WHATSAPP_VERIFY_TOKEN', xander_env_get('WHATSAPP_VERIFY_TOKEN')
 wh_add($checks, 'WHATSAPP_APP_SECRET', xander_env_get('WHATSAPP_APP_SECRET') !== '', 'set in .env (POST signature)');
 wh_add($checks, 'WHATSAPP_ACCESS_TOKEN', xander_env_get('WHATSAPP_ACCESS_TOKEN') !== '', 'set in .env');
 wh_add($checks, 'WHATSAPP_PHONE_NUMBER_ID', xander_env_get('WHATSAPP_PHONE_NUMBER_ID') !== '', 'set in .env');
+$inviteLang = xander_env_get('WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG');
+wh_add(
+    $checks,
+    'WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG',
+    true,
+    $inviteLang !== '' ? $inviteLang : 'default en (xander_prescreening_invite)'
+);
 wh_add($checks, 'PRESCREENING_FORWARD_SECRET', xander_env_get('PRESCREENING_FORWARD_SECRET') !== '', 'must match xanderbot VPS .env');
 
 if (!xander_env_get('WHATSAPP_VERIFY_TOKEN') || !xander_env_get('WHATSAPP_ACCESS_TOKEN')) {

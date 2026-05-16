@@ -15,8 +15,21 @@ const XANDER_PRESCREENING_TRIGGERS = ['prescreening', 'pre-screening', 'prescree
 
 /** Meta template: admin invites student from sidebar — body {{1}} = student name */
 const XANDER_WHATSAPP_PRESCREENING_INVITE_TEMPLATE = 'xander_prescreening_invite';
-/** Match the language you chose in Meta (English → often en or en_US). */
-const XANDER_WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG = 'en_US';
+
+/** Meta language code for invite template (override in .env). */
+function xander_prescreening_invite_template_lang(): string
+{
+    xander_load_env_file();
+    $v = trim(xander_env_get('WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG'));
+
+    return $v !== '' ? $v : 'en';
+}
+
+/** @return array<int, string> */
+function xander_prescreening_invite_template_lang_candidates(): array
+{
+    return xander_whatsapp_unique_language_codes([], xander_prescreening_invite_template_lang());
+}
 
 /** @return array<int, array{key:string,prompt:string,hint?:string}> */
 function xander_prescreening_whatsapp_question_steps(): array
@@ -213,14 +226,14 @@ function xander_prescreening_normalize_wa_phone(string $raw): ?string
 /**
  * Admin sidebar: send invite template first, then student replies on WhatsApp.
  *
- * @return array{sent:bool,error:string,to:string}
+ * @return array{sent:bool,error:string,to:string,method:string,template_lang:string}
  */
 function xander_prescreening_admin_send_invite(mysqli $conn, string $phoneRaw, string $studentName = ''): array
 {
-    $out = ['sent' => false, 'error' => '', 'to' => ''];
+    $out = ['sent' => false, 'error' => '', 'to' => '', 'method' => '', 'template_lang' => ''];
     $to = xander_prescreening_normalize_wa_phone($phoneRaw);
     if ($to === null) {
-        $out['error'] = 'Invalid WhatsApp number — include country code.';
+        $out['error'] = 'Invalid WhatsApp number. ' . xander_whatsapp_phone_validation_hint();
 
         return $out;
     }
@@ -241,10 +254,14 @@ function xander_prescreening_admin_send_invite(mysqli $conn, string $phoneRaw, s
         $api['url'],
         $api['token'],
         XANDER_WHATSAPP_PRESCREENING_INVITE_TEMPLATE,
-        XANDER_WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG,
+        xander_prescreening_invite_template_lang(),
         1,
         [$name],
-        $fallback
+        $fallback,
+        [
+            'language_codes' => xander_prescreening_invite_template_lang_candidates(),
+            'allow_text_fallback' => false,
+        ]
     );
 
     if (!$res['sent']) {
@@ -252,6 +269,9 @@ function xander_prescreening_admin_send_invite(mysqli $conn, string $phoneRaw, s
 
         return $out;
     }
+
+    $out['method'] = (string) ($res['method'] ?? 'template');
+    $out['template_lang'] = (string) ($res['template_lang'] ?? xander_prescreening_invite_template_lang());
 
     $answers = ['student_name' => $name];
     xander_prescreening_save_session($conn, $to, 'invited', $answers, 0);

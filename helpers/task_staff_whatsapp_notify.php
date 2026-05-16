@@ -193,7 +193,7 @@ function pcvc_task_monitor_send_staff_whatsapp(
     $defaultCc = trim(xander_env_get('WHATSAPP_DEFAULT_COUNTRY_CODE'));
     $to = xander_format_phone_for_whatsapp_e164($rawPhone, $defaultCc !== '' ? $defaultCc : null);
     if ($to === null) {
-        $empty['error'] = 'Staff phone number is missing country code or is invalid for WhatsApp. Set WHATSAPP_DEFAULT_COUNTRY_CODE in .env if numbers are national format.';
+        $empty['error'] = 'Staff phone number is invalid for WhatsApp. ' . xander_whatsapp_phone_validation_hint();
 
         return $empty;
     }

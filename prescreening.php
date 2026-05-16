@@ -62,7 +62,7 @@ $docLabels = [
 
   <div class="card-panel border border-success border-2">
     <h2><i class="bi bi-whatsapp text-success me-1"></i> Step 1 — Send WhatsApp template invite</h2>
-    <p class="text-muted small">Approve template <code>xander_prescreening_invite</code> in Meta. Student replies <strong>START</strong> to begin.</p>
+    <p class="text-muted small">Approve template <code>xander_prescreening_invite</code> in Meta. Student replies <strong>START</strong> to begin. WhatsApp number must include <strong>country code</strong> (e.g. +250…, +1…, +44…, +234…).</p>
     <form id="inviteForm" class="row g-3 align-items-end">
       <div class="col-md-5">
         <label class="form-label">Student name (template greeting)</label>
@@ -70,7 +70,7 @@ $docLabels = [
       </div>
       <div class="col-md-5">
         <label class="form-label">Student WhatsApp <span class="text-danger">*</span></label>
-        <input type="tel" name="whatsapp_number" class="form-control" placeholder="+250788123456" required>
+        <input type="tel" name="whatsapp_number" class="form-control" placeholder="+country code & number" required pattern="^\+[0-9\s\-().]{10,20}$" title="Include + and country code, e.g. +250788123456 or +12704387305">
       </div>
       <div class="col-md-2">
         <button type="submit" class="btn btn-whatsapp w-100" id="inviteBtn"><i class="bi bi-send me-1"></i>Send</button>
@@ -97,8 +97,8 @@ $docLabels = [
         </div>
         <div class="col-md-4">
           <label class="form-label">Student WhatsApp number <span class="text-danger">*</span></label>
-          <input type="tel" name="whatsapp_number" class="form-control" placeholder="e.g. +250788123456" required>
-          <small class="text-muted">Include country code.</small>
+          <input type="tel" name="whatsapp_number" class="form-control" placeholder="+country code & number" required pattern="^\+[0-9\s\-().]{10,20}$" title="Include + and country code">
+          <small class="text-muted">International format with + and country code (any country).</small>
         </div>
       </div>
     </div>
@@ -249,7 +249,11 @@ $docLabels = [
       try {
         const res = await fetch('send_prescreening_invite.php', { method: 'POST', body: new FormData(inviteForm), credentials: 'same-origin' });
         const data = await res.json();
-        showStatus(data.status === 'success' ? 'success' : 'danger', data.message || 'Done.');
+        let msg = data.message || 'Done.';
+        if (data.status === 'success' && data.to) {
+          msg += ' Sent to +' + String(data.to).replace(/^\+/, '');
+        }
+        showStatus(data.status === 'success' ? 'success' : 'danger', msg);
         if (data.status === 'success') inviteForm.reset();
       } catch (err) {
         showStatus('danger', 'Network error.');
