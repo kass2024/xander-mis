@@ -231,7 +231,7 @@ function xander_prescreening_record_invite_wamid(mysqli $conn, string $waPhone, 
     if (!$stmt) {
         return;
     }
-    $pending = 'accepted';
+    $pending = 'api_accepted';
     $stmt->bind_param('sss', $wamid, $pending, $waPhone);
     $stmt->execute();
     $stmt->close();
