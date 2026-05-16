@@ -44,17 +44,17 @@ if ($expectedSecret === '' || !hash_equals($expectedSecret, $givenSecret)) {
 }
 
 $action = (string) ($body['action'] ?? 'handle');
-$from = preg_replace('/\D+/', '', (string) ($body['from'] ?? ''));
-if ($from === '') {
-    http_response_code(422);
-    echo json_encode(['error' => 'Missing from', 'handled' => false]);
-    exit;
-}
 
+// Delivery webhooks use recipient_id (no "from") — must run before generic from check
 if ($action === 'delivery_status') {
     $wamid = trim((string) ($body['wamid'] ?? $body['external_id'] ?? ''));
     $delivery = strtolower(trim((string) ($body['status'] ?? '')));
-    $recipient = preg_replace('/\D+/', '', (string) ($body['recipient_id'] ?? '')) ?? '';
+    $recipient = preg_replace('/\D+/', '', (string) ($body['recipient_id'] ?? $body['from'] ?? '')) ?? '';
+    if ($recipient === '') {
+        http_response_code(422);
+        echo json_encode(['error' => 'Missing recipient_id', 'recorded' => false]);
+        exit;
+    }
     $errors = $body['errors'] ?? [];
     $errorCode = null;
     $errorMessage = '';
@@ -82,7 +82,14 @@ if ($action === 'delivery_status') {
         'error_code' => $errorCode,
         'recorded' => $recorded,
     ]);
-    echo json_encode(['recorded' => $recorded, 'status' => $delivery]);
+    echo json_encode(['recorded' => $recorded, 'status' => $delivery, 'recipient' => $recipient]);
+    exit;
+}
+
+$from = preg_replace('/\D+/', '', (string) ($body['from'] ?? ''));
+if ($from === '') {
+    http_response_code(422);
+    echo json_encode(['error' => 'Missing from', 'handled' => false]);
     exit;
 }
 
