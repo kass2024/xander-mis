@@ -1,9 +1,5 @@
 # --- User-requested paths ---
 /admin/
-# Ignore uploaded/static assets except application-report JS (assign + study choices UI)
-/assets/*
-!/assets/js/
-!/assets/js/**
 /pdfs/
 /PHPMailer/
 /templates/
