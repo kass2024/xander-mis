@@ -90,6 +90,22 @@ if (!is_dir($uploadDir)) {
 }
 wh_add($checks, 'uploads/prescreening writable', is_dir($uploadDir) && is_writable($uploadDir), $uploadDir);
 
+require_once $root . '/helpers/whatsapp_track_log.php';
+$trackPaths = xander_whatsapp_track_log_paths();
+$trackWritable = '';
+foreach ($trackPaths as $tp) {
+    $dir = dirname($tp);
+    if (! is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    if (is_dir($dir) && is_writable($dir)) {
+        $trackWritable = $tp;
+        break;
+    }
+}
+wh_add($checks, 'whatsapp track log writable', $trackWritable !== '', $trackWritable !== '' ? $trackWritable : implode(' | ', $trackPaths));
+wh_add($checks, 'function_exists(curl_init)', function_exists('curl_init'), function_exists('curl_init') ? 'ok' : 'enable php-curl');
+
 wh_add(
     $checks,
     'function:verify_signature',

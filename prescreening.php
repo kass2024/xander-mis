@@ -55,7 +55,7 @@ $docLabels = [
   <div class="mb-3">
     <h1 class="h3 text-primary fw-bold"><i class="bi bi-clipboard-check me-2"></i>Quick Pre-screening</h1>
     <p class="text-muted mb-0">Start from the sidebar: send a WhatsApp <strong>template invite</strong>. The student replies <strong>START</strong>, answers 15 questions, and uploads 9 documents (same as web). Results go to staff WhatsApp <strong>+1 270 438 7305</strong> and <strong>+254 711 807 646</strong>.</p>
-    <p class="text-muted small mt-2 mb-0">Meta webhook stays on <strong>xanderbot.site</strong>; pre-screening data is saved on this server (cPanel). Setup check: <a href="api/webhook-health.php" target="_blank">webhook-health</a></p>
+    <p class="text-muted small mt-2 mb-0">Meta webhook stays on <strong>xanderbot.site</strong>; pre-screening data is saved on this server (cPanel). Setup: <a href="api/webhook-health.php" target="_blank">webhook-health</a> · <a href="api/prescreening-invite-log.php" target="_blank">invite log</a></p>
   </div>
 
   <div id="statusBox" class="alert" role="alert"></div>
@@ -70,7 +70,7 @@ $docLabels = [
       </div>
       <div class="col-md-5">
         <label class="form-label">Student WhatsApp <span class="text-danger">*</span></label>
-        <input type="tel" name="whatsapp_number" class="form-control" placeholder="+country code & number" required pattern="^\+[0-9\s\-().]{10,20}$" title="Include + and country code, e.g. +250788123456 or +12704387305">
+        <input type="tel" name="whatsapp_number" class="form-control" placeholder="Student +250… (not staff +254711…)" required pattern="^\+[0-9\s\-().]{10,20}$" title="Student personal WhatsApp with +country code">
       </div>
       <div class="col-md-2">
         <button type="submit" class="btn btn-whatsapp w-100" id="inviteBtn"><i class="bi bi-send me-1"></i>Send</button>
@@ -248,15 +248,24 @@ $docLabels = [
       inviteBtn.disabled = true;
       try {
         const res = await fetch('send_prescreening_invite.php', { method: 'POST', body: new FormData(inviteForm), credentials: 'same-origin' });
-        const data = await res.json();
+        const raw = await res.text();
+        let data;
+        try { data = JSON.parse(raw); } catch (e) {
+          showStatus('danger', 'Server error (not JSON). Check cPanel error log or api/prescreening-invite-log.php');
+          console.error(raw);
+          return;
+        }
         let msg = data.message || 'Done.';
         if (data.status === 'success' && data.to) {
-          msg += ' Sent to +' + String(data.to).replace(/^\+/, '');
+          msg += ' → +' + String(data.to).replace(/^\+/, '');
+        }
+        if (data.status === 'error' && data.log_url) {
+          msg += ' See invite log.';
         }
         showStatus(data.status === 'success' ? 'success' : 'danger', msg);
         if (data.status === 'success') inviteForm.reset();
       } catch (err) {
-        showStatus('danger', 'Network error.');
+        showStatus('danger', 'Network error: ' + (err.message || ''));
       } finally {
         inviteBtn.disabled = false;
       }

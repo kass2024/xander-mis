@@ -590,7 +590,18 @@ function xander_whatsapp_post_template_message(
     }
 
     $res = xander_whatsapp_graph_post($url, $token, $payload);
-    error_log('[whatsapp] template ' . $templateName . ' lang=' . $templateLang . ' HTTP ' . $res['http'] . ' body: ' . $res['body']);
+    $logLine = '[whatsapp] template ' . $templateName . ' lang=' . $templateLang . ' to=' . ($payload['to'] ?? '')
+        . ' HTTP ' . $res['http'] . ' body: ' . $res['body'];
+    error_log($logLine);
+    if (function_exists('xander_whatsapp_track')) {
+        xander_whatsapp_track($res['http'] >= 200 && $res['http'] < 300 ? 'graph_template_ok' : 'graph_template_fail', [
+            'template' => $templateName,
+            'lang' => $templateLang,
+            'to' => $payload['to'] ?? '',
+            'http' => $res['http'],
+            'body_preview' => mb_substr($res['body'], 0, 400),
+        ]);
+    }
     $res['payload'] = $payload;
 
     return $res;

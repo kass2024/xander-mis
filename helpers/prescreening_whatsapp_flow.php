@@ -227,7 +227,7 @@ function xander_prescreening_normalize_wa_phone(string $raw): ?string
 /**
  * Admin sidebar: send invite template first, then student replies on WhatsApp.
  *
- * @return array{sent:bool,error:string,to:string,method:string,template_lang:string}
+ * @return array{sent:bool,error:string,to:string,method:string,template_lang:string,staff_number_warning?:string}
  */
 function xander_prescreening_admin_send_invite(mysqli $conn, string $phoneRaw, string $studentName = ''): array
 {
@@ -235,17 +235,31 @@ function xander_prescreening_admin_send_invite(mysqli $conn, string $phoneRaw, s
     $to = xander_prescreening_normalize_wa_phone($phoneRaw);
     if ($to === null) {
         $out['error'] = 'Invalid WhatsApp number. ' . xander_whatsapp_phone_validation_hint();
+        xander_whatsapp_track('invite_invalid_phone', ['phone_raw' => $phoneRaw]);
 
         return $out;
     }
     $out['to'] = $to;
 
+    $staff = xander_prescreening_staff_whatsapp_numbers();
+    if (in_array($to, $staff, true)) {
+        $out['staff_number_warning'] = 'Warning: this number is a staff alert number in .env — use the student\'s personal WhatsApp for testing.';
+        xander_whatsapp_track('invite_staff_number', ['to' => $to]);
+    }
+
     $api = xander_whatsapp_api_messages_url();
     if ($api === null) {
-        $out['error'] = 'WhatsApp API is not configured in .env.';
+        $out['error'] = 'WhatsApp API is not configured in .env (WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID).';
+        xander_whatsapp_track('invite_env_missing', []);
 
         return $out;
     }
+
+    xander_whatsapp_track('invite_sending', [
+        'to' => $to,
+        'template' => XANDER_WHATSAPP_PRESCREENING_INVITE_TEMPLATE,
+        'lang' => xander_prescreening_invite_template_lang(),
+    ]);
 
     $name = trim($studentName) !== '' ? trim($studentName) : 'Student';
     $fallback = "Hello {$name}, Xander Global Scholars invites you to complete Quick Pre-Screening on WhatsApp. Reply *START* to begin (15 questions and documents). Type CANCEL to stop.";
@@ -271,6 +285,7 @@ function xander_prescreening_admin_send_invite(mysqli $conn, string $phoneRaw, s
             'to' => $to,
             'error' => $out['error'],
             'method' => $res['method'] ?? '',
+            'meta_http' => isset($res['detail']) ? mb_substr((string) $res['detail'], 0, 500) : '',
         ]);
 
         return $out;
