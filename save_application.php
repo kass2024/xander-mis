@@ -58,6 +58,7 @@ require_once __DIR__ . '/helpers/study_choices.php';
 require_once __DIR__ . '/helpers/urls.php';
 require_once __DIR__ . '/helpers/role.php';
 require_once __DIR__ . '/helpers/application_assignment_column.php';
+require_once __DIR__ . '/helpers/application_spam_guard.php';
 require_once __DIR__ . '/includes/company_branding.php';
 function debug_log(string $label, $data = null): void
 {
@@ -803,6 +804,18 @@ if ($isFinal === 1) {
         json_error('Please correct the highlighted fields and try again.', $fieldErrors, 400);
     }
 
+    $spamVerdict = pcvc_spam_check_post($_POST);
+    if ($spamVerdict['is_spam']) {
+        $spamAppId = (int) ($_POST['application_id'] ?? 0);
+        if ($spamAppId > 0) {
+            pcvc_spam_delete_application($conn, $spamAppId);
+        }
+        json_error(
+            'Your application could not be saved. ' . ($spamVerdict['reason'] ?: 'Please use your real name and a valid contact email.'),
+            ['first_name' => 'Please enter your real name.', 'email' => 'Use a personal email you check regularly.'],
+            400
+        );
+    }
 
     try {
 

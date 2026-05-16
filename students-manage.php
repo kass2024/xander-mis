@@ -12,6 +12,7 @@ require 'db.php';
 
 session_start();
 require_once __DIR__ . '/helpers/role.php';
+require_once __DIR__ . '/helpers/application_spam_guard.php';
 
 // NOTE: Do NOT compute "time ago" in PHP here.
 // Student report uses browser-timezone JS; we match it in JS below for consistency.
@@ -39,6 +40,10 @@ if ($adminPk > 0) {
     }
 }
 $canDeleteApplication = xander_is_superadmin_role($dbRole) || xander_is_superadmin_role($sessionRole);
+
+if ($canDeleteApplication && isset($conn) && $conn instanceof mysqli) {
+    pcvc_spam_purge_database($conn, 40, false, false);
+}
 
 // Handle new record submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_new'])) {

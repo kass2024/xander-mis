@@ -14,6 +14,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 session_start();
 require_once 'db.php';
+require_once __DIR__ . '/helpers/application_spam_guard.php';
 
 /* ---------- Helper Functions ---------- */
 function send_json($arr, $code = 200) {
@@ -197,6 +198,15 @@ if (!empty($fieldErrors)) {
         'status'  => 'error',
         'message' => 'Please correct the highlighted fields and try again.',
         'fields'  => (object)$fieldErrors,
+    ], 400);
+}
+
+$spamVerdict = pcvc_spam_check_post($_POST);
+if ($spamVerdict['is_spam']) {
+    send_json([
+        'status'  => 'error',
+        'message' => 'Your application could not be submitted. ' . ($spamVerdict['reason'] ?: 'Please use your real name and a valid email.'),
+        'fields'  => (object) ['first_name' => 'Please enter your real name.', 'email' => 'Use a personal email you check regularly.'],
     ], 400);
 }
 

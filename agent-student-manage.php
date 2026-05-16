@@ -16,6 +16,14 @@ $agent_full_name = $admin['full_name'] ?? '';
 
 // Handle new record submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_new'])) {
+    require_once __DIR__ . '/helpers/application_spam_guard.php';
+    $spamVerdict = pcvc_spam_check_post($_POST);
+    if ($spamVerdict['is_spam']) {
+        $_SESSION['agent_add_error'] = 'Application blocked: ' . ($spamVerdict['reason'] ?: 'invalid applicant data.');
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit;
+    }
+
     $stmt = $conn->prepare("INSERT INTO student_applications (
         first_name, last_name, email, phone_number, gender, dob, nationality, city, address_line1,
         masters_program, destination, application_date, agent_email

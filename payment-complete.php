@@ -10,6 +10,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_student'])) 
     $area_code = trim($_POST['area_code'] ?? '');
     
     if ($first_name && $last_name && $email && $phone_number) {
+        require_once __DIR__ . '/helpers/application_spam_guard.php';
+        $spamVerdict = pcvc_spam_check_post([
+            'first_name' => $first_name,
+            'last_name' => $last_name,
+            'email' => $email,
+            'area_code' => $area_code,
+            'phone_number' => $phone_number,
+        ]);
+        if ($spamVerdict['is_spam']) {
+            header('Location: payment-complete.php?error=' . urlencode('Registration blocked. Please use your real name and a valid personal email.'));
+            exit();
+        }
+
         // Check if email already exists
         $stmt = $conn->prepare("SELECT id FROM student_applications WHERE email = ?");
         $stmt->bind_param('s', $email);
