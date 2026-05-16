@@ -209,9 +209,81 @@ if (!move_uploaded_file($_FILES['file']['tmp_name'],$tmpPath))
     ]));
 appendDebugStage($debug, 'prepare', 'Temporary file saved on server.');
 
+$fromSmartAutofill = !empty($_POST['from_smart_autofill']) && (string) $_POST['from_smart_autofill'] === '1';
+
 $mime = mime_content_type($tmpPath) ?: 'application/octet-stream';
 $ext  = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 $debug['mime'] = $mime;
+
+if ($fromSmartAutofill) {
+    $allowedFileFields = [
+        'degree_transcripts',
+        'high_school_degree',
+        'valid_passport',
+        'recommendation_letters',
+        'personal_statement',
+        'cv_resume',
+        'english_certificate',
+        'birth_certificate',
+        'payment_proof',
+    ];
+    $multiFileFields = ['degree_transcripts', 'recommendation_letters'];
+    $allowedExt = ['pdf', 'docx', 'jpg', 'jpeg', 'png', 'webp'];
+
+    if (!in_array($field, $allowedFileFields, true)) {
+        @unlink($tmpPath);
+        exit(json_encode(['status' => 'error', 'message' => 'Invalid attachment field.', 'debug' => $debug]));
+    }
+    if (!in_array($ext, $allowedExt, true)) {
+        @unlink($tmpPath);
+        exit(json_encode(['status' => 'error', 'message' => 'Unsupported file type.', 'debug' => $debug]));
+    }
+
+    if (!rename($tmpPath, $UPLOAD_DIR . $fileName)) {
+        exit(json_encode(['status' => 'error', 'message' => 'Failed to save uploaded file.', 'debug' => $debug]));
+    }
+
+    $filePath = 'uploads/' . $fileName;
+    appendDebugStage($debug, 'save', 'Smart autofill route — skipped duplicate AI validation.');
+
+    if (in_array($field, $multiFileFields, true)) {
+        $stmt = $conn->prepare("SELECT {$field} FROM student_applications WHERE id = ?");
+        $stmt->bind_param('i', $appId);
+        $stmt->execute();
+        $stmt->bind_result($existing);
+        $stmt->fetch();
+        $stmt->close();
+
+        $files = [];
+        if (!empty($existing)) {
+            $decoded = json_decode($existing, true);
+            if (is_array($decoded)) {
+                $files = $decoded;
+            }
+        }
+        $files[] = $filePath;
+        $json = json_encode($files, JSON_UNESCAPED_UNICODE);
+
+        $stmt = $conn->prepare("UPDATE student_applications SET {$field} = ? WHERE id = ?");
+        $stmt->bind_param('si', $json, $appId);
+        $stmt->execute();
+        $stmt->close();
+    } else {
+        $stmt = $conn->prepare("UPDATE student_applications SET {$field} = ? WHERE id = ?");
+        $stmt->bind_param('si', $filePath, $appId);
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    echo json_encode([
+        'status'    => 'success',
+        'file_path' => $filePath,
+        'message'   => 'Document attached (verified during smart analysis).',
+        'debug'     => $debug,
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 // Detect scanned PDF (no text layer)
 $isPdf = ($mime === 'application/pdf');
 $isScannedPdf = false;

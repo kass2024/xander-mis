@@ -3781,7 +3781,8 @@ if (!multiple) {
    SINGLE FILE UPLOAD (CORE LOGIC)
    One file → one request → safe progress
 ===================================================== */
-function uploadSingleFile(field, file) {
+function uploadSingleFile(field, file, options = {}) {
+  const fromSmartAutofill = options.fromSmartAutofill === true;
 
   return new Promise((resolve, reject) => {
 
@@ -3839,6 +3840,9 @@ function uploadSingleFile(field, file) {
       document.querySelector('[name="last_name"]')?.value || ""
     );
     formData.append("lang", document.documentElement.lang || "en");
+    if (fromSmartAutofill) {
+      formData.append("from_smart_autofill", "1");
+    }
 
     /* ===============================
        INIT REQUEST
@@ -3853,7 +3857,7 @@ function uploadSingleFile(field, file) {
     =============================== */
     xhr.upload.onprogress = e => {
       if (!e.lengthComputable) return;
-      const percent = Math.round((e.loaded / e.total) * 60);
+      const percent = Math.round((e.loaded / e.total) * (fromSmartAutofill ? 85 : 60));
       progress.set(percent, `Uploading ${file.name}…`, "upload");
     };
 
@@ -3861,8 +3865,12 @@ function uploadSingleFile(field, file) {
        UPLOAD COMPLETE → START AI UI
     =============================== */
     xhr.upload.onload = () => {
-      progress.set(62, "Upload complete. Extracting document text…", "extract");
-      validationTimer = startValidationSimulation(progress);
+      if (fromSmartAutofill) {
+        progress.set(88, "Attaching document…", "route");
+      } else {
+        progress.set(62, "Upload complete. Extracting document text…", "extract");
+        validationTimer = startValidationSimulation(progress);
+      }
     };
 
     /* ===============================
@@ -3917,7 +3925,11 @@ function uploadSingleFile(field, file) {
         renderUploadedFileChip(file.name);
         window.uploadStatus[field].push(file.name);
         let draftSaveWarning = "";
-        if (response.autofill_fields && typeof window.applyAutofillFields === "function") {
+        if (
+          !fromSmartAutofill &&
+          response.autofill_fields &&
+          typeof window.applyAutofillFields === "function"
+        ) {
           window.applyAutofillFields(response.autofill_fields);
           if (typeof window.persistAutofillDraftData === "function") {
             try {
@@ -4423,30 +4435,42 @@ function startValidationSimulation(progress) {
       const warnings = [...(analysisData.warnings || []), ...queueWarnings];
       let attachFailures = 0;
 
-      setStage("route", texts.uploading, "info", "Routing recognized documents into the existing attachment fields.");
-      let completed = 0;
-      for (const doc of queue) {
-        const file = files[Number(doc.client_index)];
-        if (!file) {
-          warnings.push(`Original file missing for ${doc.original_name}.`);
-          continue;
-        }
+      setStage("route", texts.uploading, "info", "Routing recognized documents into the existing attachment fields (parallel).");
+      const routeTotal = Math.max(queue.length, 1);
+      let routeCompleted = 0;
 
-        setStage(
-          "route",
-          `Routing ${doc.original_name} to ${doc.field_label || doc.field}...`,
-          "info",
-          `${completed + 1} of ${Math.max(queue.length, 1)} attachment routes in progress.`
-        );
+      const routeResults = await Promise.all(
+        queue.map(async (doc) => {
+          const file = files[Number(doc.client_index)];
+          if (!file) {
+            return { ok: false, warning: `Original file missing for ${doc.original_name}.` };
+          }
 
-        try {
-          await uploadSingleFile(doc.field, file);
-        } catch (err) {
+          try {
+            await uploadSingleFile(doc.field, file, { fromSmartAutofill: true });
+            routeCompleted++;
+            setStage(
+              "route",
+              `Attached ${routeCompleted} of ${routeTotal} documents…`,
+              "info",
+              `Last: ${doc.original_name} → ${doc.field_label || doc.field}`
+            );
+            return { ok: true };
+          } catch (err) {
+            return {
+              ok: false,
+              warning: `Failed to attach ${doc.original_name} to ${doc.field_label || doc.field}.`,
+            };
+          }
+        })
+      );
+
+      routeResults.forEach((result) => {
+        if (!result.ok && result.warning) {
           attachFailures++;
-          warnings.push(`Failed to attach ${doc.original_name} to ${doc.field_label || doc.field}.`);
+          warnings.push(result.warning);
         }
-        completed++;
-      }
+      });
 
       setStage("save", <?php echo json_encode($t['smart_autofill_stage_save'], JSON_UNESCAPED_UNICODE); ?>, "info", "Saving extracted student details and current study choices.");
       try {

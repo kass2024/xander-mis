@@ -515,23 +515,29 @@ function flatten_uploaded_files(string $key): array
     return $out;
 }
 
-function scanned_pdf_to_images(string $pdfPath, string $outDir): array
+function scanned_pdf_to_images(string $pdfPath, string $outDir, ?int $maxPages = null): array
 {
     if (!class_exists('Imagick')) {
         throw new RuntimeException('Scanned PDF support requires Imagick on the server.');
     }
 
+    $maxPages = $maxPages ?? autofill_max_scan_pages();
     $images = [];
     $im = new Imagick();
-    $im->setResolution(200, 200);
+    $im->setResolution(150, 150);
     $im->readImage($pdfPath);
 
+    $pageNum = 0;
     foreach ($im as $i => $page) {
+        if ($pageNum >= $maxPages) {
+            break;
+        }
         $page->setImageFormat('jpeg');
-        $page->setImageCompressionQuality(90);
+        $page->setImageCompressionQuality(82);
         $out = $outDir . 'page_' . ($i + 1) . '_' . bin2hex(random_bytes(3)) . '.jpg';
         $page->writeImage($out);
         $images[] = $out;
+        $pageNum++;
     }
 
     $im->clear();
@@ -579,6 +585,103 @@ function upload_openai_file(string $filePath, string $mime, string $fileName, st
     return (string)$data['id'];
 }
 
+function autofill_max_scan_pages(): int
+{
+    $n = (int) (getenv('AUTOFILL_MAX_SCAN_PAGES') ?: 2);
+
+    return max(1, min(5, $n));
+}
+
+/**
+ * Run multiple Responses API calls in parallel (faster batch autofill).
+ *
+ * @param list<array> $payloads
+ * @return list<array>
+ */
+function call_responses_api_multi(array $payloads, string $apiKey, int $maxRetries = 2, int $delayMs = 600): array
+{
+    $count = count($payloads);
+    if ($count === 0) {
+        return [];
+    }
+    if ($count === 1) {
+        return [call_responses_api($payloads[0], $apiKey, $maxRetries, $delayMs)];
+    }
+
+    $results = array_fill(0, $count, ['error' => ['message' => 'Not executed']]);
+    $pending = range(0, $count - 1);
+
+    for ($attempt = 0; $attempt < $maxRetries && $pending !== []; $attempt++) {
+        $mh = curl_multi_init();
+        $handles = [];
+
+        foreach ($pending as $idx) {
+            $ch = curl_init('https://api.openai.com/v1/responses');
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => [
+                    "Authorization: Bearer {$apiKey}",
+                    'Content-Type: application/json',
+                ],
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => json_encode($payloads[$idx], JSON_UNESCAPED_UNICODE),
+                CURLOPT_TIMEOUT => 120,
+            ]);
+            curl_multi_add_handle($mh, $ch);
+            $handles[$idx] = $ch;
+        }
+
+        $running = null;
+        do {
+            $status = curl_multi_exec($mh, $running);
+            if ($running > 0) {
+                curl_multi_select($mh, 1.0);
+            }
+        } while ($running > 0 && $status === CURLM_OK);
+
+        $retryNext = [];
+        foreach ($handles as $idx => $ch) {
+            $response = curl_multi_getcontent($ch);
+            $error = curl_error($ch);
+            curl_multi_remove_handle($mh, $ch);
+            curl_close($ch);
+
+            if ($error) {
+                $results[$idx] = ['error' => ['message' => $error]];
+                if ($attempt < $maxRetries - 1) {
+                    $retryNext[] = $idx;
+                }
+                continue;
+            }
+
+            $data = json_decode((string) $response, true);
+            if (!is_array($data)) {
+                $results[$idx] = ['error' => ['message' => 'Invalid API response']];
+                continue;
+            }
+
+            if (isset($data['error'])) {
+                $message = strtolower((string) ($data['error']['message'] ?? ''));
+                $results[$idx] = $data;
+                if (pcvc_contains($message, 'ownership') && $attempt < $maxRetries - 1) {
+                    $retryNext[] = $idx;
+                }
+                continue;
+            }
+
+            $results[$idx] = $data;
+        }
+
+        curl_multi_close($mh);
+        $pending = $retryNext;
+        if ($pending !== [] && $attempt < $maxRetries - 1) {
+            usleep($delayMs * 1000);
+        }
+    }
+
+    return $results;
+}
+
 function call_responses_api(array $payload, string $apiKey, int $maxRetries = 3, int $delayMs = 800): array
 {
     for ($attempt = 0; $attempt < $maxRetries; $attempt++) {
@@ -590,7 +693,8 @@ function call_responses_api(array $payload, string $apiKey, int $maxRetries = 3,
                 'Content-Type: application/json'
             ],
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE)
+            CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
+            CURLOPT_TIMEOUT => 120,
         ]);
 
         $response = curl_exec($ch);
@@ -935,6 +1039,7 @@ $mergedFields = [];
 $fieldScores = [];
 $documents = [];
 $warnings = [];
+$analysisJobs = [];
 
 foreach ($uploadedFiles as $file) {
     $originalName = basename((string)($file['name'] ?? 'document'));
@@ -1002,52 +1107,76 @@ foreach ($uploadedFiles as $file) {
             'text' => ['format' => ['type' => 'json_object']]
         ];
 
-        add_stage($debug, 'ai', 'Sending ' . $originalName . ' to OpenAI.');
-        $response = call_responses_api($payload, $apiKey);
-        if (isset($response['error'])) {
-            throw new RuntimeException((string)($response['error']['message'] ?? 'AI extraction failed.'));
-        }
+        add_stage($debug, 'ai', 'Queued ' . $originalName . ' for parallel OpenAI analysis.');
+        $analysisJobs[] = [
+            'payload' => $payload,
+            'cleanup' => $cleanup,
+            'client_index' => $clientIndex,
+            'original_name' => $originalName,
+        ];
+    } catch (Throwable $e) {
+        $warnings[] = $originalName . ': ' . $e->getMessage();
+        cleanup_paths($cleanup);
+    }
+}
 
-        $ai = decode_json_response(response_text($response));
-        if (!$ai || empty($ai['document_type'])) {
-            throw new RuntimeException('AI returned an invalid extraction result.');
-        }
+if ($analysisJobs) {
+    add_stage($debug, 'ai', 'Running ' . count($analysisJobs) . ' document analyses in parallel.');
+    $payloads = array_column($analysisJobs, 'payload');
+    $responses = call_responses_api_multi($payloads, $apiKey);
 
-        $documentType = (string)$ai['document_type'];
-        $confidence = max(0.0, min(1.0, (float)($ai['confidence'] ?? 0)));
-        $summary = normalize_text((string)($ai['summary'] ?? ''));
+    foreach ($analysisJobs as $jobIndex => $job) {
+        $originalName = (string) $job['original_name'];
+        $clientIndex = (int) $job['client_index'];
+        $cleanup = $job['cleanup'];
 
-        if (!array_key_exists($documentType, $fieldLabels) || $confidence < 0.45) {
+        try {
+            $response = $responses[$jobIndex] ?? ['error' => ['message' => 'No API response']];
+            if (isset($response['error'])) {
+                throw new RuntimeException((string) ($response['error']['message'] ?? 'AI extraction failed.'));
+            }
+
+            $ai = decode_json_response(response_text($response));
+            if (!$ai || empty($ai['document_type'])) {
+                throw new RuntimeException('AI returned an invalid extraction result.');
+            }
+
+            $documentType = (string) $ai['document_type'];
+            $confidence = max(0.0, min(1.0, (float) ($ai['confidence'] ?? 0)));
+            $summary = normalize_text((string) ($ai['summary'] ?? ''));
+
+            if (!array_key_exists($documentType, $fieldLabels) || $confidence < 0.45) {
+                $documents[] = [
+                    'client_index' => $clientIndex,
+                    'original_name' => $originalName,
+                    'field' => '',
+                    'field_label' => '',
+                    'confidence' => $confidence,
+                    'summary' => $summary,
+                ];
+                $warnings[] = $originalName . ': the document could not be matched confidently to a supported attachment field.';
+                cleanup_paths($cleanup);
+                continue;
+            }
+
+            $normalized = normalize_fields((array) ($ai['fields'] ?? []), $lang, $conn);
+            merge_candidate_fields($mergedFields, $fieldScores, $normalized, $documentType, $confidence);
+
             $documents[] = [
                 'client_index' => $clientIndex,
                 'original_name' => $originalName,
-                'field' => '',
-                'field_label' => '',
+                'field' => $documentType,
+                'field_label' => $fieldLabels[$documentType],
                 'confidence' => $confidence,
-                'summary' => $summary
+                'summary' => $summary,
             ];
-            $warnings[] = $originalName . ': the document could not be matched confidently to a supported attachment field.';
-            cleanup_paths($cleanup);
-            continue;
+            add_stage($debug, 'parse', 'Parsed ' . $originalName . ' as ' . $documentType . '.');
+        } catch (Throwable $e) {
+            $warnings[] = $originalName . ': ' . $e->getMessage();
         }
 
-        $normalized = normalize_fields((array)($ai['fields'] ?? []), $lang, $conn);
-        merge_candidate_fields($mergedFields, $fieldScores, $normalized, $documentType, $confidence);
-
-        $documents[] = [
-            'client_index' => $clientIndex,
-            'original_name' => $originalName,
-            'field' => $documentType,
-            'field_label' => $fieldLabels[$documentType],
-            'confidence' => $confidence,
-            'summary' => $summary
-        ];
-        add_stage($debug, 'parse', 'Parsed ' . $originalName . ' as ' . $documentType . '.');
-    } catch (Throwable $e) {
-        $warnings[] = $originalName . ': ' . $e->getMessage();
+        cleanup_paths($cleanup);
     }
-
-    cleanup_paths($cleanup);
 }
 
 file_put_contents(
