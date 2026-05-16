@@ -19,6 +19,7 @@ require_once dirname(__DIR__) . '/db.php';
 require_once dirname(__DIR__) . '/helpers/env_load.php';
 require_once dirname(__DIR__) . '/helpers/prescreening_whatsapp_schema.php';
 require_once dirname(__DIR__) . '/helpers/prescreening_whatsapp_flow.php';
+require_once dirname(__DIR__) . '/helpers/whatsapp_track_log.php';
 
 xander_load_env_file();
 xander_ensure_prescreening_whatsapp_tables($conn);
@@ -36,6 +37,7 @@ if ($givenSecret === '' && isset($body['secret'])) {
 }
 
 if ($expectedSecret === '' || !hash_equals($expectedSecret, $givenSecret)) {
+    xander_whatsapp_track('inbound_forbidden', ['reason' => 'secret_mismatch']);
     http_response_code(403);
     echo json_encode(['error' => 'Forbidden', 'handled' => false]);
     exit;
@@ -52,8 +54,10 @@ if ($from === '') {
 if ($action === 'active_session') {
     $session = xander_prescreening_load_session($conn, $from);
     $step = $session ? (string) ($session['current_step'] ?? 'idle') : 'idle';
+    $active = $step !== 'idle';
+    xander_whatsapp_track('active_session', ['from' => $from, 'active' => $active, 'step' => $step]);
     echo json_encode([
-        'active' => $step !== 'idle',
+        'active' => $active,
         'step' => $step,
     ]);
     exit;
@@ -73,9 +77,16 @@ if ($messageId !== '' && xander_prescreening_wa_dedup_seen($conn, $messageId)) {
 }
 
 try {
+    xander_whatsapp_track('handle_start', [
+        'from' => $from,
+        'message_id' => $messageId,
+        'type' => $message['type'] ?? null,
+    ]);
     $handled = (bool) xander_prescreening_handle_inbound($conn, $from, $message);
+    xander_whatsapp_track($handled ? 'handle_ok' : 'handle_noop', ['from' => $from, 'message_id' => $messageId]);
     echo json_encode(['handled' => $handled, 'duplicate' => false]);
 } catch (Throwable $e) {
+    xander_whatsapp_track('handle_error', ['from' => $from, 'error' => $e->getMessage()]);
     error_log('[prescreening-inbound] ' . $e->getMessage());
     http_response_code(500);
     echo json_encode(['handled' => false, 'error' => 'internal']);

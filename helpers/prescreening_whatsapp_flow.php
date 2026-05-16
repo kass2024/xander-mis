@@ -10,6 +10,7 @@ require_once __DIR__ . '/env_load.php';
 require_once __DIR__ . '/student_status_notify.php';
 require_once __DIR__ . '/prescreening_notify.php';
 require_once __DIR__ . '/prescreening_whatsapp_schema.php';
+require_once __DIR__ . '/whatsapp_track_log.php';
 
 const XANDER_PRESCREENING_TRIGGERS = ['prescreening', 'pre-screening', 'prescreen', 'screening', 'start screening'];
 
@@ -266,6 +267,11 @@ function xander_prescreening_admin_send_invite(mysqli $conn, string $phoneRaw, s
 
     if (!$res['sent']) {
         $out['error'] = $res['error'] !== '' ? $res['error'] : 'Could not send WhatsApp invite template.';
+        xander_whatsapp_track('invite_send_failed', [
+            'to' => $to,
+            'error' => $out['error'],
+            'method' => $res['method'] ?? '',
+        ]);
 
         return $out;
     }
@@ -277,6 +283,12 @@ function xander_prescreening_admin_send_invite(mysqli $conn, string $phoneRaw, s
     xander_prescreening_save_session($conn, $to, 'invited', $answers, 0);
 
     $out['sent'] = true;
+    xander_whatsapp_track('invite_send_ok', [
+        'to' => $to,
+        'method' => $out['method'],
+        'template_lang' => $out['template_lang'],
+        'student_name' => $name,
+    ]);
 
     return $out;
 }
