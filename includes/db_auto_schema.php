@@ -2,10 +2,24 @@
 declare(strict_types=1);
 
 /**
- * Run prescreening CREATE/ALTER when XANDER_AUTO_SCHEMA=1 in project .env (cPanel deploy).
+ * Auto-create app tables on db.php connect (once per request).
  */
 function xander_db_maybe_auto_schema(mysqli $conn): void
 {
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+
+    // Menu Access permissions — always ensure (Menu Access + admin dashboard)
+    $menuHelper = dirname(__DIR__) . '/helpers/admin_menu_permissions.php';
+    if (is_readable($menuHelper)) {
+        require_once $menuHelper;
+        xander_admin_menu_ensure_table($conn);
+    }
+
+    // Pre-screening tables — only when XANDER_AUTO_SCHEMA=1 in .env
     $envBootstrap = dirname(__DIR__) . '/helpers/env_load.php';
     if (!is_readable($envBootstrap)) {
         return;

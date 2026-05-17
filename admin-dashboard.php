@@ -19,6 +19,22 @@ if (!$result || mysqli_num_rows($result) === 0) {
 }
 $admin = mysqli_fetch_assoc($result);
 $role = $admin['role'] ?? 'standard';
+
+require_once __DIR__ . '/helpers/admin_menu_permissions.php';
+xander_admin_menu_ensure_table($conn);
+$menuAccess = xander_admin_menu_resolve($conn, $admin);
+
+function adm_menu(string $menuKey): bool
+{
+    global $menuAccess;
+    return xander_admin_menu_allowed($menuAccess, $menuKey);
+}
+
+function adm_sub(string $menuKey, string $file): bool
+{
+    global $menuAccess;
+    return xander_admin_submenu_allowed($menuAccess, $menuKey, $file);
+}
 $displayName = trim(
   ($admin['first_name'] ?? '') . ' ' . ($admin['last_name'] ?? '')
 );
@@ -348,8 +364,8 @@ $sidebarAccess = [
   ]
 ];
 
-// Get current role's allowed sidebar items
-$allowedSidebarItems = $sidebarAccess[$role] ?? $sidebarAccess['standard'];
+// Sidebar access: superadmin = all; others = custom DB or role default
+$allowedSidebarItems = $menuAccess['menus'];
 
 // Get agent data for chart
 $agentsCombined = [];
@@ -1302,7 +1318,7 @@ if (strtolower($role) !== 'catholic university of america') {
     <div class="sidebar-section">
       <div class="sidebar-section-title">Applications</div>
       
-      <?php if (in_array('all_admissions', $allowedSidebarItems)): ?>
+      <?php if (adm_menu('all_admissions')): ?>
       <!-- All university admissions -->
       <a href="#all_admissions" class="sidebar-link" onclick="toggleSidebarMenu('all_admissions')">
         <i class="bi bi-mortarboard"></i>
@@ -1329,7 +1345,7 @@ if (strtolower($role) !== 'catholic university of america') {
       </div>
       <?php endif; ?>
       
-      <?php if (in_array('loan_applications', $allowedSidebarItems)): ?>
+      <?php if (adm_menu('loan_applications')): ?>
       <!-- Study Loan Applications -->
       <a href="#loan_applications" class="sidebar-link" onclick="toggleSidebarMenu('loan_applications')">
         <i class="bi bi-bank"></i>
@@ -1348,7 +1364,7 @@ if (strtolower($role) !== 'catholic university of america') {
       </div>
       <?php endif; ?>
       
-      <?php if (in_array('I-20_applications', $allowedSidebarItems)): ?>
+      <?php if (adm_menu('I-20_applications')): ?>
       <!-- I-20 Applications -->
       <a href="#I-20_applications" class="sidebar-link" onclick="toggleSidebarMenu('I-20_applications')">
         <i class="bi bi-file-earmark-text"></i>
@@ -1363,7 +1379,7 @@ if (strtolower($role) !== 'catholic university of america') {
       </div>
       <?php endif; ?>
       
-      <?php if (in_array('staff_reporting', $allowedSidebarItems) && $role === 'superadmin'): ?>
+      <?php if (adm_menu('staff_reporting')): ?>
       <!-- Staff Management - Superadmin only -->
       <a href="#staff_reporting" class="sidebar-link" onclick="toggleSidebarMenu('staff_reporting')">
         <i class="bi bi-people"></i>
@@ -1410,7 +1426,7 @@ if (strtolower($role) !== 'catholic university of america') {
       </div>
       <?php endif; ?>
       
-      <?php if (in_array('commission_request', $allowedSidebarItems)): ?>
+      <?php if (adm_menu('commission_request')): ?>
       <!-- Commission Request -->
       <a href="#commission_request" class="sidebar-link" onclick="toggleSidebarMenu('commission_request')">
         <i class="bi bi-cash-coin"></i>
@@ -1429,7 +1445,7 @@ if (strtolower($role) !== 'catholic university of america') {
       </div>
       <?php endif; ?>
       
-   <?php if (in_array('credit_transfer', $allowedSidebarItems)): ?>
+   <?php if (adm_menu('credit_transfer')): ?>
       <!-- Credit Transfer Applications - Superadmin only -->
       <a href="#credit_transfer" class="sidebar-link" onclick="toggleSidebarMenu('credit_transfer')">
         <i class="bi bi-arrow-left-right"></i>
@@ -1452,7 +1468,7 @@ if (strtolower($role) !== 'catholic university of america') {
       </div>
       <?php endif; ?>
 
-      <?php if (in_array('visit_study_visa', $allowedSidebarItems)): ?>
+      <?php if (adm_menu('visit_study_visa')): ?>
       <!-- Visit And Study Visa -->
       <a href="#visit_study_visa" class="sidebar-link" onclick="toggleSidebarMenu('visit_study_visa')">
         <i class="bi bi-globe2"></i>
@@ -1467,7 +1483,7 @@ if (strtolower($role) !== 'catholic university of america') {
       </div>
       <?php endif; ?>
       
-      <?php if (in_array('staff_attendance', $allowedSidebarItems)): ?>
+      <?php if (adm_menu('staff_attendance')): ?>
       <!-- Staff Attendance -->
       <a href="#staff_attendance" class="sidebar-link" onclick="toggleSidebarMenu('staff_attendance')">
         <i class="bi bi-calendar-check"></i>
@@ -1518,7 +1534,7 @@ if (strtolower($role) !== 'catholic university of america') {
       </div>
       <?php endif; ?>
       
-      <?php if (in_array('university_portal', $allowedSidebarItems)): ?>
+      <?php if (adm_menu('university_portal')): ?>
       <!-- Apply for Student -->
       <a href="#university_portal" class="sidebar-link" onclick="toggleSidebarMenu('university_portal')">
         <i class="bi bi-person-plus"></i>
@@ -1541,7 +1557,7 @@ if (strtolower($role) !== 'catholic university of america') {
       </div>
       <?php endif; ?>
       
-      <?php if (in_array('marketing', $allowedSidebarItems)): ?>
+      <?php if (adm_menu('marketing')): ?>
       <!-- Marketing Materials -->
       <a href="#marketing" class="sidebar-link" onclick="toggleSidebarMenu('marketing')">
         <i class="bi bi-megaphone"></i>
@@ -1560,7 +1576,7 @@ if (strtolower($role) !== 'catholic university of america') {
       </div>
       <?php endif; ?>
       
-      <?php if (in_array('ticketing', $allowedSidebarItems) && $role === 'superadmin'): ?>
+      <?php if (adm_menu('ticketing')): ?>
       <!-- Air Ticketing Reservation - Superadmin only -->
       <a href="#ticketing" class="sidebar-link" onclick="toggleSidebarMenu('ticketing')">
         <i class="bi bi-ticket-perforated"></i>
@@ -1575,7 +1591,7 @@ if (strtolower($role) !== 'catholic university of america') {
       </div>
       <?php endif; ?>
       
-      <?php if (in_array('jobsabrod', $allowedSidebarItems)): ?>
+      <?php if (adm_menu('jobsabrod')): ?>
       <!-- Jobs Application - Superadmin only -->
       <a href="#jobsabrod" class="sidebar-link" onclick="toggleSidebarMenu('jobsabrod')">
         <i class="bi bi-briefcase"></i>
@@ -1590,7 +1606,7 @@ if (strtolower($role) !== 'catholic university of america') {
       </div>
       <?php endif; ?>
       
-      <?php if (in_array('platform', $allowedSidebarItems) && $role === 'superadmin'): ?>
+      <?php if (adm_menu('platform')): ?>
       <!-- Platforms management - Superadmin only -->
       <a href="#platform" class="sidebar-link" onclick="toggleSidebarMenu('platform')">
         <i class="bi bi-diagram-3"></i>
@@ -1605,7 +1621,7 @@ if (strtolower($role) !== 'catholic university of america') {
       </div>
       <?php endif; ?>
       
-      <?php if (in_array('contracts', $allowedSidebarItems)): ?>
+      <?php if (adm_menu('contracts')): ?>
       <!-- Student contract -->
       <a href="#contracts" class="sidebar-link" onclick="toggleSidebarMenu('contracts')">
         <i class="bi bi-file-earmark-lock"></i>
@@ -1632,7 +1648,7 @@ if (strtolower($role) !== 'catholic university of america') {
       </div>
       <?php endif; ?>
 
-      <?php if (in_array('prescreening', $allowedSidebarItems)): ?>
+      <?php if (adm_menu('prescreening')): ?>
       <a href="#prescreening" class="sidebar-link" onclick="toggleSidebarMenu('prescreening')">
         <i class="bi bi-clipboard-check"></i>
         <span>Pre-screening</span>
@@ -1650,7 +1666,7 @@ if (strtolower($role) !== 'catholic university of america') {
       </div>
       <?php endif; ?>
 
-      <?php if (in_array('chart', $allowedSidebarItems) && $role === 'superadmin'): ?>
+      <?php if (adm_menu('chart')): ?>
       <a href="#chart" class="sidebar-link" onclick="toggleSidebarMenu('chart')">
         <i class="bi bi-chat-dots"></i>
         <span>Live Chat Assistant</span>
@@ -1677,6 +1693,10 @@ if (strtolower($role) !== 'catholic university of america') {
         <span>Change Password</span>
       </a>
       <?php if ($role === 'superadmin'): ?>
+        <a href="#" class="sidebar-link" onclick="loadInFrame('admin-menu-access.php', 'Menu Access'); return false;">
+          <i class="bi bi-shield-lock"></i>
+          <span>Menu Access</span>
+        </a>
         <a href="#" class="sidebar-link" data-bs-toggle="modal" data-bs-target="#adminSettingsModal">
           <i class="bi bi-gear"></i>
           <span>System Settings</span>
@@ -1747,6 +1767,11 @@ if (strtolower($role) !== 'catholic university of america') {
                 </a>
               </li>
               <?php if ($role === 'superadmin'): ?>
+                <li>
+                  <a class="dropdown-item" href="#" onclick="loadInFrame('admin-menu-access.php', 'Menu Access'); return false;">
+                    <i class="bi bi-shield-lock me-2"></i> Menu Access
+                  </a>
+                </li>
                 <li>
                   <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#adminSettingsModal">
                     <i class="bi bi-gear me-2"></i> System Settings
@@ -3382,6 +3407,38 @@ if (strtolower($role) !== 'catholic university of america') {
         document.getElementById('sidebar').classList.remove('show');
       }
     });
+
+    // Per-admin submenu access (custom permissions from Menu Access)
+    (function applySubmenuAccess() {
+      const access = <?= json_encode($menuAccess, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+      if (!access || !access.submenus) return;
+
+      document.querySelectorAll('[id^="submenu_"]').forEach((sub) => {
+        const menuKey = sub.id.replace(/^submenu_/, '');
+        const allowed = access.submenus[menuKey];
+        if (!Array.isArray(allowed)) return;
+
+        let visibleCount = 0;
+        sub.querySelectorAll('a[onclick]').forEach((link) => {
+          const match = (link.getAttribute('onclick') || '').match(/loadInFrame\('([^']+)'/);
+          const file = match ? match[1] : '';
+          if (file && allowed.indexOf(file) === -1) {
+            link.style.display = 'none';
+          } else {
+            link.style.display = '';
+            visibleCount++;
+          }
+        });
+
+        if (visibleCount === 0) {
+          const parentLink = document.querySelector('.sidebar-link[href="#' + menuKey + '"]');
+          if (parentLink) {
+            parentLink.style.display = 'none';
+          }
+          sub.style.display = 'none';
+        }
+      });
+    })();
   </script>
   
   <!-- Include profile and password modals -->
