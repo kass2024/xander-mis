@@ -1,6 +1,12 @@
 <?php
 require "marketing-openai.php"; // AI helper
 
+// Country folder mappings
+$COUNTRY_FOLDERS = [
+    'rwanda' => 30592893924,
+    'burundi' => 31502860318
+];
+
 //-----------------------------------------------------------
 // AJAX ENDPOINT - returns categorized + searchable JSON
 //-----------------------------------------------------------
@@ -8,9 +14,13 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
     header("Content-Type: application/json");
 
     $token = "kqNT7Z8BpwhA0d4MFZVgju0kZbR12PpsX93VWhpTOL5i4jVefcDdX";
-    
-    // 👇 Use the folder ID from configuration
-    $folderId = 30592893924;  // Marketing Materials folder
+
+    // Get country from request (default to rwanda)
+    $country = $_GET['country'] ?? 'rwanda';
+    $country = in_array($country, array_keys($COUNTRY_FOLDERS)) ? $country : 'rwanda';
+
+    // Use the folder ID for selected country
+    $folderId = $COUNTRY_FOLDERS[$country];
 
     $listUrl = "https://api.pcloud.com/listfolder?folderid=$folderId&recursive=1&access_token=$token";
     $res = file_get_contents($listUrl);
@@ -54,284 +64,689 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xander - Marketing Materials</title>
-    
-    <!-- Xander Color Variables -->
+    <title>Xander · Marketing Assets</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+    <link href="https://unpkg.com/@videojs/themes/dist/city/index.css" rel="stylesheet">
+    <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+
     <style>
         :root {
             --deep-navy: #012F6B;
             --secondary-blue: #254D81;
             --dark-blue: #002765;
             --gold: #F2A65A;
+            --gold-dark: #e09540;
             --white: #FFFFFF;
-            --light-bg: #f8fafc;
-            --text-dark: #1e293b;
-            --text-muted: #64748b;
-            --success: #2e7d32;
-            --danger: #c62828;
-            --warning: #ed6c02;
-            --info: #0288d1;
-            --border-light: #e2e8f0;
+
+            --bg: #F6F8FC;
+            --surface: #FFFFFF;
+            --surface-2: #FAFBFE;
+            --border: #E8ECF3;
+            --border-strong: #D9DFEA;
+
+            --text: #0B1B36;
+            --text-muted: #5B6A86;
+            --text-soft: #8A98B3;
+
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #ea580c;
+            --info: #0284c7;
+
+            --shadow-sm: 0 1px 2px rgba(11, 27, 54, 0.04), 0 1px 3px rgba(11, 27, 54, 0.06);
+            --shadow-md: 0 4px 12px rgba(11, 27, 54, 0.06), 0 2px 6px rgba(11, 27, 54, 0.04);
+            --shadow-lg: 0 18px 40px -10px rgba(1, 47, 107, 0.18), 0 8px 16px -8px rgba(1, 47, 107, 0.10);
+            --shadow-xl: 0 30px 60px -15px rgba(1, 47, 107, 0.25);
+
+            --radius-sm: 8px;
+            --radius: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 22px;
         }
-    </style>
-    
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Video.js CSS -->
-    <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
-    <link href="https://unpkg.com/@videojs/themes/dist/city/index.css" rel="stylesheet">
-    <!-- Video.js Script -->
-    <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
-    
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body { height: 100%; }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(180deg, var(--white) 0%, #f0f4f8 100%);
-            color: var(--text-dark);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
-        /* ===== XANDER HEADER ===== */
-        .xander-header {
-            background: linear-gradient(135deg, var(--deep-navy) 0%, var(--secondary-blue) 100%);
-            padding: 12px 0;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(1100px 600px at 110% -10%, rgba(242, 166, 90, 0.10), transparent 60%),
+                radial-gradient(900px 500px at -10% 0%, rgba(1, 47, 107, 0.07), transparent 55%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ===== TOP NAV ===== */
+        .topbar {
             position: sticky;
             top: 0;
             z-index: 1000;
-            border-bottom: 3px solid var(--gold);
+            backdrop-filter: saturate(180%) blur(14px);
+            -webkit-backdrop-filter: saturate(180%) blur(14px);
+            background: rgba(255, 255, 255, 0.78);
+            border-bottom: 1px solid var(--border);
         }
 
-        .header-container {
+        .topbar-inner {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 0 24px;
-        }
-
-        .logo-container {
+            padding: 14px 24px;
             display: flex;
             align-items: center;
-            gap: 20px;
-        }
-
-        .logo-main {
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--white);
-            letter-spacing: 1px;
-            position: relative;
-            display: inline-block;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .logo-main::after {
-            content: '📊';
-            position: absolute;
-            top: -8px;
-            right: -35px;
-            font-size: 1.8rem;
-            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3));
-        }
-
-        .logo-subtitle {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: var(--gold);
-            letter-spacing: 1px;
-            border-left: 3px solid var(--gold);
-            padding-left: 20px;
-            text-transform: uppercase;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
-        }
-
-        /* ===== MAIN CONTAINER ===== */
-        .main-container {
-            max-width: 1400px;
-            margin: 30px auto;
-            padding: 0 24px;
-        }
-
-        /* ===== PAGE HEADER ===== */
-        .page-header {
-            display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-            gap: 20px;
+            gap: 18px;
         }
 
-        .page-title {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--deep-navy);
+        .brand {
             display: flex;
             align-items: center;
             gap: 12px;
-            margin: 0;
+            text-decoration: none;
         }
 
-        .page-title i {
-            color: var(--gold);
-            font-size: 32px;
-        }
-
-        .search-container {
+        .brand-mark {
+            width: 38px;
+            height: 38px;
+            border-radius: 11px;
+            background: linear-gradient(135deg, var(--deep-navy), var(--secondary-blue));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 800;
+            font-size: 18px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 6px 16px -4px rgba(1, 47, 107, 0.45);
             position: relative;
-            min-width: 320px;
         }
 
-        .search-container i {
+        .brand-mark::after {
+            content: '';
             position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
+            inset: -2px;
+            border-radius: 13px;
+            background: linear-gradient(135deg, var(--gold), transparent 60%);
+            opacity: 0.35;
+            z-index: -1;
+            filter: blur(6px);
+        }
+
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.1;
+        }
+
+        .brand-text .name {
+            font-weight: 800;
+            font-size: 16px;
+            color: var(--text);
+            letter-spacing: 0.2px;
+        }
+
+        .brand-text .sub {
+            font-size: 11px;
+            font-weight: 600;
             color: var(--text-muted);
+            letter-spacing: 1.4px;
+            text-transform: uppercase;
+        }
+
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .pill .dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18);
+        }
+
+        /* ===== HERO ===== */
+        .container-x {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 28px 24px 80px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 22px;
+            margin-bottom: 26px;
+        }
+
+        @media (max-width: 980px) {
+            .hero { grid-template-columns: 1fr; }
+        }
+
+        .hero-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: var(--radius-xl);
+            background: linear-gradient(135deg, var(--deep-navy) 0%, var(--secondary-blue) 55%, #2a5a96 100%);
+            color: var(--white);
+            padding: 32px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .hero-card::before {
+            content: '';
+            position: absolute;
+            right: -80px; top: -80px;
+            width: 300px; height: 300px;
+            background: radial-gradient(closest-side, rgba(242,166,90,0.45), transparent 70%);
+            filter: blur(2px);
+        }
+
+        .hero-card::after {
+            content: '';
+            position: absolute;
+            left: -60px; bottom: -120px;
+            width: 280px; height: 280px;
+            background: radial-gradient(closest-side, rgba(255,255,255,0.10), transparent 70%);
+        }
+
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--gold);
+            backdrop-filter: blur(8px);
+        }
+
+        .hero-title {
+            font-size: clamp(28px, 4vw, 40px);
+            font-weight: 800;
+            line-height: 1.1;
+            margin: 14px 0 10px;
+            letter-spacing: -0.5px;
+            position: relative;
+        }
+
+        .hero-sub {
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 15px;
+            max-width: 520px;
+            position: relative;
+        }
+
+        .hero-quick {
+            margin-top: 22px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .quick-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.10);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: var(--white);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .quick-chip:hover {
+            background: rgba(255, 255, 255, 0.18);
+            transform: translateY(-1px);
+        }
+
+        .quick-chip i { color: var(--gold); }
+
+        /* Stats panel */
+        .stats-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 18px;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-card .icon {
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+
+        .stat-card.images .icon { background: rgba(2, 132, 199, 0.10); color: var(--info); }
+        .stat-card.videos .icon { background: rgba(220, 38, 38, 0.10); color: var(--danger); }
+        .stat-card.others .icon { background: rgba(234, 88, 12, 0.10); color: var(--warning); }
+        .stat-card.total  .icon { background: rgba(1, 47, 107, 0.10); color: var(--deep-navy); }
+
+        .stat-card .label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+        }
+
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text);
+            line-height: 1.1;
+            margin-top: 4px;
+        }
+
+        /* ===== CONTROLS ===== */
+        .controls {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 14px;
+            box-shadow: var(--shadow-sm);
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 22px;
+        }
+
+        @media (max-width: 820px) {
+            .controls { grid-template-columns: 1fr; }
+        }
+
+        .search-wrap {
+            position: relative;
+        }
+
+        .search-wrap i {
+            position: absolute;
+            left: 16px; top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-soft);
             font-size: 16px;
         }
 
         #searchInput {
             width: 100%;
-            padding: 12px 16px 12px 45px;
-            border: 2px solid var(--border-light);
-            border-radius: 30px;
+            padding: 12px 44px 12px 44px;
+            border: 1.5px solid var(--border);
+            background: var(--surface-2);
+            border-radius: 12px;
             font-size: 14px;
-            background: var(--white);
-            transition: all 0.3s ease;
+            font-weight: 500;
+            color: var(--text);
+            transition: all 0.2s ease;
         }
+
+        #searchInput::placeholder { color: var(--text-soft); }
 
         #searchInput:focus {
             outline: none;
-            border-color: var(--gold);
-            box-shadow: 0 0 0 4px rgba(242, 166, 90, 0.1);
+            border-color: var(--secondary-blue);
+            background: var(--surface);
+            box-shadow: 0 0 0 4px rgba(37, 77, 129, 0.10);
         }
 
-        /* ===== AI INSIGHTS CARD ===== */
-        .ai-card {
-            background: var(--white);
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(1, 47, 107, 0.08);
-            border: 1px solid var(--border-light);
-            overflow: hidden;
-            margin-bottom: 30px;
+        .kbd {
+            position: absolute;
+            right: 12px; top: 50%;
+            transform: translateY(-50%);
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 3px 7px;
+            border-radius: 6px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
         }
 
-        .ai-header {
-            background: linear-gradient(135deg, #f8fafc 0%, #eef2f6 100%);
-            padding: 16px 20px;
-            border-bottom: 2px solid var(--gold);
+        .country-wrap {
             display: flex;
             align-items: center;
-            gap: 12px;
-        }
-
-        .ai-header i {
-            color: var(--gold);
-            font-size: 24px;
-        }
-
-        .ai-header h5 {
-            margin: 0;
-            font-weight: 700;
-            color: var(--deep-navy);
-            font-size: 18px;
-        }
-
-        .ai-body {
-            padding: 20px;
-            background: linear-gradient(135deg, rgba(242, 166, 90, 0.02) 0%, rgba(1, 47, 107, 0.02) 100%);
-        }
-
-        #ai-box {
-            font-size: 0.95rem;
-            line-height: 1.6;
-            color: var(--text-dark);
-            white-space: pre-wrap;
-        }
-
-        /* ===== SECTION HEADERS ===== */
-        .section-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin: 40px 0 20px 0;
-        }
-
-        .section-icon {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, var(--deep-navy) 0%, var(--secondary-blue) 100%);
+            gap: 8px;
+            padding: 4px;
+            background: var(--surface-2);
+            border: 1.5px solid var(--border);
             border-radius: 12px;
+        }
+
+        .country-btn {
+            padding: 8px 14px;
+            background: transparent;
+            border: none;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .country-btn:hover { color: var(--text); }
+
+        .country-btn.active {
+            background: var(--surface);
+            color: var(--deep-navy);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .view-toggle {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px;
+            background: var(--surface-2);
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+        }
+
+        .view-btn {
+            width: 36px; height: 36px;
+            background: transparent;
+            border: none;
+            border-radius: 9px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .view-btn:hover { color: var(--text); }
+
+        .view-btn.active {
+            background: var(--surface);
+            color: var(--deep-navy);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* ===== TABS ===== */
+        .tabs {
+            display: flex;
+            gap: 6px;
+            padding: 6px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 24px;
+            overflow-x: auto;
+        }
+
+        .tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 13.5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .tab:hover { color: var(--text); background: var(--surface-2); }
+
+        .tab.active {
+            color: var(--white);
+            background: linear-gradient(135deg, var(--deep-navy), var(--secondary-blue));
+            box-shadow: var(--shadow-md);
+        }
+
+        .tab .badge-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 20px;
+            padding: 0 7px;
+            border-radius: 999px;
+            background: var(--bg);
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .tab.active .badge-count {
+            background: rgba(255, 255, 255, 0.18);
+            color: var(--white);
+        }
+
+        /* ===== AI INSIGHTS ===== */
+        .ai-card {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            padding: 18px 20px;
+            margin-bottom: 28px;
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ai-card::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, var(--gold), var(--secondary-blue));
+        }
+
+        .ai-icon {
+            flex-shrink: 0;
+            width: 42px; height: 42px;
+            border-radius: 11px;
+            background: linear-gradient(135deg, rgba(242,166,90,0.15), rgba(1,47,107,0.10));
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--white);
-            font-size: 24px;
+            color: var(--gold);
+            font-size: 20px;
         }
 
-        .section-title {
-            font-size: 24px;
+        .ai-content { flex: 1; min-width: 0; }
+
+        .ai-title {
+            font-size: 12px;
             font-weight: 700;
-            color: var(--deep-navy);
+            color: var(--text-muted);
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ai-title .live {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            color: var(--success);
+        }
+
+        .ai-title .live::before {
+            content: '';
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 1.6s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.8); }
+        }
+
+        #ai-box {
+            color: var(--text);
+            line-height: 1.55;
+            font-size: 14px;
+        }
+
+        /* ===== SECTIONS ===== */
+        .section { margin-bottom: 36px; scroll-margin-top: 90px; }
+        .section.is-hidden { display: none; }
+
+        .section-head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .section-icon {
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .section-icon.images { background: rgba(2, 132, 199, 0.10); color: var(--info); }
+        .section-icon.videos { background: rgba(220, 38, 38, 0.10); color: var(--danger); }
+        .section-icon.others { background: rgba(234, 88, 12, 0.10); color: var(--warning); }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
             margin: 0;
         }
 
         .section-count {
-            background: var(--gold);
-            color: var(--deep-navy);
-            padding: 4px 12px;
-            border-radius: 30px;
-            font-size: 14px;
+            margin-left: 4px;
+            font-size: 13px;
             font-weight: 600;
-            margin-left: 12px;
+            color: var(--text-muted);
+            background: var(--bg);
+            padding: 3px 10px;
+            border-radius: 999px;
         }
 
-        /* ===== GRID LAYOUT ===== */
+        /* ===== GRID ===== */
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 25px;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 18px;
         }
 
-        /* ===== FILE CARD ===== */
+        .grid.list-view {
+            grid-template-columns: 1fr;
+        }
+
         .file-card {
-            background: var(--white);
-            border-radius: 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
             overflow: hidden;
-            border: 1px solid var(--border-light);
-            box-shadow: 0 5px 15px rgba(1, 47, 107, 0.08);
-            transition: all 0.3s ease;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
             position: relative;
+            animation: fadeInUp 0.4s ease both;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .file-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(1, 47, 107, 0.15);
-            border-color: var(--gold);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--border-strong);
         }
 
         .media-preview {
             position: relative;
-            width: 100%;
-            height: 180px;
-            background: linear-gradient(135deg, #f8fafc 0%, #eef2f6 100%);
+            aspect-ratio: 16 / 11;
+            background:
+                linear-gradient(135deg, #EEF2F8 0%, #E2E8F0 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             overflow: hidden;
         }
 
-        .skeleton {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+        .media-preview .skeleton {
+            position: absolute; inset: 0;
+            background: linear-gradient(90deg, #EEF2F8 0%, #F6F8FC 50%, #EEF2F8 100%);
             background-size: 200% 100%;
             animation: shimmer 1.5s infinite;
         }
@@ -341,103 +756,96 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
             100% { background-position: -200% 0; }
         }
 
-        .thumb {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+        .media-preview .thumb {
+            width: 100%; height: 100%;
             object-fit: cover;
             opacity: 0;
-            transition: opacity 0.3s ease;
-            z-index: 2;
+            transition: opacity 0.4s ease, transform 0.5s ease;
         }
 
-        .thumb.loaded {
-            opacity: 1;
+        .file-card:hover .thumb { transform: scale(1.05); }
+        .thumb.loaded { opacity: 1; }
+
+        .file-icon-wrap {
+            font-size: 2.6rem;
+            color: var(--secondary-blue);
+            opacity: 0.85;
         }
 
-        .file-icon {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #f8fafc 0%, #eef2f6 100%);
-            font-size: 48px;
-            transition: transform 0.3s ease;
-        }
-
-        .file-card:hover .file-icon {
-            transform: scale(1.05);
+        .badge-type {
+            position: absolute;
+            top: 10px; left: 10px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(11, 27, 54, 0.78);
+            color: var(--white);
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            backdrop-filter: blur(8px);
         }
 
         .play-button {
             position: absolute;
-            top: 50%;
-            left: 50%;
+            top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            width: 60px;
-            height: 60px;
-            background: rgba(1, 47, 107, 0.9);
+            width: 56px; height: 56px;
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 10;
-            border: 2px solid var(--gold);
+            transition: all 0.25s ease;
+            box-shadow: 0 12px 26px rgba(0, 0, 0, 0.25);
         }
 
         .play-button:hover {
-            transform: translate(-50%, -50%) scale(1.1);
-            background: var(--deep-navy);
+            background: var(--gold);
+            transform: translate(-50%, -50%) scale(1.08);
         }
 
         .play-button i {
-            color: var(--white);
-            font-size: 24px;
-            margin-left: 4px;
+            color: var(--deep-navy);
+            font-size: 22px;
+            margin-left: 3px;
+            transition: color 0.2s ease;
         }
 
-        .file-info {
-            padding: 16px;
-        }
+        .play-button:hover i { color: var(--white); }
+
+        .file-info { padding: 14px 16px 16px; }
 
         .filename {
             font-weight: 600;
-            color: var(--text-dark);
+            font-size: 14px;
+            color: var(--text);
             margin-bottom: 8px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            font-size: 15px;
         }
 
         .file-meta {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
-        }
-
-        .file-size {
+            gap: 10px;
+            margin-bottom: 14px;
             font-size: 12px;
             color: var(--text-muted);
-            background: var(--light-bg);
-            padding: 4px 8px;
-            border-radius: 4px;
         }
 
-        .file-ext {
-            background: linear-gradient(135deg, var(--deep-navy) 0%, var(--secondary-blue) 100%);
-            color: var(--white);
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            font-weight: 600;
+        .file-meta .dot-sep {
+            width: 3px; height: 3px;
+            border-radius: 50%;
+            background: var(--text-soft);
+        }
+
+        .file-meta .ext-tag {
             text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
 
         .file-actions {
@@ -445,296 +853,270 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
             gap: 8px;
         }
 
-        .btn-preview {
+        .btn-preview, .btn-download {
             flex: 1;
-            background: var(--light-bg);
-            border: 1px solid var(--border-light);
-            color: var(--deep-navy);
-            padding: 8px 0;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-
-        .btn-preview:hover {
-            background: var(--gold);
-            border-color: var(--gold);
-            color: var(--deep-navy);
-        }
-
-        .btn-download {
-            flex: 1;
-            background: linear-gradient(135deg, var(--deep-navy) 0%, var(--secondary-blue) 100%);
-            color: var(--white);
-            padding: 8px 0;
-            border-radius: 6px;
+            padding: 9px 12px;
+            border: none;
+            border-radius: 9px;
             font-size: 13px;
             font-weight: 600;
             text-decoration: none;
-            text-align: center;
+            cursor: pointer;
             transition: all 0.2s ease;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
+            font-family: inherit;
+        }
+
+        .btn-preview {
+            background: var(--surface-2);
+            color: var(--deep-navy);
+            border: 1.5px solid var(--border);
+        }
+
+        .btn-preview:hover {
+            background: var(--deep-navy);
+            color: var(--white);
+            border-color: var(--deep-navy);
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, var(--deep-navy), var(--secondary-blue));
+            color: var(--white);
+            box-shadow: 0 6px 14px -6px rgba(1, 47, 107, 0.5);
         }
 
         .btn-download:hover {
-            background: linear-gradient(135deg, var(--dark-blue) 0%, var(--deep-navy) 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(1, 47, 107, 0.3);
             color: var(--white);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px -8px rgba(1, 47, 107, 0.55);
+        }
+
+        /* List view tweaks */
+        .grid.list-view .file-card {
+            display: grid;
+            grid-template-columns: 110px 1fr auto;
+            align-items: center;
+            gap: 16px;
+            padding-right: 16px;
+        }
+
+        .grid.list-view .media-preview {
+            aspect-ratio: 1;
+            height: 90px;
+            border-radius: 10px;
+            margin: 12px 0 12px 12px;
+        }
+
+        .grid.list-view .file-info {
+            padding: 12px 0;
+        }
+
+        .grid.list-view .file-actions {
+            margin: 0;
+            min-width: 220px;
+        }
+
+        @media (max-width: 640px) {
+            .grid.list-view .file-card {
+                grid-template-columns: 80px 1fr;
+            }
+            .grid.list-view .file-actions {
+                grid-column: 1 / -1;
+                padding: 0 12px 12px;
+                min-width: auto;
+            }
         }
 
         /* ===== EMPTY STATE ===== */
         .empty-state {
             text-align: center;
-            padding: 60px 20px;
-            background: var(--light-bg);
-            border-radius: 16px;
-            border: 2px dashed var(--border-light);
-            grid-column: 1 / -1;
+            padding: 60px 24px;
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            border: 1.5px dashed var(--border-strong);
         }
 
         .empty-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-            color: var(--deep-navy);
+            font-size: 42px;
+            margin-bottom: 14px;
+            opacity: 0.7;
         }
 
         .empty-title {
-            font-size: 20px;
+            font-size: 16px;
             font-weight: 700;
-            color: var(--text-dark);
-            margin-bottom: 8px;
+            color: var(--text);
+            margin-bottom: 6px;
         }
 
         .empty-text {
             color: var(--text-muted);
             font-size: 14px;
+            max-width: 360px;
+            margin: 0 auto;
         }
 
-        /* ===== VIDEO MODAL ===== */
-        .video-modal .modal-dialog {
-            max-width: 90%;
-            height: 85vh;
-            margin: 2rem auto;
-        }
-
-        .video-modal .modal-content {
-            background: var(--deep-navy);
-            border: 2px solid var(--gold);
-            border-radius: 16px;
-            overflow: hidden;
-            height: 100%;
-        }
-
-        .video-modal .modal-header {
-            background: linear-gradient(135deg, var(--deep-navy) 0%, var(--secondary-blue) 100%);
-            border-bottom: 2px solid var(--gold);
-            padding: 12px 20px;
-        }
-
-        .video-modal .modal-title {
-            color: var(--white);
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .video-modal .modal-title i {
-            color: var(--gold);
-        }
-
-        .video-modal .btn-close {
-            filter: brightness(0) invert(1);
-            opacity: 0.8;
-        }
-
-        .video-modal .btn-close:hover {
-            opacity: 1;
-        }
-
-        .video-modal .modal-body {
-            padding: 0;
-            background: #000;
-            height: calc(100% - 60px);
-        }
-
-        #videoContainer {
-            width: 100%;
-            height: 100%;
-        }
-
-        .video-js {
-            width: 100%;
-            height: 100%;
-        }
-
-        .video-js .vjs-big-play-button {
-            background-color: rgba(1, 47, 107, 0.8);
-            border: 2px solid var(--gold);
-            border-radius: 50%;
-            width: 70px;
-            height: 70px;
-            line-height: 70px;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        .video-js:hover .vjs-big-play-button {
-            background-color: var(--deep-navy);
-        }
-
-        /* ===== TOAST NOTIFICATIONS ===== */
-        .toast-container {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            z-index: 9999;
-        }
-
-        .toast-notification {
-            background: var(--white);
-            border-radius: 8px;
-            padding: 12px 20px;
-            margin-top: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-left: 4px solid;
-            animation: slideIn 0.3s ease;
-        }
-
-        .toast-notification.success {
-            border-left-color: var(--success);
-        }
-
-        .toast-notification.error {
-            border-left-color: var(--danger);
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        /* ===== LOADING OVERLAY ===== */
+        /* ===== LOADING / SKELETONS ===== */
         .loading-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.9);
+            inset: 0;
+            background: rgba(246, 248, 252, 0.85);
+            backdrop-filter: blur(6px);
             display: none;
             align-items: center;
             justify-content: center;
             z-index: 9999;
         }
 
+        .loading-overlay .loader {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+        }
+
         .spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid var(--border-light);
-            border-radius: 50%;
+            width: 46px; height: 46px;
+            border: 3.5px solid var(--border);
             border-top-color: var(--deep-navy);
-            animation: spin 1s ease-in-out infinite;
+            border-right-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-overlay .loader p {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
         }
 
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 768px) {
-            .header-container {
-                padding: 0 16px;
-            }
-            
-            .logo-main {
-                font-size: 1.5rem;
-            }
-            
-            .logo-main::after {
-                right: -25px;
-                font-size: 1.3rem;
-            }
-            
-            .logo-subtitle {
-                font-size: 1rem;
-                padding-left: 12px;
-            }
-            
-            .page-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .search-container {
-                min-width: 100%;
-            }
-            
-            .grid {
-                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-                gap: 15px;
-            }
-            
-            .section-header {
-                flex-wrap: wrap;
-            }
-            
-            .file-actions {
-                flex-direction: column;
-            }
-            
-            .video-modal .modal-dialog {
-                max-width: 95%;
-                height: 60vh;
-            }
+        .skeleton-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+        .skeleton-card .sk-thumb {
+            aspect-ratio: 16 / 11;
+            background: linear-gradient(90deg, #EEF2F8 0%, #F6F8FC 50%, #EEF2F8 100%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        .skeleton-card .sk-body { padding: 14px; }
+        .skeleton-card .sk-line {
+            height: 12px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #EEF2F8 0%, #F6F8FC 50%, #EEF2F8 100%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            margin-bottom: 10px;
+        }
+        .skeleton-card .sk-line.w-60 { width: 60%; }
+        .skeleton-card .sk-line.w-40 { width: 40%; }
+
+        /* ===== TOAST ===== */
+        .toast-container {
+            position: fixed;
+            bottom: 24px; right: 24px;
+            z-index: 9999;
+            display: flex; flex-direction: column; gap: 10px;
         }
 
-        @media (max-width: 480px) {
-            .logo-container {
-                gap: 10px;
-            }
-            
-            .logo-main {
-                font-size: 1.3rem;
-            }
-            
-            .logo-subtitle {
-                font-size: 0.8rem;
-                padding-left: 8px;
-            }
-            
-            .grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .section-icon {
-                width: 36px;
-                height: 36px;
-                font-size: 18px;
-            }
-            
-            .section-title {
-                font-size: 20px;
-            }
+        .toast-notification {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: var(--text);
+            border-left: 4px solid;
+            min-width: 250px;
+            animation: slideIn 0.3s ease;
+        }
+        .toast-notification.success { border-left-color: var(--success); }
+        .toast-notification.success i { color: var(--success); }
+        .toast-notification.error { border-left-color: var(--danger); }
+        .toast-notification.error i { color: var(--danger); }
+        .toast-notification.info { border-left-color: var(--info); }
+        .toast-notification.info i { color: var(--info); }
+
+        @keyframes slideIn {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* ===== VIDEO MODAL ===== */
+        .video-modal .modal-content {
+            background: #0a0f1a;
+            border: none;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-xl);
+        }
+        .video-modal .modal-header {
+            background: linear-gradient(135deg, var(--deep-navy), var(--secondary-blue));
+            border-bottom: 1px solid rgba(242, 166, 90, 0.4);
+            padding: 14px 20px;
+        }
+        .video-modal .modal-title {
+            color: var(--white);
+            font-weight: 700;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .video-modal .modal-title i { color: var(--gold); }
+        .video-modal .btn-close {
+            filter: brightness(0) invert(1);
+            opacity: 0.85;
+        }
+        .video-modal .btn-close:hover { opacity: 1; }
+        .video-modal .modal-body { padding: 0; background: #000; }
+
+        #videoContainer { width: 100%; }
+
+        .video-js { width: 100%; height: 60vh; }
+
+        .video-js .vjs-big-play-button {
+            background-color: rgba(242, 166, 90, 0.95);
+            border: none;
+            border-radius: 50%;
+            width: 72px; height: 72px;
+            line-height: 72px;
+            left: 50%; top: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+        }
+
+        .video-js:hover .vjs-big-play-button {
+            background-color: var(--gold-dark);
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-strong);
+            border-radius: 999px;
+            border: 2px solid var(--bg);
+        }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-soft); }
+
+        @media (max-width: 640px) {
+            .container-x { padding: 18px 14px 60px; }
+            .hero-card { padding: 24px; }
+            .stats-panel { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
@@ -742,106 +1124,192 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
 
 <!-- Loading Overlay -->
 <div class="loading-overlay" id="loadingOverlay">
-    <div class="spinner"></div>
+    <div class="loader">
+        <div class="spinner"></div>
+        <p>Fetching latest assets…</p>
+    </div>
 </div>
 
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 
-<!-- Xander Header -->
-<div class="xander-header">
-    <div class="header-container">
-        <div class="logo-container">
-            <div class="logo-main">XANDER</div>
-            <div class="logo-subtitle">MARKETING ASSETS</div>
+<!-- Top Nav -->
+<div class="topbar">
+    <div class="topbar-inner">
+        <a href="#" class="brand">
+            <div class="brand-mark">X</div>
+            <div class="brand-text">
+                <span class="name">Xander</span>
+                <span class="sub">Marketing Assets</span>
+            </div>
+        </a>
+        <div class="top-actions">
+            <div class="pill">
+                <span class="dot"></span>
+                <span id="connectionLabel">Connected to pCloud</span>
+            </div>
         </div>
     </div>
 </div>
 
-<main class="main-container">
-    
-    <!-- Page Header -->
-    <div class="page-header">
-        <h1 class="page-title">
-            <i class="bi bi-megaphone"></i>
-            Marketing Materials
-        </h1>
-        
-        <div class="search-container">
+<main class="container-x">
+
+    <!-- Hero + Stats -->
+    <section class="hero">
+        <div class="hero-card">
+            <span class="hero-eyebrow">
+                <i class="bi bi-stars"></i> Asset Library
+            </span>
+            <h1 class="hero-title">Your marketing materials, organized.</h1>
+            <p class="hero-sub">Browse, preview, and download images, videos, and documents from your shared marketing folder. Filter by country or search across everything.</p>
+            <div class="hero-quick">
+                <button class="quick-chip" data-jump="images">
+                    <i class="bi bi-images"></i> Jump to Images
+                </button>
+                <button class="quick-chip" data-jump="videos">
+                    <i class="bi bi-camera-reels"></i> Jump to Videos
+                </button>
+                <button class="quick-chip" data-jump="others">
+                    <i class="bi bi-file-earmark-text"></i> Documents
+                </button>
+            </div>
+        </div>
+
+        <div class="stats-panel">
+            <div class="stat-card total">
+                <div class="icon"><i class="bi bi-collection"></i></div>
+                <div class="label">Total Assets</div>
+                <div class="value" id="totalCount">0</div>
+            </div>
+            <div class="stat-card images">
+                <div class="icon"><i class="bi bi-image"></i></div>
+                <div class="label">Images</div>
+                <div class="value" id="imagesStatCount">0</div>
+            </div>
+            <div class="stat-card videos">
+                <div class="icon"><i class="bi bi-play-btn"></i></div>
+                <div class="label">Videos</div>
+                <div class="value" id="videosStatCount">0</div>
+            </div>
+            <div class="stat-card others">
+                <div class="icon"><i class="bi bi-file-earmark"></i></div>
+                <div class="label">Documents</div>
+                <div class="value" id="othersStatCount">0</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Controls -->
+    <div class="controls">
+        <div class="search-wrap">
             <i class="bi bi-search"></i>
-            <input type="text" id="searchInput" class="form-control" 
-                   placeholder="Search files by name...">
+            <input type="text" id="searchInput" placeholder="Search files by name…" autocomplete="off">
+            <span class="kbd">⌘F</span>
+        </div>
+        <div class="country-wrap" role="tablist" aria-label="Country">
+            <button class="country-btn active" data-country="rwanda" type="button">
+                <span>🇷🇼</span> Rwanda
+            </button>
+            <button class="country-btn" data-country="burundi" type="button">
+                <span>🇧🇮</span> Burundi
+            </button>
+        </div>
+        <div class="view-toggle" role="tablist" aria-label="View">
+            <button class="view-btn active" data-view="grid" type="button" title="Grid view">
+                <i class="bi bi-grid-fill"></i>
+            </button>
+            <button class="view-btn" data-view="list" type="button" title="List view">
+                <i class="bi bi-list-ul"></i>
+            </button>
         </div>
     </div>
-    
-    <!-- AI Insights Card -->
+
+    <!-- AI Insights -->
     <div class="ai-card">
-       
-        <div class="ai-body">
-            <div id="ai-box">Analyzing your marketing materials...</div>
+        <div class="ai-icon"><i class="bi bi-stars"></i></div>
+        <div class="ai-content">
+            <div class="ai-title">
+                AI Insights
+                <span class="live">Live</span>
+            </div>
+            <div id="ai-box">Analyzing your marketing materials…</div>
         </div>
     </div>
-    
+
+    <!-- Filter Tabs -->
+    <div class="tabs" role="tablist" aria-label="Filter">
+        <button class="tab active" data-filter="all" type="button">
+            <i class="bi bi-grid"></i> All
+            <span class="badge-count" id="tabAllCount">0</span>
+        </button>
+        <button class="tab" data-filter="images" type="button">
+            <i class="bi bi-images"></i> Images
+            <span class="badge-count" id="tabImagesCount">0</span>
+        </button>
+        <button class="tab" data-filter="videos" type="button">
+            <i class="bi bi-camera-reels"></i> Videos
+            <span class="badge-count" id="tabVideosCount">0</span>
+        </button>
+        <button class="tab" data-filter="others" type="button">
+            <i class="bi bi-file-earmark-text"></i> Documents
+            <span class="badge-count" id="tabOthersCount">0</span>
+        </button>
+    </div>
+
     <!-- Images Section -->
-    <div class="section-header">
-        <div class="section-icon">
-            <i class="bi bi-images"></i>
-        </div>
-        <h2 class="section-title">
-            Images
+    <section class="section" id="section-images">
+        <div class="section-head">
+            <div class="section-icon images"><i class="bi bi-images"></i></div>
+            <h2 class="section-title">Images</h2>
             <span class="section-count" id="imagesCount">0</span>
-        </h2>
-    </div>
-    <div id="imagesGrid" class="grid"></div>
-    <div id="noImages" class="empty-state d-none">
-        <div class="empty-icon">🖼️</div>
-        <div class="empty-title">No Images Found</div>
-        <div class="empty-text">Upload images to the marketing folder to see them here</div>
-    </div>
-    
+        </div>
+        <div id="imagesGrid" class="grid"></div>
+        <div id="noImages" class="empty-state d-none">
+            <div class="empty-icon">🖼️</div>
+            <div class="empty-title">No images yet</div>
+            <div class="empty-text">Upload images to the marketing folder to see them appear here automatically.</div>
+        </div>
+    </section>
+
     <!-- Videos Section -->
-    <div class="section-header">
-        <div class="section-icon">
-            <i class="bi bi-camera-reels"></i>
-        </div>
-        <h2 class="section-title">
-            Videos
+    <section class="section" id="section-videos">
+        <div class="section-head">
+            <div class="section-icon videos"><i class="bi bi-camera-reels"></i></div>
+            <h2 class="section-title">Videos</h2>
             <span class="section-count" id="videosCount">0</span>
-        </h2>
-    </div>
-    <div id="videosGrid" class="grid"></div>
-    <div id="noVideos" class="empty-state d-none">
-        <div class="empty-icon">🎬</div>
-        <div class="empty-title">No Videos Found</div>
-        <div class="empty-text">Upload videos to the marketing folder to see them here</div>
-    </div>
-    
-    <!-- Other Files Section -->
-    <div class="section-header">
-        <div class="section-icon">
-            <i class="bi bi-files"></i>
         </div>
-        <h2 class="section-title">
-            Other Files
+        <div id="videosGrid" class="grid"></div>
+        <div id="noVideos" class="empty-state d-none">
+            <div class="empty-icon">🎬</div>
+            <div class="empty-title">No videos yet</div>
+            <div class="empty-text">Upload videos to the marketing folder to see them appear here automatically.</div>
+        </div>
+    </section>
+
+    <!-- Others Section -->
+    <section class="section" id="section-others">
+        <div class="section-head">
+            <div class="section-icon others"><i class="bi bi-file-earmark-text"></i></div>
+            <h2 class="section-title">Documents</h2>
             <span class="section-count" id="othersCount">0</span>
-        </h2>
-    </div>
-    <div id="othersGrid" class="grid"></div>
-    <div id="noOthers" class="empty-state d-none">
-        <div class="empty-icon">📄</div>
-        <div class="empty-title">No Other Files Found</div>
-        <div class="empty-text">Upload documents to the marketing folder to see them here</div>
-    </div>
+        </div>
+        <div id="othersGrid" class="grid"></div>
+        <div id="noOthers" class="empty-state d-none">
+            <div class="empty-icon">📄</div>
+            <div class="empty-title">No documents yet</div>
+            <div class="empty-text">Upload PDFs, docs or any other files to the marketing folder to see them here.</div>
+        </div>
+    </section>
 </main>
 
 <!-- Video Preview Modal -->
 <div class="modal fade video-modal" id="videoModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="bi bi-play-circle"></i>
-                    Video Preview
+                    <i class="bi bi-play-circle-fill"></i>
+                    <span id="videoModalTitle">Video Preview</span>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -855,99 +1323,192 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 // ===== CONFIGURATION =====
-const FOLDER_ID = 30592893924;
+const COUNTRY_FOLDERS = <?= json_encode($COUNTRY_FOLDERS) ?>;
+let currentCountry = 'rwanda';
+let currentFilter = 'all';
+let currentView = 'grid';
 let allFilesData = { images: [], videos: [], others: [] };
 
-// ===== TOAST NOTIFICATION SYSTEM =====
+// ===== COUNTRY SELECTION =====
+document.querySelectorAll('.country-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        if (btn.classList.contains('active')) return;
+        document.querySelectorAll('.country-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentCountry = btn.dataset.country;
+        const label = btn.textContent.trim();
+        document.getElementById('searchInput').value = '';
+        loadFiles();
+        showToast(`Switched to ${label}`, 'info');
+    });
+});
+
+// ===== VIEW TOGGLE =====
+document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        if (btn.classList.contains('active')) return;
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentView = btn.dataset.view;
+        ['imagesGrid','videosGrid','othersGrid'].forEach(id => {
+            const g = document.getElementById(id);
+            g.classList.toggle('list-view', currentView === 'list');
+        });
+    });
+});
+
+// ===== TAB FILTERS =====
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentFilter = tab.dataset.filter;
+        applyFilter();
+    });
+});
+
+function applyFilter() {
+    const map = {
+        all: ['section-images','section-videos','section-others'],
+        images: ['section-images'],
+        videos: ['section-videos'],
+        others: ['section-others']
+    };
+    const visible = map[currentFilter];
+    ['section-images','section-videos','section-others'].forEach(id => {
+        const el = document.getElementById(id);
+        if (visible.includes(id)) el.classList.remove('is-hidden');
+        else el.classList.add('is-hidden');
+    });
+}
+
+// ===== QUICK JUMP CHIPS =====
+document.querySelectorAll('.quick-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        const target = chip.dataset.jump;
+        const tab = document.querySelector(`.tab[data-filter="${target}"]`);
+        if (tab) tab.click();
+        document.getElementById(`section-${target}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+});
+
+// ===== TOAST =====
 function showToast(message, type = 'success') {
-    const toastContainer = document.getElementById('toastContainer');
+    const container = document.getElementById('toastContainer');
     const toast = document.createElement('div');
     toast.className = `toast-notification ${type}`;
-    toast.innerHTML = `
-        <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
-        <span>${message}</span>
-    `;
-    
-    toastContainer.appendChild(toast);
-    
+    const icon = type === 'success' ? 'check-circle-fill'
+              : type === 'error'   ? 'exclamation-triangle-fill'
+              : 'info-circle-fill';
+    toast.innerHTML = `<i class="bi bi-${icon}"></i><span>${message}</span>`;
+    container.appendChild(toast);
     setTimeout(() => {
         toast.style.animation = 'slideIn 0.3s reverse';
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
 
+// ===== SKELETON LOADER =====
+function showSkeletons() {
+    ['imagesGrid','videosGrid','othersGrid'].forEach(id => {
+        const grid = document.getElementById(id);
+        grid.innerHTML = '';
+        for (let i = 0; i < 4; i++) {
+            grid.insertAdjacentHTML('beforeend', `
+                <div class="skeleton-card">
+                    <div class="sk-thumb"></div>
+                    <div class="sk-body">
+                        <div class="sk-line w-60"></div>
+                        <div class="sk-line w-40"></div>
+                    </div>
+                </div>
+            `);
+        }
+    });
+}
+
 // ===== LOAD FILES =====
 async function loadFiles() {
     const loadingOverlay = document.getElementById('loadingOverlay');
     loadingOverlay.style.display = 'flex';
-    
+    showSkeletons();
+
     try {
-        const response = await fetch('?ajax=1');
+        const response = await fetch(`?ajax=1&country=${currentCountry}`);
         const data = await response.json();
-        
+
         if (data.error) {
             showToast('Failed to load files', 'error');
             loadingOverlay.style.display = 'none';
             return;
         }
-        
+
         allFilesData = data;
         renderAll(data);
         updateCounts(data);
         runAISummary(data);
-        
+
     } catch (error) {
         console.error('Error loading files:', error);
         showToast('Error connecting to server', 'error');
     }
-    
+
     loadingOverlay.style.display = 'none';
 }
 
-// ===== UPDATE SECTION COUNTS =====
+// ===== COUNTS =====
 function updateCounts(data) {
-    document.getElementById('imagesCount').textContent = data.images.length;
-    document.getElementById('videosCount').textContent = data.videos.length;
-    document.getElementById('othersCount').textContent = data.others.length;
+    const i = data.images.length, v = data.videos.length, o = data.others.length;
+    const t = i + v + o;
+    document.getElementById('imagesCount').textContent = i;
+    document.getElementById('videosCount').textContent = v;
+    document.getElementById('othersCount').textContent = o;
+    document.getElementById('imagesStatCount').textContent = i;
+    document.getElementById('videosStatCount').textContent = v;
+    document.getElementById('othersStatCount').textContent = o;
+    document.getElementById('totalCount').textContent = t;
+    document.getElementById('tabAllCount').textContent = t;
+    document.getElementById('tabImagesCount').textContent = i;
+    document.getElementById('tabVideosCount').textContent = v;
+    document.getElementById('tabOthersCount').textContent = o;
 }
 
-// ===== RENDER ALL CATEGORIES =====
+// ===== RENDER =====
 function renderAll(data) {
     renderCategory('imagesGrid', data.images, 'image');
     renderCategory('videosGrid', data.videos, 'video');
     renderCategory('othersGrid', data.others, 'other');
 }
 
-// ===== RENDER CATEGORY =====
 function renderCategory(gridId, items, type) {
     const grid = document.getElementById(gridId);
     const noItemsElement = document.getElementById('no' + gridId.charAt(0).toUpperCase() + gridId.slice(1, -4));
-    
+
     grid.innerHTML = '';
-    
+    grid.classList.toggle('list-view', currentView === 'list');
+
     if (items.length === 0) {
         if (noItemsElement) noItemsElement.classList.remove('d-none');
         return;
     }
-    
     if (noItemsElement) noItemsElement.classList.add('d-none');
-    
-    items.forEach(file => {
+
+    items.forEach((file, idx) => {
         const ext = file.name.split('.').pop().toLowerCase();
         const fileSize = formatFileSize(file.size || 0);
         const thumbnail = type === 'image' ? getThumbUrl(file.fileid) : '';
-        
+
         const card = document.createElement('div');
         card.className = 'file-card';
         card.dataset.name = file.name.toLowerCase();
         card.dataset.fileid = file.fileid;
-        
-        // Build card HTML
+        card.style.animationDelay = `${Math.min(idx * 30, 400)}ms`;
+
         let previewHtml = '';
-        
         if (type === 'image') {
             previewHtml = `
                 <div class="media-preview">
+                    <span class="badge-type">${ext}</span>
                     <div class="skeleton"></div>
                     <img class="thumb" data-src="${thumbnail}" alt="${file.name}">
                 </div>
@@ -955,8 +1516,9 @@ function renderCategory(gridId, items, type) {
         } else if (type === 'video') {
             previewHtml = `
                 <div class="media-preview">
-                    <div class="file-icon">
-                        <i class="bi bi-camera-reels" style="color: var(--deep-navy);"></i>
+                    <span class="badge-type">${ext}</span>
+                    <div class="file-icon-wrap">
+                        <i class="bi bi-camera-reels"></i>
                     </div>
                     <div class="play-button" data-video-id="${file.fileid}" data-filename="${file.name}">
                         <i class="bi bi-play-fill"></i>
@@ -966,20 +1528,22 @@ function renderCategory(gridId, items, type) {
         } else {
             previewHtml = `
                 <div class="media-preview">
-                    <div class="file-icon">
+                    <span class="badge-type">${ext}</span>
+                    <div class="file-icon-wrap">
                         ${getFileIcon(ext)}
                     </div>
                 </div>
             `;
         }
-        
+
         card.innerHTML = `
             ${previewHtml}
             <div class="file-info">
                 <div class="filename" title="${file.name}">${file.name}</div>
                 <div class="file-meta">
-                    <span class="file-size">${fileSize}</span>
-                    <span class="file-ext">${ext}</span>
+                    <span>${fileSize}</span>
+                    <span class="dot-sep"></span>
+                    <span class="ext-tag">${ext}</span>
                 </div>
                 <div class="file-actions">
                     ${type === 'video' ? `
@@ -987,23 +1551,17 @@ function renderCategory(gridId, items, type) {
                             <i class="bi bi-play-fill"></i> Preview
                         </button>
                     ` : ''}
-                    <a href="download-pcloud.php?fileid=${file.fileid}&name=${encodeURIComponent(file.name)}" 
-                       class="btn-download">
+                    <a href="download-pcloud.php?fileid=${file.fileid}&name=${encodeURIComponent(file.name)}" class="btn-download">
                         <i class="bi bi-download"></i> Download
                     </a>
                 </div>
             </div>
         `;
-        
         grid.appendChild(card);
     });
-    
-    // Add event listeners for images (lazy loading)
-    if (type === 'image') {
-        lazyLoadImages();
-    }
-    
-    // Add event listeners for video previews
+
+    if (type === 'image') lazyLoadImages();
+
     if (type === 'video') {
         document.querySelectorAll(`#${gridId} .play-button, #${gridId} .btn-preview`).forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -1016,116 +1574,90 @@ function renderCategory(gridId, items, type) {
     }
 }
 
-// ===== GET THUMBNAIL URL =====
 function getThumbUrl(fileId) {
-    return `https://api.pcloud.com/getthumb?fileid=${fileId}&access_token=kqNT7Z8BpwhA0d4MFZVgju0kZbR12PpsX93VWhpTOL5i4jVefcDdX&size=256x256&type=auto`;
+    return `https://api.pcloud.com/getthumb?fileid=${fileId}&access_token=kqNT7Z8BpwhA0d4MFZVgju0kZbR12PpsX93VWhpTOL5i4jVefcDdX&size=400x300&type=auto`;
 }
 
-// ===== GET FILE ICON =====
 function getFileIcon(ext) {
     const iconMap = {
-        'pdf': { icon: 'bi-file-pdf', color: '#e74c3c' },
-        'doc': { icon: 'bi-file-word', color: '#2b579a' },
-        'docx': { icon: 'bi-file-word', color: '#2b579a' },
-        'xls': { icon: 'bi-file-excel', color: '#1d6f42' },
-        'xlsx': { icon: 'bi-file-excel', color: '#1d6f42' },
-        'ppt': { icon: 'bi-file-ppt', color: '#d24726' },
-        'pptx': { icon: 'bi-file-ppt', color: '#d24726' },
-        'txt': { icon: 'bi-file-text', color: '#7f8c8d' },
-        'zip': { icon: 'bi-file-zip', color: '#f39c12' },
-        'rar': { icon: 'bi-file-zip', color: '#f39c12' },
-        'js': { icon: 'bi-file-code', color: '#f1c40f' },
-        'html': { icon: 'bi-file-code', color: '#e67e22' },
-        'css': { icon: 'bi-file-code', color: '#3498db' },
-        'php': { icon: 'bi-file-code', color: '#6c5ce7' },
-        'json': { icon: 'bi-file-code', color: '#2ecc71' },
-        'mp3': { icon: 'bi-file-music', color: '#9b59b6' },
-        'wav': { icon: 'bi-file-music', color: '#8e44ad' }
+        'pdf':  { icon: 'bi-file-earmark-pdf-fill', color: '#e74c3c' },
+        'doc':  { icon: 'bi-file-earmark-word-fill', color: '#2b579a' },
+        'docx': { icon: 'bi-file-earmark-word-fill', color: '#2b579a' },
+        'xls':  { icon: 'bi-file-earmark-excel-fill', color: '#1d6f42' },
+        'xlsx': { icon: 'bi-file-earmark-excel-fill', color: '#1d6f42' },
+        'ppt':  { icon: 'bi-file-earmark-ppt-fill', color: '#d24726' },
+        'pptx': { icon: 'bi-file-earmark-ppt-fill', color: '#d24726' },
+        'txt':  { icon: 'bi-file-earmark-text-fill', color: '#7f8c8d' },
+        'zip':  { icon: 'bi-file-earmark-zip-fill', color: '#f39c12' },
+        'rar':  { icon: 'bi-file-earmark-zip-fill', color: '#f39c12' },
+        'js':   { icon: 'bi-filetype-js', color: '#f1c40f' },
+        'html': { icon: 'bi-filetype-html', color: '#e67e22' },
+        'css':  { icon: 'bi-filetype-css', color: '#3498db' },
+        'php':  { icon: 'bi-filetype-php', color: '#6c5ce7' },
+        'json': { icon: 'bi-filetype-json', color: '#2ecc71' },
+        'mp3':  { icon: 'bi-file-earmark-music-fill', color: '#9b59b6' },
+        'wav':  { icon: 'bi-file-earmark-music-fill', color: '#8e44ad' }
     };
-    
-    const fileType = iconMap[ext] || { icon: 'bi-file-earmark', color: '#7f8c8d' };
-    return `<i class="bi ${fileType.icon}" style="color: ${fileType.color}; font-size: 3rem;"></i>`;
+    const t = iconMap[ext] || { icon: 'bi-file-earmark-fill', color: '#7f8c8d' };
+    return `<i class="bi ${t.icon}" style="color: ${t.color}; font-size: 2.6rem;"></i>`;
 }
 
-// ===== LAZY LOAD IMAGES =====
+// ===== LAZY LOAD =====
 function lazyLoadImages() {
-    const imageObserver = new IntersectionObserver((entries, observer) => {
+    const obs = new IntersectionObserver((entries, observer) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 const img = entry.target;
                 const skeleton = img.previousElementSibling;
-                
                 if (img.dataset.src) {
                     img.src = img.dataset.src;
                     img.onload = () => {
                         img.classList.add('loaded');
-                        if (skeleton && skeleton.classList.contains('skeleton')) {
-                            skeleton.style.display = 'none';
-                        }
+                        if (skeleton && skeleton.classList.contains('skeleton')) skeleton.style.display = 'none';
                     };
                     img.onerror = () => {
-                        console.error('Failed to load image:', img.dataset.src);
                         if (skeleton) skeleton.style.display = 'none';
-                        // Show fallback icon
                         const fallback = document.createElement('div');
-                        fallback.className = 'file-icon';
-                        fallback.innerHTML = '<i class="bi bi-image" style="color: var(--deep-navy); font-size: 3rem;"></i>';
+                        fallback.className = 'file-icon-wrap';
+                        fallback.innerHTML = '<i class="bi bi-image" style="color: var(--secondary-blue); font-size: 2.6rem;"></i>';
                         img.parentNode.insertBefore(fallback, img);
                         img.remove();
                     };
                 }
-                
                 observer.unobserve(img);
             }
         });
-    }, {
-        rootMargin: '50px'
-    });
-    
-    document.querySelectorAll('img.thumb:not(.loaded)').forEach(img => {
-        imageObserver.observe(img);
-    });
+    }, { rootMargin: '80px' });
+    document.querySelectorAll('img.thumb:not(.loaded)').forEach(img => obs.observe(img));
 }
 
-// ===== FORMAT FILE SIZE =====
 function formatFileSize(bytes) {
-    if (!bytes || bytes === 0) return '0 Bytes';
+    if (!bytes || bytes === 0) return '0 B';
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ['B','KB','MB','GB','TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-// ===== OPEN VIDEO MODAL =====
+// ===== VIDEO MODAL =====
 function openVideoModal(videoId, fileName) {
     const modalElement = document.getElementById('videoModal');
     const videoContainer = document.getElementById('videoContainer');
-    
+    document.getElementById('videoModalTitle').textContent = fileName || 'Video Preview';
+
     videoContainer.innerHTML = `
         <video id="videoPlayer" class="video-js vjs-big-play-centered" controls preload="auto" data-setup='{"fluid": true}'>
             <source src="get-video.php?fileid=${videoId}" type="video/mp4">
             <p class="vjs-no-js">Your browser does not support video playback.</p>
         </video>
     `;
-    
-    // Initialize video player
     if (typeof videojs !== 'undefined') {
-        const player = videojs('videoPlayer', {
-            autoplay: true,
-            controls: true,
-            responsive: true,
-            fluid: true
-        });
+        videojs('videoPlayer', { autoplay: true, controls: true, responsive: true, fluid: true });
     }
-    
     const modal = new bootstrap.Modal(modalElement);
     modal.show();
-    
-    // Clean up on modal hide
     modalElement.addEventListener('hidden.bs.modal', function() {
-        if (videojs.getPlayer('videoPlayer')) {
-            videojs.getPlayer('videoPlayer').dispose();
-        }
+        if (videojs.getPlayer('videoPlayer')) videojs.getPlayer('videoPlayer').dispose();
         videoContainer.innerHTML = '';
     }, { once: true });
 }
@@ -1133,120 +1665,78 @@ function openVideoModal(videoId, fileName) {
 // ===== AI SUMMARY =====
 async function runAISummary(data) {
     const aiBox = document.getElementById('ai-box');
-    
     try {
         const allNames = [...data.images, ...data.videos, ...data.others].map(f => f.name);
-        
         if (allNames.length === 0) {
             aiBox.textContent = 'No files available for analysis. Upload files to get AI-powered insights.';
             return;
         }
-        
         const formData = new FormData();
         formData.append('names', JSON.stringify(allNames));
-        
-        const response = await fetch('marketing-openai.php', { 
-            method: 'POST', 
-            body: formData 
-        });
-        
+        const response = await fetch('marketing-openai.php', { method: 'POST', body: formData });
         const text = await response.text();
         aiBox.textContent = text;
-        
     } catch (error) {
         console.error('AI summary error:', error);
         aiBox.textContent = 'AI analysis temporarily unavailable. Please try again later.';
     }
 }
 
-// ===== SEARCH FUNCTIONALITY =====
+// ===== SEARCH =====
 let searchTimeout;
 document.getElementById('searchInput').addEventListener('input', function() {
     clearTimeout(searchTimeout);
-    
-    const searchTerm = this.value.toLowerCase().trim();
-    
+    const term = this.value.toLowerCase().trim();
     searchTimeout = setTimeout(() => {
-        const cards = document.querySelectorAll('.file-card');
-        let visibleCount = 0;
-        
-        cards.forEach(card => {
-            const fileName = card.dataset.name || '';
-            const shouldShow = searchTerm === '' || fileName.includes(searchTerm);
-            card.style.display = shouldShow ? '' : 'none';
-            if (shouldShow) visibleCount++;
+        document.querySelectorAll('.file-card').forEach(card => {
+            const name = card.dataset.name || '';
+            card.style.display = (term === '' || name.includes(term)) ? '' : 'none';
         });
-        
-        // Show empty states if no items visible in a section
-        if (searchTerm !== '') {
-            const sections = ['images', 'videos', 'others'];
-            sections.forEach(section => {
+        if (term !== '') {
+            ['images','videos','others'].forEach(section => {
                 const grid = document.getElementById(`${section}Grid`);
-                const noElement = document.getElementById(`no${section.charAt(0).toUpperCase() + section.slice(1)}`);
-                const visibleInSection = Array.from(grid.children).some(
-                    child => child.style.display !== 'none' && child.classList.contains('file-card')
-                );
-                
-                if (noElement) {
-                    if (!visibleInSection && allFilesData[section]?.length > 0) {
-                        noElement.classList.remove('d-none');
-                        noElement.querySelector('.empty-text').textContent = 
-                            `No ${section} match your search "${searchTerm}"`;
+                const noEl = document.getElementById(`no${section.charAt(0).toUpperCase() + section.slice(1)}`);
+                const visible = Array.from(grid.children).some(c => c.style.display !== 'none' && c.classList.contains('file-card'));
+                if (noEl) {
+                    if (!visible && allFilesData[section]?.length > 0) {
+                        noEl.classList.remove('d-none');
+                        noEl.querySelector('.empty-text').textContent = `No ${section} match “${term}”.`;
                     } else {
-                        noElement.classList.add('d-none');
+                        noEl.classList.add('d-none');
                     }
                 }
             });
         } else {
-            // Reset empty states
-            ['images', 'videos', 'others'].forEach(section => {
-                const noElement = document.getElementById(`no${section.charAt(0).toUpperCase() + section.slice(1)}`);
-                if (noElement && allFilesData[section]?.length > 0) {
-                    noElement.classList.add('d-none');
-                } else if (noElement && allFilesData[section]?.length === 0) {
-                    noElement.classList.remove('d-none');
-                    noElement.querySelector('.empty-text').textContent = 
-                        `No ${section} found in the marketing folder`;
+            ['images','videos','others'].forEach(section => {
+                const noEl = document.getElementById(`no${section.charAt(0).toUpperCase() + section.slice(1)}`);
+                if (noEl && allFilesData[section]?.length > 0) {
+                    noEl.classList.add('d-none');
+                } else if (noEl) {
+                    noEl.classList.remove('d-none');
+                    noEl.querySelector('.empty-text').textContent = `Upload files to the marketing folder to see them here.`;
                 }
             });
         }
-    }, 300);
+    }, 250);
 });
 
-// ===== KEYBOARD SHORTCUTS =====
+// ===== KEYBOARD =====
 document.addEventListener('keydown', (e) => {
-    // Ctrl/Cmd + F to focus search
     if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         e.preventDefault();
         document.getElementById('searchInput').focus();
     }
-    
-    // Escape to clear search
     if (e.key === 'Escape' && document.activeElement === document.getElementById('searchInput')) {
-        document.getElementById('searchInput').value = '';
-        document.getElementById('searchInput').blur();
-        // Trigger search clear
-        document.getElementById('searchInput').dispatchEvent(new Event('input'));
+        const input = document.getElementById('searchInput');
+        input.value = '';
+        input.blur();
+        input.dispatchEvent(new Event('input'));
     }
 });
 
-// ===== INITIALIZE =====
+// ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {
     loadFiles();
-    
-    // Add animation styles
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .file-card {
-            animation: fadeIn 0.5s ease forwards;
-        }
-    `;
-    document.head.appendChild(style);
 });
 </script>
 </body>
