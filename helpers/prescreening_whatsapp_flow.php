@@ -33,38 +33,96 @@ function xander_prescreening_invite_template_lang_candidates(): array
 }
 
 /** @return array<int, array{key:string,prompt:string,hint?:string}> */
-function xander_prescreening_whatsapp_question_steps(): array
+function xander_prescreening_whatsapp_contact_steps(): array
 {
     return [
         ['key' => 'student_name', 'prompt' => "What is your *full name*?"],
         ['key' => 'student_email', 'prompt' => "What is your *email address*? (Type *skip* if none)"],
-        ['key' => 'education_level', 'prompt' => "1/15 — What is your *highest level of education*?"],
-        ['key' => 'course_program', 'prompt' => "2/15 — What *course or program* do you want to study?"],
-        ['key' => 'country_interest', 'prompt' => "3/15 — Which *country* are you interested in?"],
-        ['key' => 'open_other_countries', 'prompt' => "4/15 — Are you open to other countries (India 🇮🇳, Cyprus 🇨🇾, Malta 🇲🇹 under \$15,000/year)?"],
-        ['key' => 'budget_tuition', 'prompt' => "5/15 — What is your estimated *budget for tuition per year*?"],
-        ['key' => 'funds_application_visa', 'prompt' => "6/15 — Do you have funds for *application and visa fees*? Reply *Yes* or *No*."],
-        ['key' => 'sponsor', 'prompt' => "7/15 — Who will *sponsor* your studies? Reply: *Self*, *Parent*, or *Sponsor*."],
-        ['key' => 'afford_deposit', 'prompt' => "8/15 — Can you afford *initial deposit and accommodation*? Reply *Yes* or *No*."],
-        ['key' => 'has_valid_passport', 'prompt' => "9/15 — Do you have a *valid passport*? Reply *Yes* or *No*."],
-        ['key' => 'academic_docs_ready', 'prompt' => "10/15 — Do you have *academic documents* ready (transcripts & certificates)? Reply *Yes*, *No*, or *Partially*."],
-        ['key' => 'english_level', 'prompt' => "11/15 — What is your *level of English*? Reply: *Basic*, *Good*, or *Test done*."],
-        ['key' => 'english_test_taken', 'prompt' => "12/15 — Have you taken *IELTS / TOEFL / Duolingo*? (Type scores or *No*)"],
-        ['key' => 'visa_denied', 'prompt' => "13/15 — Have you ever been *denied a visa*? Reply *Yes* or *No*."],
-        ['key' => 'planned_intake', 'prompt' => "14/15 — When do you plan to *start* (intake)? e.g. Fall 2026"],
-        ['key' => 'ready_to_apply', 'prompt' => "15/15 — Are you ready to start the *application process now*? Reply *Yes* or *No*."],
+        ['key' => 'service_type', 'prompt' => "Which service do you need?\nReply *1* for *Study Abroad*\nReply *2* for *Work Abroad*"],
     ];
+}
+
+/** @return array<int, array{key:string,prompt:string,hint?:string}> */
+function xander_prescreening_whatsapp_study_steps(): array
+{
+    return [
+        ['key' => 'education_level', 'prompt' => "Study 1/13 — *Highest level of education*?"],
+        ['key' => 'course_program', 'prompt' => "Study 2/13 — *Course or program* to study?"],
+        ['key' => 'country_interest', 'prompt' => "Study 3/13 — *Country* of interest?"],
+        ['key' => 'open_other_countries', 'prompt' => "Study 4/13 — Open to India, Cyprus, Malta (under \$15k/year)?"],
+        ['key' => 'budget_tuition', 'prompt' => "Study 5/13 — *Tuition budget* per year?"],
+        ['key' => 'funds_application_visa', 'prompt' => "Study 6/13 — Funds for application/visa fees? *Yes* or *No*."],
+        ['key' => 'sponsor', 'prompt' => "Study 7/13 — *Sponsor*? Reply *Self*, *Parent*, or *Sponsor*."],
+        ['key' => 'afford_deposit', 'prompt' => "Study 8/13 — Afford deposit & accommodation? *Yes* or *No*."],
+        ['key' => 'has_valid_passport', 'prompt' => "Study 9/13 — Valid passport? *Yes* or *No*."],
+        ['key' => 'academic_docs_ready', 'prompt' => "Study 10/13 — Academic documents ready? *Yes*, *No*, or *Partially*."],
+        ['key' => 'english_level', 'prompt' => "Study 11/13 — English level? *Basic*, *Good*, or *Test done*."],
+        ['key' => 'english_test_taken', 'prompt' => "Study 12/13 — IELTS/TOEFL/Duolingo? (scores or *No*)"],
+        ['key' => 'visa_denied', 'prompt' => "Study 13/13 — Ever denied a visa? *Yes* or *No*."],
+        ['key' => 'planned_intake', 'prompt' => "Study — *Planned intake*? e.g. Fall 2026"],
+        ['key' => 'ready_to_apply', 'prompt' => "Study — Ready to apply now? *Yes* or *No*."],
+    ];
+}
+
+/** @return array<int, array{key:string,prompt:string}> */
+function xander_prescreening_whatsapp_work_steps(): array
+{
+    return [
+        ['key' => 'applicant_address', 'prompt' => "Work 1/3 — Your full *address*?"],
+        ['key' => 'work_country_destination', 'prompt' => "Work 2/3 — *Country destination* for work?"],
+        ['key' => 'work_emergency_contact', 'prompt' => "Work 3/3 — *Emergency contact* (name, phone, address)?"],
+    ];
+}
+
+/**
+ * @param array<string,mixed> $answers
+ * @return array<int, array{key:string,prompt:string,hint?:string}>
+ */
+function xander_prescreening_whatsapp_question_steps_for_session(array $answers): array
+{
+    $steps = xander_prescreening_whatsapp_contact_steps();
+    $service = (string) ($answers['service_type'] ?? '');
+    if ($service === 'work_abroad') {
+        return array_merge($steps, xander_prescreening_whatsapp_work_steps());
+    }
+    if ($service === 'study_abroad') {
+        return array_merge($steps, xander_prescreening_whatsapp_study_steps());
+    }
+
+    return $steps;
+}
+
+/** @return array<int, array{key:string,prompt:string,hint?:string}> */
+function xander_prescreening_whatsapp_question_steps(): array
+{
+    return array_merge(
+        xander_prescreening_whatsapp_contact_steps(),
+        xander_prescreening_whatsapp_study_steps()
+    );
+}
+
+/**
+ * @param array<string,mixed> $answers
+ * @return array<int, array{key:string,label:string}>
+ */
+function xander_prescreening_whatsapp_document_steps_for_session(array $answers): array
+{
+    require_once __DIR__ . '/prescreening_options.php';
+    $labels = (($answers['service_type'] ?? '') === 'work_abroad')
+        ? xander_prescreening_work_document_labels()
+        : xander_prescreening_document_labels();
+    $docs = [];
+    foreach ($labels as $key => $label) {
+        $docs[] = ['key' => $key, 'label' => $label];
+    }
+
+    return $docs;
 }
 
 /** @return array<int, array{key:string,label:string}> */
 function xander_prescreening_whatsapp_document_steps(): array
 {
-    $docs = [];
-    foreach (xander_prescreening_document_labels() as $key => $label) {
-        $docs[] = ['key' => $key, 'label' => $label];
-    }
-
-    return $docs;
+    return xander_prescreening_whatsapp_document_steps_for_session(['service_type' => 'study_abroad']);
 }
 
 function xander_prescreening_staff_whatsapp_numbers(): array
@@ -509,7 +567,7 @@ function xander_prescreening_admin_send_invite(mysqli $conn, string $phoneRaw, s
 
 function xander_prescreening_begin_questions(mysqli $conn, string $waPhone, array $answers): void
 {
-    $questions = xander_prescreening_whatsapp_question_steps();
+    $questions = xander_prescreening_whatsapp_question_steps_for_session($answers);
     $startIdx = 0;
     if (trim((string) ($answers['student_name'] ?? '')) !== '') {
         $startIdx = 1;
@@ -645,6 +703,17 @@ function xander_prescreening_validate_answer(string $key, string $answer): ?stri
     if ($key === 'student_email' && $a !== '' && !filter_var($a, FILTER_VALIDATE_EMAIL)) {
         return 'Please enter a valid email or type *skip*.';
     }
+    if ($key === 'service_type') {
+        $n = strtolower($a);
+        if (in_array($n, ['1', 'study', 'study abroad'], true)) {
+            return 'study_abroad';
+        }
+        if (in_array($n, ['2', 'work', 'work abroad'], true)) {
+            return 'work_abroad';
+        }
+
+        return 'Please reply *1* for Study Abroad or *2* for Work Abroad.';
+    }
     $yesNo = ['funds_application_visa', 'afford_deposit', 'has_valid_passport', 'visa_denied', 'ready_to_apply'];
     if (in_array($key, $yesNo, true)) {
         $n = strtolower($a);
@@ -704,7 +773,7 @@ function xander_prescreening_row_from_answers(array $answers, string $waPhone): 
     return $row;
 }
 
-function xander_prescreening_notify_staff_whatsapp(array $row, string $reference): array
+function xander_prescreening_notify_staff_whatsapp(array $row, string $reference, bool $uploadDocuments = false): array
 {
     xander_load_env_file();
     $numbers = xander_prescreening_staff_whatsapp_numbers();
@@ -723,11 +792,11 @@ function xander_prescreening_notify_staff_whatsapp(array $row, string $reference
         $body .= xander_whatsapp_sanitize_user_text($line) . "\n";
     }
 
-    $docPaths = [];
-    foreach (array_keys(xander_prescreening_document_labels()) as $key) {
-        $docPaths[$key] = (string) ($row[$key] ?? '');
+    $attachments = $uploadDocuments ? xander_prescreening_collect_attachments_for_row($row) : [];
+
+    if (!$uploadDocuments && $attachments === []) {
+        $body .= "\n_Documents are attached to the notification email._";
     }
-    $attachments = xander_prescreening_collect_attachments($docPaths);
 
     $sent = 0;
     foreach ($numbers as $staffTo) {
@@ -747,7 +816,7 @@ function xander_prescreening_notify_staff_whatsapp(array $row, string $reference
                     basename($att['path'])
                 );
             }
-            usleep(350000);
+            usleep(150000);
         }
     }
 
@@ -767,105 +836,44 @@ function xander_prescreening_finalize_submission(mysqli $conn, array $row, strin
     $reference = 'PS-' . strtoupper(substr(md5($userId), 0, 8));
     $submittedAt = date('Y-m-d H:i:s');
 
-    if ($pending && empty($pending['submitted_at'])) {
-        xander_prescreening_save_submission(
-            $conn,
-            $userId,
-            'whatsapp',
-            (string) ($row['student_name'] ?? $pending['student_name'] ?? ''),
-            (string) ($row['student_email'] ?? $pending['student_email'] ?? ''),
-            (string) ($row['whatsapp_number'] ?? $pending['whatsapp_number'] ?? ''),
-            [
-                'education_level' => (string) ($row['education_level'] ?? ''),
-                'course_program' => (string) ($row['course_program'] ?? ''),
-                'country_interest' => (string) ($row['country_interest'] ?? ''),
-                'open_other_countries' => (string) ($row['open_other_countries'] ?? ''),
-                'budget_tuition' => (string) ($row['budget_tuition'] ?? ''),
-                'funds_application_visa' => (string) ($row['funds_application_visa'] ?? ''),
-                'sponsor' => (string) ($row['sponsor'] ?? ''),
-                'afford_deposit' => (string) ($row['afford_deposit'] ?? ''),
-                'has_valid_passport' => (string) ($row['has_valid_passport'] ?? ''),
-                'academic_docs_ready' => (string) ($row['academic_docs_ready'] ?? ''),
-                'english_level' => (string) ($row['english_level'] ?? ''),
-                'english_test_taken' => (string) ($row['english_test_taken'] ?? ''),
-                'visa_denied' => (string) ($row['visa_denied'] ?? ''),
-                'planned_intake' => (string) ($row['planned_intake'] ?? ''),
-                'ready_to_apply' => (string) ($row['ready_to_apply'] ?? ''),
-            ],
-            [
-                'doc_valid_passport' => (string) ($row['doc_valid_passport'] ?? ''),
-                'doc_degree_transcripts' => (string) ($row['doc_degree_transcripts'] ?? ''),
-                'doc_high_school' => (string) ($row['doc_high_school'] ?? ''),
-                'doc_cv_resume' => (string) ($row['doc_cv_resume'] ?? ''),
-                'doc_recommendation' => (string) ($row['doc_recommendation'] ?? ''),
-                'doc_personal_statement' => (string) ($row['doc_personal_statement'] ?? ''),
-                'doc_english_certificate' => (string) ($row['doc_english_certificate'] ?? ''),
-                'doc_birth_certificate' => (string) ($row['doc_birth_certificate'] ?? ''),
-                'doc_payment_proof' => (string) ($row['doc_payment_proof'] ?? ''),
-            ],
-            null,
-            false
-        );
-        xander_send_prescreening_notifications($row, $reference, true);
-        xander_prescreening_notify_staff_whatsapp($row, $reference);
+    require_once __DIR__ . '/prescreening_options.php';
 
-        return $reference;
+    $fields = array_merge(
+        ['service_type' => (string) ($row['service_type'] ?? 'study_abroad')],
+        xander_prescreening_empty_study_fields(),
+        xander_prescreening_empty_work_fields()
+    );
+    foreach (array_keys($fields) as $key) {
+        if (array_key_exists($key, $row)) {
+            $fields[$key] = (string) $row[$key];
+        }
     }
 
-    $sql = "INSERT INTO prescreening_submissions (
-        user_id, source, student_name, student_email, whatsapp_number,
-        education_level, course_program, country_interest, open_other_countries,
-        budget_tuition, funds_application_visa, sponsor, afford_deposit,
-        has_valid_passport, academic_docs_ready, english_level, english_test_taken,
-        visa_denied, planned_intake, ready_to_apply,
-        doc_valid_passport, doc_degree_transcripts, doc_high_school, doc_cv_resume,
-        doc_recommendation, doc_personal_statement, doc_english_certificate,
-        doc_birth_certificate, doc_payment_proof, submitted_at
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        throw new RuntimeException('DB prepare failed');
+    $docKeys = array_unique(array_merge(
+        array_keys(xander_prescreening_document_labels()),
+        array_keys(xander_prescreening_work_document_labels())
+    ));
+    $docPaths = [];
+    foreach ($docKeys as $docKey) {
+        $docPaths[$docKey] = (string) ($row[$docKey] ?? '');
     }
 
-    $bind = [
-        $userId, 'whatsapp',
-        (string) ($row['student_name'] ?? ''),
-        (string) ($row['student_email'] ?? ''),
-        (string) ($row['whatsapp_number'] ?? ''),
-        (string) ($row['education_level'] ?? ''),
-        (string) ($row['course_program'] ?? ''),
-        (string) ($row['country_interest'] ?? ''),
-        (string) ($row['open_other_countries'] ?? ''),
-        (string) ($row['budget_tuition'] ?? ''),
-        (string) ($row['funds_application_visa'] ?? ''),
-        (string) ($row['sponsor'] ?? ''),
-        (string) ($row['afford_deposit'] ?? ''),
-        (string) ($row['has_valid_passport'] ?? ''),
-        (string) ($row['academic_docs_ready'] ?? ''),
-        (string) ($row['english_level'] ?? ''),
-        (string) ($row['english_test_taken'] ?? ''),
-        (string) ($row['visa_denied'] ?? ''),
-        (string) ($row['planned_intake'] ?? ''),
-        (string) ($row['ready_to_apply'] ?? ''),
-        (string) ($row['doc_valid_passport'] ?? ''),
-        (string) ($row['doc_degree_transcripts'] ?? ''),
-        (string) ($row['doc_high_school'] ?? ''),
-        (string) ($row['doc_cv_resume'] ?? ''),
-        (string) ($row['doc_recommendation'] ?? ''),
-        (string) ($row['doc_personal_statement'] ?? ''),
-        (string) ($row['doc_english_certificate'] ?? ''),
-        (string) ($row['doc_birth_certificate'] ?? ''),
-        (string) ($row['doc_payment_proof'] ?? ''),
-        $submittedAt,
-    ];
-    $types = str_repeat('s', 30);
-    $stmt->bind_param($types, ...$bind);
-    $stmt->execute();
-    $stmt->close();
-
-    xander_send_prescreening_notifications($row, $reference, true);
-    xander_prescreening_notify_staff_whatsapp($row, $reference);
+    xander_prescreening_save_submission(
+        $conn,
+        $userId,
+        'whatsapp',
+        (string) ($row['student_name'] ?? $pending['student_name'] ?? ''),
+        (string) ($row['student_email'] ?? $pending['student_email'] ?? ''),
+        (string) ($row['whatsapp_number'] ?? $pending['whatsapp_number'] ?? ''),
+        $fields,
+        $docPaths,
+        null,
+        false
+    );
+    xander_prescreening_delete_invite($conn, $userId);
+    $notifyRow = array_merge($row, $fields, $docPaths);
+    xander_send_prescreening_notifications($notifyRow, $reference, true);
+    xander_prescreening_notify_staff_whatsapp($notifyRow, $reference);
 
     return $reference;
 }
@@ -916,8 +924,8 @@ function xander_prescreening_handle_inbound(mysqli $conn, string $waPhone, array
         return true;
     }
 
-    $questions = xander_prescreening_whatsapp_question_steps();
-    $docs = xander_prescreening_whatsapp_document_steps();
+    $questions = xander_prescreening_whatsapp_question_steps_for_session($answers);
+    $docs = xander_prescreening_whatsapp_document_steps_for_session($answers);
 
     if (str_starts_with($step, 'q:')) {
         $qi = (int) substr($step, 2);
@@ -936,12 +944,14 @@ function xander_prescreening_handle_inbound(mysqli $conn, string $waPhone, array
             return true;
         }
         $answers[$q['key']] = $validated;
+        $questions = xander_prescreening_whatsapp_question_steps_for_session($answers);
         $next = $qi + 1;
         if ($next < count($questions)) {
             xander_prescreening_save_session($conn, $waPhone, 'q:' . $next, $answers, 0);
             xander_whatsapp_send_plain_text($waPhone, $questions[$next]['prompt']);
             return true;
         }
+        $docs = xander_prescreening_whatsapp_document_steps_for_session($answers);
         $docIndex = 0;
         xander_prescreening_save_session($conn, $waPhone, 'doc:0', $answers, 0);
         $label = $docs[0]['label'];

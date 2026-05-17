@@ -40,7 +40,7 @@ function generateReceiptPdf(string $receiptHtml, string $receiptNo): void
             $options->setHttpContext($httpContext);
 
             $dompdf = new \Dompdf\Dompdf($options);
-            $dompdf->loadHtml($receiptHtml);
+            $dompdf->loadHtml($receiptHtml, 'UTF-8');
             $dompdf->setPaper('A4', 'portrait');
             $dompdf->render();
             file_put_contents($pdfFile, $dompdf->output());

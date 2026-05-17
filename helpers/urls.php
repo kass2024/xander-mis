@@ -14,7 +14,7 @@ function pcvc_app_base_path(): string
     $sn = (string)($_SERVER['SCRIPT_NAME'] ?? '');
     if ($sn === '') return '';
 
-    foreach (['/student/', '/api/'] as $seg) {
+    foreach (['/student/', '/institution/', '/api/'] as $seg) {
         $pos = strpos($sn, $seg);
         if ($pos !== false) {
             $base = rtrim(substr($sn, 0, $pos), '/');

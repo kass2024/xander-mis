@@ -109,7 +109,7 @@ if (isset($conn) && ($conn instanceof mysqli) && $studentEmail !== '') {
     <div class="row g-0">
       <aside class="col-12 col-lg-2 sidebar p-3">
         <div class="mb-3">
-          <div class="small muted fw-semibold">Student portal</div>
+          <div class="small muted fw-semibold">My Account</div>
           <div class="fw-bold">Applications</div>
         </div>
         <nav class="nav nav-pills flex-column gap-2">

@@ -27,7 +27,7 @@
           <div class="hdr-dropdown-menu" role="menu">
             <a href="student-login.php" role="menuitem"><i class="fas fa-user-graduate"></i> <?php echo ht('login_student'); ?></a>
             <a href="admin-login.php" role="menuitem"><i class="fas fa-user-shield"></i> <?php echo ht('login_admin'); ?></a>
-            <a href="partner-contract.php" role="menuitem"><i class="fas fa-building-columns"></i> <?php echo ht('login_institution'); ?></a>
+            <a href="institution-login.php" role="menuitem"><i class="fas fa-building-columns"></i> <?php echo ht('login_institution'); ?></a>
           </div>
         </div>
 
@@ -40,7 +40,7 @@
           <div class="hdr-dropdown-menu" role="menu">
             <a href="student-application.php" role="menuitem"><i class="fas fa-user-graduate"></i> <?php echo ht('signup_student'); ?></a>
             <a href="register.php" role="menuitem"><i class="fas fa-user-shield"></i> <?php echo ht('signup_admin'); ?></a>
-            <a href="partners.php" role="menuitem"><i class="fas fa-building-columns"></i> <?php echo ht('signup_institution'); ?></a>
+            <a href="institution-signup.php" role="menuitem"><i class="fas fa-building-columns"></i> <?php echo ht('signup_institution'); ?></a>
           </div>
         </div>
 

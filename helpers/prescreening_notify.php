@@ -14,6 +14,7 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/prescreening_options.php';
 require_once __DIR__ . '/mail_smtp.php';
 require_once __DIR__ . '/env_load.php';
 require_once __DIR__ . '/phone_whatsapp_normalize.php';
@@ -23,10 +24,20 @@ const XANDER_WHATSAPP_PRESCREENING_TEMPLATE_NAME = 'xander_prescreening_received
 const XANDER_WHATSAPP_PRESCREENING_TEMPLATE_LANG = 'en';
 const XANDER_WHATSAPP_PRESCREENING_TEMPLATE_PARAMS = 2;
 
+function xander_prescreening_is_work_row(array $row): bool
+{
+    return (string) ($row['service_type'] ?? '') === 'work_abroad';
+}
+
 /** @return array<string, string> */
 function xander_prescreening_question_labels(): array
 {
     return [
+        'service_type' => 'Type of service',
+        'applicant_address' => 'Address',
+        'work_country_destination' => 'Work country destination',
+        'work_emergency_contact' => 'Emergency contact',
+        'work_docs_checklist' => 'Documents checklist',
         'education_level' => 'Highest level of education',
         'course_program' => 'Course or program to study',
         'country_interest' => 'Country of interest',
@@ -45,20 +56,31 @@ function xander_prescreening_question_labels(): array
     ];
 }
 
-/** @return array<string, string> */
-function xander_prescreening_document_labels(): array
+/** Question labels for a submission row (study vs work). */
+function xander_prescreening_question_labels_for_row(array $row): array
 {
-    return [
-        'doc_valid_passport' => 'Valid Passport',
-        'doc_degree_transcripts' => 'Degree / Academic Transcripts',
-        'doc_high_school' => 'High School Certificate',
-        'doc_cv_resume' => 'CV / Resume',
-        'doc_recommendation' => 'Recommendation Letter(s)',
-        'doc_personal_statement' => 'Personal Statement / Motivation Letter',
-        'doc_english_certificate' => 'English Proficiency Certificate',
-        'doc_birth_certificate' => 'Birth Certificate',
-        'doc_payment_proof' => 'Application / Payment Proof',
-    ];
+    $all = xander_prescreening_question_labels();
+    if (xander_prescreening_is_work_row($row)) {
+        $keys = ['service_type', 'applicant_address', 'work_country_destination', 'work_emergency_contact', 'work_docs_checklist'];
+
+        return array_intersect_key($all, array_flip($keys));
+    }
+
+    $workOnly = ['applicant_address', 'work_country_destination', 'work_emergency_contact', 'work_docs_checklist'];
+
+    return array_diff_key($all, array_flip($workOnly));
+}
+
+/** Document labels for a submission row (study vs work). */
+function xander_prescreening_document_labels_for_row(array $row): array
+{
+    if (xander_prescreening_is_work_row($row)) {
+        require_once __DIR__ . '/prescreening_options.php';
+
+        return xander_prescreening_work_document_labels();
+    }
+
+    return xander_prescreening_document_labels();
 }
 
 function xander_prescreening_h(string $s): string
@@ -71,11 +93,26 @@ function xander_prescreening_h(string $s): string
  */
 function xander_prescreening_build_summary_lines(array $row): array
 {
-    $labels = xander_prescreening_question_labels();
+    $labels = xander_prescreening_question_labels_for_row($row);
     $lines = [];
     foreach ($labels as $key => $label) {
         $val = trim((string) ($row[$key] ?? ''));
-        if ($val !== '') {
+        if ($val === '') {
+            continue;
+        }
+        if ($key === 'service_type') {
+            $val = $val === 'work_abroad' ? 'Work Abroad' : ($val === 'study_abroad' ? 'Study Abroad' : $val);
+        }
+        if ($key === 'work_docs_checklist' && str_starts_with($val, '[')) {
+            $decoded = json_decode($val, true);
+            $val = is_array($decoded) ? implode('; ', $decoded) : $val;
+        }
+        $lines[] = $label . ': ' . $val;
+    }
+
+    if (xander_prescreening_is_work_row($row)) {
+        require_once __DIR__ . '/prescreening_work_profile.php';
+        foreach (xander_prescreening_work_profile_email_lines($row) as $label => $val) {
             $lines[] = $label . ': ' . $val;
         }
     }
@@ -121,17 +158,27 @@ function xander_prescreening_build_email_html(array $row, string $reference, boo
     $wa = trim((string) ($row['whatsapp_number'] ?? ''));
 
     $qRows = '';
-    foreach (xander_prescreening_question_labels() as $key => $label) {
+    foreach (xander_prescreening_question_labels_for_row($row) as $key => $label) {
         $val = trim((string) ($row[$key] ?? ''));
+        if ($val === '') {
+            continue;
+        }
+        if ($key === 'service_type') {
+            $val = $val === 'work_abroad' ? 'Work Abroad' : ($val === 'study_abroad' ? 'Study Abroad' : $val);
+        }
+        if ($key === 'work_docs_checklist' && str_starts_with($val, '[')) {
+            $decoded = json_decode($val, true);
+            $val = is_array($decoded) ? implode('; ', $decoded) : $val;
+        }
         $qRows .= '<tr><td style="padding:6px;border:1px solid #ddd;"><strong>'
             . xander_prescreening_h($label)
             . '</strong></td><td style="padding:6px;border:1px solid #ddd;">'
-            . xander_prescreening_h($val !== '' ? $val : '—')
+            . xander_prescreening_h($val)
             . '</td></tr>';
     }
 
     $docList = '';
-    foreach (xander_prescreening_document_labels() as $key => $label) {
+    foreach (xander_prescreening_document_labels_for_row($row) as $key => $label) {
         $path = trim((string) ($row[$key] ?? ''));
         $docList .= '<li>' . xander_prescreening_h($label)
             . ($path !== '' ? ' — attached' : ' — not uploaded')
@@ -168,10 +215,30 @@ function xander_prescreening_build_email_html(array $row, string $reference, boo
  * @param array<string, string> $docPaths keyed by doc_* column => relative path
  * @return array<int, array{path:string, name:string}>
  */
-function xander_prescreening_collect_attachments(array $docPaths): array
+/**
+ * @param array<string, mixed> $row
+ * @return array<int, array{path:string, name:string}>
+ */
+function xander_prescreening_collect_attachments_for_row(array $row): array
+{
+    $labels = xander_prescreening_document_labels_for_row($row);
+    $docPaths = [];
+    foreach (array_keys($labels) as $key) {
+        $docPaths[$key] = (string) ($row[$key] ?? '');
+    }
+
+    return xander_prescreening_collect_attachments($docPaths, $labels);
+}
+
+/**
+ * @param array<string, string> $docPaths
+ * @param array<string, string>|null $labels
+ * @return array<int, array{path:string, name:string}>
+ */
+function xander_prescreening_collect_attachments(array $docPaths, ?array $labels = null): array
 {
     $out = [];
-    $labels = xander_prescreening_document_labels();
+    $labels = $labels ?? xander_prescreening_document_labels();
     foreach ($labels as $key => $label) {
         $rel = trim((string) ($docPaths[$key] ?? ''));
         if ($rel === '') {
@@ -197,11 +264,7 @@ function xander_send_prescreening_notifications(array $row, string $reference, b
     $emailResult = ['admin' => false, 'student' => false];
     $waResult = ['sent' => false, 'error' => '', 'detail' => '', 'docs_sent' => 0];
 
-    $docPaths = [];
-    foreach (array_keys(xander_prescreening_document_labels()) as $key) {
-        $docPaths[$key] = (string) ($row[$key] ?? '');
-    }
-    $attachments = xander_prescreening_collect_attachments($docPaths);
+    $attachments = xander_prescreening_collect_attachments_for_row($row);
 
     $adminMail = xander_prescreening_build_email_html($row, $reference, true);
     try {
@@ -296,7 +359,7 @@ function xander_send_prescreening_notifications(array $row, string $reference, b
         return ['email' => $emailResult, 'whatsapp' => $waResult];
     }
 
-    $labels = xander_prescreening_document_labels();
+    $labels = xander_prescreening_document_labels_for_row($row);
     foreach ($attachments as $att) {
         $mediaId = xander_whatsapp_upload_media_file((string) $phoneId, $token, $version, $att['path']);
         if ($mediaId === null) {

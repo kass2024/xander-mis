@@ -30,9 +30,9 @@ if (!in_array($ext, $allowed, true)) {
     exit;
 }
 
-if ($_FILES['file']['size'] > 5 * 1024 * 1024) {
+if ($_FILES['file']['size'] > 15 * 1024 * 1024) {
     http_response_code(400);
-    echo json_encode(['error'=>'File too large']);
+    echo json_encode(['error'=>'File too large (max 15MB)']);
     exit;
 }
 

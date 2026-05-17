@@ -9,10 +9,13 @@ $BOOT_LOG = __DIR__ . '/student_ai_autofill_boot.log';
 );
 
 ob_start();
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 header('Content-Type: application/json; charset=UTF-8');
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/helpers/ai_autofill_form_config.php';
 @file_put_contents($BOOT_LOG, date('c') . " [after_db]\n", FILE_APPEND);
 require_once __DIR__ . '/helpers/load_env.php';
 @file_put_contents($BOOT_LOG, date('c') . " [after_load_env_require]\n", FILE_APPEND);
@@ -854,6 +857,11 @@ function cleanup_paths(array $paths): void
 
 function field_priority(string $field, string $source): int
 {
+    $mode = ai_autofill_form_mode();
+    if ($mode === 'job') {
+        return ai_autofill_field_priority($field, $source, 'job');
+    }
+
     $preferences = [
         'first_name' => ['valid_passport', 'birth_certificate', 'cv_resume', 'degree_transcripts', 'high_school_degree'],
         'last_name' => ['valid_passport', 'birth_certificate', 'cv_resume', 'degree_transcripts', 'high_school_degree'],
@@ -931,6 +939,7 @@ if ($apiKey === '') {
 
 $debug['api_key_status'] = 'configured';
 $lang = (($_POST['lang'] ?? 'en') === 'fr') ? 'fr' : 'en';
+$autofillMode = ai_autofill_form_mode();
 $uploadedFiles = flatten_uploaded_files('documents');
 $debug['documents_received'] = count($uploadedFiles);
 add_stage($debug, 'prepare', 'Batch upload accepted.');
@@ -957,83 +966,8 @@ try {
     ], 500);
 }
 
-$fieldLabels = [
-    'degree_transcripts' => $lang === 'fr' ? 'Diplomes / Releves de Notes' : 'Degree / Academic Transcripts',
-    'high_school_degree' => $lang === 'fr' ? 'Certificat de Lycee' : 'High School Certificate',
-    'valid_passport' => $lang === 'fr' ? 'Passeport Valide' : 'Valid Passport',
-    'recommendation_letters' => $lang === 'fr' ? 'Lettres de Recommandation' : 'Recommendation Letter(s)',
-    'personal_statement' => $lang === 'fr' ? 'Lettre de Motivation' : 'Personal Statement / Motivation Letter',
-    'cv_resume' => $lang === 'fr' ? 'CV / Curriculum Vitae' : 'CV / Resume',
-    'english_certificate' => $lang === 'fr' ? 'Certificat d Anglais' : 'English Proficiency Certificate',
-    'birth_certificate' => $lang === 'fr' ? 'Certificat de Naissance' : 'Birth Certificate',
-    'payment_proof' => $lang === 'fr' ? 'Preuve de Paiement' : 'Application / Payment Proof'
-];
-
-$systemPrompt = <<<PROMPT
-You are an admissions document classification and extraction assistant.
-
-Classify each uploaded document into exactly one of:
-- valid_passport
-- degree_transcripts
-- high_school_degree
-- cv_resume
-- recommendation_letters
-- personal_statement
-- english_certificate
-- birth_certificate
-- payment_proof
-- unknown
-
-Rules:
-1. Extract only applicant facts explicitly visible in the document.
-2. Never invent data.
-3. If the document mostly refers to someone other than the applicant, keep fields empty.
-4. Recommendation letters may mention other people; only extract student data if it is clearly about the applicant.
-5. Return country names, not codes.
-6. When the document is a CV or resume, prioritize extracting the main contact block first: email, phone, address, city, nationality, and education institution details.
-7. For CV/resume documents, if the phone is written locally but the country is explicit elsewhere in the same document, convert it to a full international number in phone_international.
-8. Return the strongest real applicant email address visible in the document, not a school or company address unless it is clearly the applicant contact.
-9. Ignore sample, placeholder, dummy, or template contact details.
-10. Return JSON only.
-
-JSON schema:
-{
-  "document_type": "valid_passport|degree_transcripts|high_school_degree|cv_resume|recommendation_letters|personal_statement|english_certificate|birth_certificate|payment_proof|unknown",
-  "confidence": 0.0,
-  "summary": "short summary",
-  "fields": {
-    "first_name": "",
-    "last_name": "",
-    "email": "",
-    "phone_international": "",
-    "dob": "",
-    "gender": "",
-    "passport_number": "",
-    "student_national_id": "",
-    "country_of_birth": "",
-    "city_of_birth": "",
-    "nationality": "",
-    "second_nationality": "",
-    "address_line1": "",
-    "address_line2": "",
-    "city": "",
-    "state_province": "",
-    "postal_code": "",
-    "previous_institution_name": "",
-    "previous_institution_city": "",
-    "previous_institution_province": "",
-    "previous_institution_country": "",
-    "previous_institution_post_code": "",
-    "previous_study_start": "",
-    "previous_study_graduation": "",
-    "language_of_instruction": "",
-    "father_first_name": "",
-    "father_last_name": "",
-    "mother_first_name": "",
-    "mother_last_name": ""
-  }
-}
-PROMPT;
+$fieldLabels = ai_autofill_field_labels($autofillMode, $lang);
+$systemPrompt = ai_autofill_system_prompt($autofillMode, $lang);
 
 $mergedFields = [];
 $fieldScores = [];
@@ -1159,7 +1093,9 @@ if ($analysisJobs) {
                 continue;
             }
 
-            $normalized = normalize_fields((array) ($ai['fields'] ?? []), $lang, $conn);
+            $normalized = $autofillMode === 'job'
+                ? ai_autofill_normalize_job_fields((array) ($ai['fields'] ?? []), $conn)
+                : normalize_fields((array) ($ai['fields'] ?? []), $lang, $conn);
             merge_candidate_fields($mergedFields, $fieldScores, $normalized, $documentType, $confidence);
 
             $documents[] = [
@@ -1194,7 +1130,9 @@ if (!$documents && !$mergedFields) {
     add_stage($debug, 'parse', 'No usable documents were analyzed successfully.');
     json_exit([
         'status' => 'error',
-        'message' => 'No document could be analyzed successfully. Please try clearer passport, CV, or academic files.',
+        'message' => $autofillMode === 'job'
+            ? 'No document could be analyzed successfully. Please try clearer passport, CV, or certificate files.'
+            : 'No document could be analyzed successfully. Please try clearer passport, CV, or academic files.',
         'warnings' => $warnings,
         'debug' => $debug
     ], 422);

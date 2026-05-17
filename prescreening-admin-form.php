@@ -14,15 +14,14 @@ require_once __DIR__ . '/helpers/prescreening_access.php';
 
 xander_prescreening_require_superadmin();
 xander_ensure_prescreening_schema($conn);
-$userId = 'user-' . time() . '-' . random_int(1000, 9999);
-$stmt = $conn->prepare(
-    "INSERT INTO prescreening_submissions (user_id, source, student_name, student_email, whatsapp_number, created_at)
-     VALUES (?, 'admin', '', '', '', NOW())
-     ON DUPLICATE KEY UPDATE user_id = user_id"
-);
-$stmt->bind_param('s', $userId);
-$stmt->execute();
-$stmt->close();
+require_once __DIR__ . '/helpers/prescreening_invite.php';
+
+if (empty($_SESSION['prescreen_admin_draft_user_id'])
+    || !preg_match('/^user-[0-9]+-[0-9]+$/', (string) $_SESSION['prescreen_admin_draft_user_id'])) {
+    $_SESSION['prescreen_admin_draft_user_id'] = 'user-' . time() . '-' . random_int(1000, 9999);
+}
+$userId = (string) $_SESSION['prescreen_admin_draft_user_id'];
+xander_prescreening_ensure_admin_draft($conn, $userId);
 $docLabels = xander_prescreening_document_labels();
 $prefill = [];
 $asyncDocs = true;
@@ -52,7 +51,7 @@ $asyncDocs = true;
   <div id="statusBox" class="alert d-none"></div>
   <form id="prescreenForm" novalidate>
     <input type="hidden" name="user_id" value="<?= htmlspecialchars($userId, ENT_QUOTES, 'UTF-8') ?>">
-    <div class="card-panel">
+    <div class="card-panel prescreen-contact-readonly">
       <h2>Student contact</h2>
       <div class="row g-3">
         <div class="col-md-4">

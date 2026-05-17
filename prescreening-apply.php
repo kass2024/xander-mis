@@ -21,8 +21,13 @@ if (empty($row['submitted_at'])) {
 }
 
 $handoff = xander_prescreening_build_apply_handoff($conn, $row);
-$_SESSION['xander_prescreen_handoff'] = $handoff;
+$isWork = xander_prescreening_is_work_abroad($row);
+xander_prescreening_store_apply_handoff_sessions($handoff, $isWork);
+if ($isWork) {
+    $target = 'job-application.php?id=' . rawurlencode($handoff['user_id']) . '&from_prescreen=1';
+} else {
+    $target = 'student-application.php?id=' . rawurlencode($handoff['user_id']) . '&from_prescreen=1';
+}
 
-$target = 'student-application.php?id=' . rawurlencode($handoff['user_id']) . '&from_prescreen=1';
 header('Location: ' . $target);
 exit;

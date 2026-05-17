@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../helpers/student_portal_schema.php';
+require_once __DIR__ . '/../helpers/job_application_status.php';
 require_once __DIR__ . '/../helpers/urls.php';
 require_once __DIR__ . '/../helpers/mysqli_compat.php';
 require_once __DIR__ . '/auth.php';
@@ -73,7 +74,32 @@ if ($email !== '') {
     }
 }
 
-// 4) Student contracts: by student_id when profile exists
+// 4) Job application: latest by email
+$jobApp = null;
+if ($email !== '') {
+    $st = $conn->prepare('
+        SELECT ja.*, c.name AS work_country_name
+        FROM job_applications ja
+        LEFT JOIN countries c ON c.id = ja.work_country_id
+        WHERE LOWER(TRIM(ja.email)) = ?
+        ORDER BY ja.id DESC
+        LIMIT 1
+    ');
+    if ($st) {
+        $st->bind_param('s', $email);
+        $st->execute();
+        $jobApp = pcvc_stmt_fetch_assoc($st);
+        $st->close();
+        if ($jobApp) {
+            $jid = trim((string) ($jobApp['user_id'] ?? ''));
+            if ($jid !== '') {
+                $_SESSION['job_user_id'] = $jid;
+            }
+        }
+    }
+}
+
+// 5) Student contracts: by student_id when profile exists
 $contracts = [];
 if ($appId > 0) {
     $st = $conn->prepare("
@@ -135,7 +161,7 @@ require_once __DIR__ . '/layout.php';
 ?>
 
 <?php
-$hasAny = (bool)$student || (bool)$credit || (bool)$loan || !empty($contracts);
+$hasAny = (bool) $student || (bool) $credit || (bool) $loan || (bool) $jobApp || !empty($contracts);
 ?>
 
 <?php if (!$hasAny): ?>
@@ -195,6 +221,27 @@ $hasAny = (bool)$student || (bool)$credit || (bool)$loan || !empty($contracts);
               <span class="badge <?= $done ? 'text-bg-success' : 'text-bg-light text-secondary border' ?>"><?= $done ? 'Done' : 'Pending' ?></span>
             </div>
           <?php endforeach; ?>
+        </div>
+      </div>
+    </div>
+  <?php endif; ?>
+
+  <?php if ($jobApp): ?>
+    <?php
+      $jobStatusKey = xander_normalize_job_process_status($jobApp['process_status'] ?? null);
+      $jobStatusLabels = xander_job_application_process_statuses();
+      $jobStatusLabel = $jobStatusLabels[$jobStatusKey] ?? ucfirst(str_replace('_', ' ', $jobStatusKey));
+    ?>
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+          <h2 class="h6 fw-bold mb-0">Job application</h2>
+          <span class="badge text-bg-primary"><?= htmlspecialchars($jobStatusLabel, ENT_QUOTES, 'UTF-8') ?></span>
+        </div>
+        <div class="row g-2">
+          <div class="col-md-4"><div class="muted small fw-semibold">Reference</div><div class="fw-semibold"><?= htmlspecialchars((string) ($jobApp['user_id'] ?? '—'), ENT_QUOTES, 'UTF-8') ?></div></div>
+          <div class="col-md-4"><div class="muted small fw-semibold">Work country</div><div class="fw-semibold"><?= htmlspecialchars((string) ($jobApp['work_country_name'] ?? '—'), ENT_QUOTES, 'UTF-8') ?></div></div>
+          <div class="col-md-4"><div class="muted small fw-semibold">Submitted</div><div class="fw-semibold"><?= htmlspecialchars((string) ($jobApp['created_at'] ?? '—'), ENT_QUOTES, 'UTF-8') ?></div></div>
         </div>
       </div>
     </div>

@@ -19,6 +19,16 @@ function xander_db_maybe_auto_schema(mysqli $conn): void
         xander_admin_menu_ensure_table($conn);
     }
 
+    $instSchema = dirname(__DIR__) . '/helpers/institution_portal_schema.php';
+    if (is_readable($instSchema)) {
+        require_once $instSchema;
+        try {
+            xander_institution_portal_ensure_schema($conn);
+        } catch (Throwable $e) {
+            error_log('[db_auto_schema] institution portal: ' . $e->getMessage());
+        }
+    }
+
     // Pre-screening tables — only when XANDER_AUTO_SCHEMA=1 in .env
     $envBootstrap = dirname(__DIR__) . '/helpers/env_load.php';
     if (!is_readable($envBootstrap)) {

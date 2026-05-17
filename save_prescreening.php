@@ -35,9 +35,9 @@ try {
         prescreening_respond(['status' => 'error', 'message' => 'Superadmin only'], 403);
     }
     require_once __DIR__ . '/helpers/prescreening_schema.php';
+    require_once __DIR__ . '/helpers/prescreening_invite.php';
     require_once __DIR__ . '/helpers/prescreening_save.php';
-    require_once __DIR__ . '/helpers/prescreening_notify.php';
-    require_once __DIR__ . '/helpers/prescreening_whatsapp_flow.php';
+    require_once __DIR__ . '/helpers/prescreening_async_notify.php';
     require_once __DIR__ . '/helpers/prescreening_whatsapp_schema.php';
 
     if (!isset($conn) || !$conn) {
@@ -85,6 +85,10 @@ try {
     }
     if (is_array($existingRow)) {
         $docPaths = xander_prescreening_merge_doc_paths_from_row($existingRow, $docPaths);
+    }
+    $draftInvite = xander_prescreening_load_draft_by_user_id($conn, $userId);
+    if (is_array($draftInvite)) {
+        $docPaths = xander_prescreening_merge_doc_paths_from_row($draftInvite, $docPaths);
     }
 
     $adminId = (int) ($_SESSION['admin_id'] ?? $_SESSION['id'] ?? 0);
@@ -175,40 +179,23 @@ try {
     ], $fields, $docPaths);
 
     $reference = 'PS-' . strtoupper(substr(md5($userId), 0, 8));
-    $notify = xander_send_prescreening_notifications($row, $reference);
-    $staffWa = xander_prescreening_notify_staff_whatsapp($row, $reference);
 
-    $emailOk = !empty($notify['email']['admin']);
-    $waOk = !empty($notify['whatsapp']['sent']);
-    $errors = [];
-    if (!$emailOk) {
-        $errors[] = 'Admin email could not be sent.';
-    }
-    if (!$waOk) {
-        $errors[] = (string) ($notify['whatsapp']['error'] ?? 'WhatsApp could not be sent.');
-    }
+    xander_prescreening_delete_invite($conn, $userId);
+    unset($_SESSION['prescreen_admin_draft_user_id']);
 
-    $upd = $conn->prepare('UPDATE prescreening_submissions SET email_sent = ?, whatsapp_sent = ?, notify_errors = ? WHERE user_id = ? LIMIT 1');
-    if ($upd) {
-        $emailSent = $emailOk ? 1 : 0;
-        $waSent = $waOk ? 1 : 0;
-        $errJson = $errors !== [] ? json_encode($errors, JSON_UNESCAPED_UNICODE) : null;
-        $upd->bind_param('iiss', $emailSent, $waSent, $errJson, $userId);
-        $upd->execute();
-        $upd->close();
-    }
-
-    prescreening_respond([
-        'status' => ($emailOk || $waOk) ? 'success' : 'partial',
-        'message' => $waOk && $emailOk
-            ? 'Pre-screening sent to email and WhatsApp successfully.'
-            : ($errors !== [] ? implode(' ', $errors) : 'Saved with notification issues.'),
-        'user_id' => $userId,
-        'reference' => $reference,
-        'email' => $notify['email'],
-        'whatsapp' => $notify['whatsapp'],
-        'staff_whatsapp' => $staffWa,
-    ]);
+    xander_prescreening_flush_json_and_notify(
+        [
+            'status' => 'success',
+            'message' => 'Pre-screening saved. Email and WhatsApp notifications are being sent.',
+            'user_id' => $userId,
+            'reference' => $reference,
+        ],
+        $conn,
+        $row,
+        $reference,
+        $userId,
+        false
+    );
 } catch (Throwable $e) {
     error_log('[save_prescreening] ' . $e->getMessage());
     prescreening_respond(['status' => 'error', 'message' => 'Server error: ' . $e->getMessage()], 500);

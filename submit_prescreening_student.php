@@ -22,16 +22,25 @@ try {
     require_once __DIR__ . '/db.php';
     require_once __DIR__ . '/helpers/prescreening_invite.php';
     require_once __DIR__ . '/helpers/prescreening_save.php';
-    require_once __DIR__ . '/helpers/prescreening_notify.php';
-    require_once __DIR__ . '/helpers/prescreening_whatsapp_flow.php';
+    require_once __DIR__ . '/helpers/prescreening_async_notify.php';
 
     $token = trim((string) ($_POST['token'] ?? ''));
     $invite = xander_prescreening_load_invite_by_token($conn, $token);
     if (!$invite) {
         student_prescreen_respond(['status' => 'error', 'message' => 'Invalid or expired link.'], 404);
     }
-    if (!empty($invite['submitted_at'])) {
-        student_prescreen_respond(['status' => 'error', 'message' => 'This form was already submitted.']);
+    $already = $conn->prepare(
+        'SELECT id FROM prescreening_submissions WHERE user_id = ? AND submitted_at IS NOT NULL LIMIT 1'
+    );
+    if ($already) {
+        $uidCheck = (string) ($invite['user_id'] ?? '');
+        $already->bind_param('s', $uidCheck);
+        $already->execute();
+        if ($already->get_result()->fetch_row()) {
+            $already->close();
+            student_prescreen_respond(['status' => 'error', 'message' => 'This form was already submitted.']);
+        }
+        $already->close();
     }
 
     $userId = (string) ($invite['user_id'] ?? '');
@@ -39,7 +48,12 @@ try {
     $studentEmail = trim((string) ($invite['student_email'] ?? ''));
     $whatsapp = trim((string) ($invite['whatsapp_number'] ?? ''));
 
-    $parsed = xander_prescreening_parse_form_payload($_POST, [], 'user');
+    $parsed = xander_prescreening_parse_form_payload($_POST, $_FILES, 'user');
+    if (($parsed['fields']['service_type'] ?? '') === 'work_abroad') {
+        $studentName = trim((string) ($_POST['student_name'] ?? $studentName));
+        $studentEmail = trim((string) ($_POST['student_email'] ?? $studentEmail));
+        $whatsapp = trim((string) ($_POST['whatsapp_number'] ?? $whatsapp));
+    }
     if ($parsed['errors'] !== []) {
         student_prescreen_respond(['status' => 'error', 'message' => $parsed['errors'][0]]);
     }
@@ -60,6 +74,18 @@ try {
         false
     );
 
+    if ($token !== '') {
+        $tokUp = $conn->prepare(
+            'UPDATE prescreening_submissions SET invite_token = ? WHERE user_id = ? LIMIT 1'
+        );
+        if ($tokUp) {
+            $tokUp->bind_param('ss', $token, $userId);
+            $tokUp->execute();
+            $tokUp->close();
+        }
+    }
+    xander_prescreening_delete_invite($conn, $userId);
+
     $row = array_merge([
         'student_name' => $studentName,
         'student_email' => $studentEmail,
@@ -68,26 +94,19 @@ try {
     ], $parsed['fields'], $parsed['docPaths']);
 
     $reference = $saved['reference'];
-    $notify = xander_send_prescreening_notifications($row, $reference, true);
-    xander_prescreening_notify_staff_whatsapp($row, $reference);
 
-    $emailOk = !empty($notify['email']['admin']);
-    $waOk = !empty($notify['whatsapp']['sent']);
-    $upd = $conn->prepare('UPDATE prescreening_submissions SET email_sent = ?, whatsapp_sent = ?, notify_errors = ? WHERE user_id = ? LIMIT 1');
-    if ($upd) {
-        $emailSent = $emailOk ? 1 : 0;
-        $waSent = $waOk ? 1 : 0;
-        $errJson = (!$emailOk && !$waOk) ? json_encode(['Notification issues'], JSON_UNESCAPED_UNICODE) : null;
-        $upd->bind_param('iiss', $emailSent, $waSent, $errJson, $userId);
-        $upd->execute();
-        $upd->close();
-    }
-
-    student_prescreen_respond([
-        'status' => 'success',
-        'message' => 'Thank you! Your pre-screening has been submitted.',
-        'reference' => $reference,
-    ]);
+    xander_prescreening_flush_json_and_notify(
+        [
+            'status' => 'success',
+            'message' => 'Thank you! Your pre-screening has been submitted.',
+            'reference' => $reference,
+        ],
+        $conn,
+        $row,
+        $reference,
+        $userId,
+        true
+    );
 } catch (Throwable $e) {
     error_log('[submit_prescreening_student] ' . $e->getMessage());
     student_prescreen_respond(['status' => 'error', 'message' => 'Server error. Please try again.'], 500);

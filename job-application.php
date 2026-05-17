@@ -58,6 +58,22 @@ if ($already_applied) {
     header("Location: $redirect_url");
     exit;
 }
+
+/** Pre-screening → job application handoff (superadmin Apply now, work abroad). */
+$prescreenHandoffForJs = null;
+if (!empty($_GET['from_prescreen']) && !empty($_SESSION['xander_prescreen_handoff'])) {
+    $handoff = $_SESSION['xander_prescreen_handoff'];
+    $reqId = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) ($_GET['id'] ?? ''));
+    if ($reqId !== '' && ($handoff['user_id'] ?? '') === $reqId && ($handoff['service_type'] ?? '') === 'work_abroad') {
+        $_SESSION['user_id'] = $reqId;
+        $prescreenHandoffForJs = [
+            'docs' => $handoff['docs'] ?? [],
+            'prefill' => $handoff['prefill'] ?? [],
+            'hints' => $handoff['hints'] ?? [],
+            'auto_run' => !empty($handoff['auto_run']),
+        ];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -338,26 +354,43 @@ if ($already_applied) {
             align-items: center;
         }
         
-        .progress-overlay {
+        .job-submit-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
+            inset: 0;
+            z-index: 9999;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(3px);
             display: none;
             align-items: center;
             justify-content: center;
-            z-index: 9999;
         }
         
-        .progress-card {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            max-width: 400px;
+        .job-submit-overlay.is-visible {
+            display: flex;
+        }
+        
+        .job-submit-box {
+            background: #fff;
+            border-radius: 14px;
+            padding: 1.5rem 1.75rem;
+            max-width: 320px;
             width: 90%;
             text-align: center;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .job-submit-spin {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 12px;
+            border: 3px solid #e2e8f0;
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: jobSpin 0.75s linear infinite;
+        }
+        
+        @keyframes jobSpin {
+            to { transform: rotate(360deg); }
         }
         
         .validation-summary {
@@ -379,69 +412,46 @@ if ($already_applied) {
         
         .success-card {
             background: white;
-            border-radius: 15px;
-            padding: 3rem 2rem;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            border-radius: 14px;
+            padding: 2rem 1.5rem;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
             border: 1px solid var(--gray-200);
         }
         
         .success-icon {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            width: 56px;
+            height: 56px;
+            background: #10b981;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 2rem;
+            margin: 0 auto 1rem;
             color: white;
-            font-size: 2.5rem;
+            font-size: 1.5rem;
         }
         
         .success-title {
-            font-size: 2rem;
+            font-size: 1.5rem;
             font-weight: 700;
             color: var(--gray-700);
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
         }
         
         .success-message {
-            font-size: 1.125rem;
+            font-size: 1rem;
             color: var(--gray-500);
-            margin-bottom: 2rem;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        
-        .reference-card {
-            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-            border: 2px dashed var(--primary-color);
-            border-radius: 10px;
-            padding: 1.5rem;
-            margin: 2rem auto;
-            max-width: 500px;
+            margin-bottom: 1.25rem;
         }
         
         .reference-id {
-            font-family: 'Courier New', monospace;
-            font-size: 1.5rem;
+            font-family: ui-monospace, 'Courier New', monospace;
+            font-size: 1.125rem;
             font-weight: 700;
             color: var(--primary-color);
-            background: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            display: inline-block;
-            margin: 0.5rem 0;
+            letter-spacing: 0.02em;
+            margin: 0.25rem 0 1rem;
             word-break: break-all;
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-top: 2rem;
         }
         
         @media (max-width: 768px) {
@@ -585,67 +595,30 @@ if ($already_applied) {
         <i class="fas fa-clock me-2"></i>Session: <span id="timer">59:59</span>
     </div>
     
-    <!-- Progress Overlay -->
-    <div class="progress-overlay" id="progressOverlay">
-        <div class="progress-card">
-            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <h4>Submitting Application</h4>
-            <p id="progressText">Please wait while we process your application...</p>
-            <div class="progress mt-3">
-                <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
-            </div>
+    <!-- Submit overlay -->
+    <div class="job-submit-overlay" id="jobSubmitOverlay" aria-live="polite">
+        <div class="job-submit-box">
+            <div class="job-submit-spin" aria-hidden="true"></div>
+            <p class="fw-semibold mb-1" style="margin:0">Saving application</p>
+            <p class="small text-muted mb-0">One moment…</p>
         </div>
     </div>
-    
-    <!-- Success Message Container (Initially Hidden) -->
+
+    <!-- Success (hidden until submit) -->
     <div class="success-container" id="successContainer">
         <div class="success-card">
             <div class="success-icon">
                 <i class="fas fa-check"></i>
             </div>
-            <h1 class="success-title">Application Submitted Successfully</h1>
-            <p class="success-message">
-                Your application has been received and is under review. We'll contact you 
-                within 3-5 business days with an update. Please keep your reference number 
-                for future communications.
-            </p>
-            
-            <div class="reference-card">
-                <h5 class="mb-2">Your Reference ID:</h5>
-                <div class="reference-id" id="referenceId">Loading...</div>
-                <p class="small text-muted mt-2">
-                    <i class="fas fa-info-circle me-1"></i>
-                    Save this number for tracking your application
-                </p>
-            </div>
-            
-            <div class="alert alert-info mb-4">
-                <div class="d-flex align-items-start">
-                    <i class="fas fa-envelope me-3 mt-1"></i>
-                    <div>
-                        <strong>Next Steps:</strong>
-                        <ul class="mb-0 mt-2">
-                            <li>A confirmation email has been sent to your registered email address</li>
-                            <li>Our team will review your application within 3-5 business days</li>
-                            <li>Check your spam folder if you don't see our email</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="action-buttons">
-                <button type="button" class="btn btn-primary" id="submitAnotherBtn">
-                    <i class="fas fa-plus-circle me-2"></i> Submit Another Application
-                </button>
-                <button type="button" class="btn btn-outline-primary" id="printBtn">
-                    <i class="fas fa-print me-2"></i> Print Confirmation
-                </button>
-            </div>
+            <h1 class="success-title">Thank you</h1>
+            <p class="success-message">Your application was received. We will be in touch soon.</p>
+            <p class="small text-muted mb-1">Reference</p>
+            <div class="reference-id" id="referenceId">—</div>
+            <p class="small text-muted mb-3">A confirmation email is on its way.</p>
+            <button type="button" class="btn btn-primary px-4" id="submitAnotherBtn">Close</button>
         </div>
     </div>
-    
+
     <!-- Database Warning -->
     <?php if ($conn->connect_error): ?>
     <div class="container mt-3">
@@ -683,6 +656,8 @@ if ($already_applied) {
             </div>
         </div>
         
+        <?php require __DIR__ . '/includes/job_smart_autofill.php'; ?>
+
         <!-- Main Form -->
         <form id="jobForm" enctype="multipart/form-data" novalidate>
             <!-- CSRF Protection -->
@@ -700,30 +675,30 @@ if ($already_applied) {
                 
                 <div class="row g-3">
                     <div class="col-12 col-md-6">
-                        <label for="first_name" class="form-label required">First Name</label>
+                        <label for="first_name" class="form-label">First Name</label>
                         <input type="text" class="form-control" id="first_name" name="first_name" 
-                               placeholder="Enter your first name" required maxlength="100">
+                               placeholder="Enter your first name" maxlength="100">
                         <div class="invalid-feedback">Please enter your first name</div>
                     </div>
                     
                     <div class="col-12 col-md-6">
-                        <label for="last_name" class="form-label required">Last Name</label>
+                        <label for="last_name" class="form-label">Last Name</label>
                         <input type="text" class="form-control" id="last_name" name="last_name" 
-                               placeholder="Enter your last name" required maxlength="100">
+                               placeholder="Enter your last name" maxlength="100">
                         <div class="invalid-feedback">Please enter your last name</div>
                     </div>
                     
                     <div class="col-12 col-md-6">
-                        <label for="email" class="form-label required">Email Address</label>
+                        <label for="email" class="form-label">Email Address</label>
                         <input type="email" class="form-control" id="email" name="email" 
-                               placeholder="example@email.com" required maxlength="150">
+                               placeholder="example@email.com" maxlength="150">
                         <div class="invalid-feedback">Please enter a valid email address</div>
                     </div>
                     
                     <div class="col-12 col-md-6">
-                        <label for="phone" class="form-label required">Phone Number</label>
+                        <label for="phone" class="form-label">Phone Number</label>
                         <div class="form-text mb-2" style="font-size: 0.85rem;">Use the country flag dropdown, then your number. We store <strong>digits only</strong> (country code + number, no +) so WhatsApp can message you.</div>
-                        <input type="tel" class="form-control" id="phone" required>
+                        <input type="tel" class="form-control" id="phone">
                         <input type="hidden" name="phone_area_code" id="phone_area_code">
                         <input type="hidden" name="phone_number" id="phone_number">
                         <div class="invalid-feedback">Please enter a valid phone number</div>
@@ -743,8 +718,8 @@ if ($already_applied) {
                 
                 <div class="row">
                     <div class="col-12">
-                        <label for="work_country_id" class="form-label required">Desired Work Country</label>
-                        <select class="form-select country-select" id="work_country_id" name="work_country_id" required>
+                        <label for="work_country_id" class="form-label">Desired Work Country</label>
+                        <select class="form-select country-select" id="work_country_id" name="work_country_id">
                             <option value="">Select a country...</option>
                             <!-- Countries loaded via JavaScript -->
                         </select>
@@ -765,8 +740,8 @@ if ($already_applied) {
                 
                 <div class="row g-3">
                     <div class="col-12 col-md-6">
-                        <label for="address_country_id" class="form-label required">Country</label>
-                        <select class="form-select country-select" id="address_country_id" name="address_country_id" required>
+                        <label for="address_country_id" class="form-label">Country</label>
+                        <select class="form-select country-select" id="address_country_id" name="address_country_id">
                             <option value="">Select your country...</option>
                             <!-- Countries loaded via JavaScript -->
                         </select>
@@ -774,37 +749,37 @@ if ($already_applied) {
                     </div>
                     
                     <div class="col-12 col-md-6">
-                        <label for="province_state" class="form-label required">Province / State</label>
+                        <label for="province_state" class="form-label">Province / State</label>
                         <input type="text" class="form-control" id="province_state" name="province_state" 
-                               placeholder="Enter province or state" required maxlength="120">
+                               placeholder="Enter province or state" maxlength="120">
                         <div class="invalid-feedback">Please enter your province/state</div>
                     </div>
                     
                     <div class="col-12 col-md-6">
-                        <label for="district" class="form-label required">District</label>
+                        <label for="district" class="form-label">District</label>
                         <input type="text" class="form-control" id="district" name="district" 
-                               placeholder="Enter district" required maxlength="120">
+                               placeholder="Enter district" maxlength="120">
                         <div class="invalid-feedback">Please enter your district</div>
                     </div>
                     
                     <div class="col-12 col-md-6">
-                        <label for="sector" class="form-label required">Sector</label>
+                        <label for="sector" class="form-label">Sector</label>
                         <input type="text" class="form-control" id="sector" name="sector" 
-                               placeholder="Enter sector" required maxlength="120">
+                               placeholder="Enter sector" maxlength="120">
                         <div class="invalid-feedback">Please enter your sector</div>
                     </div>
                     
                     <div class="col-12 col-md-6">
-                        <label for="cell_ward" class="form-label required">Cell / Ward</label>
+                        <label for="cell_ward" class="form-label">Cell / Ward</label>
                         <input type="text" class="form-control" id="cell_ward" name="cell_ward" 
-                               placeholder="Enter cell or ward" required maxlength="120">
+                               placeholder="Enter cell or ward" maxlength="120">
                         <div class="invalid-feedback">Please enter your cell/ward</div>
                     </div>
                     
                     <div class="col-12 col-md-6">
-                        <label for="village" class="form-label required">Village</label>
+                        <label for="village" class="form-label">Village</label>
                         <input type="text" class="form-control" id="village" name="village" 
-                               placeholder="Enter village" required maxlength="120">
+                               placeholder="Enter village" maxlength="120">
                         <div class="invalid-feedback">Please enter your village</div>
                     </div>
                 </div>
@@ -821,32 +796,32 @@ if ($already_applied) {
                 
                 <div class="row g-3">
                     <div class="col-12 col-md-6">
-                        <label for="emergency_full_name" class="form-label required">Full Name</label>
+                        <label for="emergency_full_name" class="form-label">Full Name</label>
                         <input type="text" class="form-control" id="emergency_full_name" name="emergency_full_name" 
-                               placeholder="Enter full name" required maxlength="150">
+                               placeholder="Enter full name" maxlength="150">
                         <div class="invalid-feedback">Please enter emergency contact name</div>
                     </div>
                     
                     <div class="col-12 col-md-6">
-                        <label for="emergency_relationship" class="form-label required">Relationship</label>
+                        <label for="emergency_relationship" class="form-label">Relationship</label>
                         <input type="text" class="form-control" id="emergency_relationship" name="emergency_relationship" 
-                               placeholder="e.g., Father, Sister, Spouse" required maxlength="100">
+                               placeholder="e.g., Father, Sister, Spouse" maxlength="100">
                         <div class="invalid-feedback">Please enter relationship</div>
                     </div>
                     
                     <div class="col-12 col-md-6">
-                        <label for="emergency_phone" class="form-label required">Phone Number</label>
+                        <label for="emergency_phone" class="form-label">Phone Number</label>
                         <div class="form-text mb-2" style="font-size: 0.85rem;">Same as above: country code + number, saved as digits only (no +) for WhatsApp.</div>
-                        <input type="tel" class="form-control" id="emergency_phone" required>
+                        <input type="tel" class="form-control" id="emergency_phone">
                         <input type="hidden" name="emergency_area_code" id="emergency_area_code">
                         <input type="hidden" name="emergency_phone_number" id="emergency_phone_number">
                         <div class="invalid-feedback">Please enter a valid emergency phone number</div>
                     </div>
                     
                     <div class="col-12 col-md-6">
-                        <label for="emergency_email" class="form-label required">Email Address</label>
+                        <label for="emergency_email" class="form-label">Email Address</label>
                         <input type="email" class="form-control" id="emergency_email" name="emergency_email" 
-                               placeholder="emergency@email.com" required maxlength="150">
+                               placeholder="emergency@email.com" maxlength="150">
                         <div class="invalid-feedback">Please enter a valid emergency email</div>
                     </div>
                 </div>
@@ -875,7 +850,7 @@ if ($already_applied) {
                                 <span><i class="fas fa-weight-hanging"></i> 15MB max</span>
                             </div>
                             <input type="file" class="d-none" id="passport" name="passport" 
-                                   accept=".pdf,.jpg,.jpeg,.png" required data-max-size="15728640">
+                                   accept=".pdf,.jpg,.jpeg,.png" data-max-size="15728640">
                         </div>
                         <div class="file-preview-container" id="passport-preview"></div>
                         <div class="invalid-feedback">Passport is required</div>
@@ -894,7 +869,7 @@ if ($already_applied) {
                                 <span><i class="fas fa-weight-hanging"></i> 15MB max</span>
                             </div>
                             <input type="file" class="d-none" id="photo" name="photo" 
-                                   accept=".jpg,.jpeg,.png" required data-max-size="15728640">
+                                   accept=".jpg,.jpeg,.png" data-max-size="15728640">
                         </div>
                         <div class="file-preview-container" id="photo-preview"></div>
                         <div class="invalid-feedback">Passport photo is required</div>
@@ -1035,7 +1010,8 @@ if ($already_applied) {
         endpoints: {
             countries: 'getCountries.php',
             save: 'save_job_application.php',
-            upload: 'upload_temp_file.php'   // 👈 ADD THIS
+            upload: 'upload_temp_file.php',
+            autofill: 'job_ai_autofill.php'
         },
         maxFileSize: 15728640, // 15MB in bytes
         sessionTimeout: 7200, // 2 hours in seconds
@@ -1092,12 +1068,8 @@ if ($already_applied) {
             location.reload();
         });
         
-        $('#printBtn').on('click', function() {
-            window.print();
-        });
-        
         // Show welcome message
-        showToast('Please complete all required fields marked with *', 'info', 5000);
+        showToast('Fill in what you can — all fields are optional. You may submit with missing details.', 'info', 6000);
     });
     
     // Initialize phone inputs
@@ -1252,11 +1224,8 @@ async function handleFileUpload(input) {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', CONFIG.endpoints.upload, true);
 
-    xhr.upload.onprogress = function (e) {
-        if (e.lengthComputable) {
-            const percent = Math.round((e.loaded / e.total) * 100);
-            updateProgress(`Uploading ${input.id}: ${percent}%`, percent);
-        }
+    xhr.upload.onprogress = function () {
+        /* progress UI optional — upload is usually quick */
     };
 
     xhr.onload = function () {
@@ -1371,9 +1340,7 @@ async function handleFileUpload(input) {
                 return;
             }
             
-            if (validateForm()) {
-                submitForm();
-            }
+            submitForm({ lenient: true });
         });
     }
     
@@ -1387,7 +1354,7 @@ async function handleFileUpload(input) {
         // Clear previous validation
         field.removeClass('is-invalid is-valid');
         
-        // Required field validation
+        // field validation
         if (isRequired && !value) {
             field.addClass('is-invalid');
             return false;
@@ -1436,47 +1403,40 @@ if ((fieldId === 'phone' || fieldId === 'emergency_phone') && value) {
         return true;
     }
     
-    // Validate entire form
+    // Validate only fields that have values (nothing is required).
     function validateForm() {
         let isValid = true;
         const errors = [];
         
-        // Validate all fields
         $('#jobForm').find('input, select').each(function() {
-            if (!validateField($(this))) {
+            const $f = $(this);
+            const val = $f.val() ? String($f.val()).trim() : '';
+            if (val === '') {
+                return;
+            }
+            if (!validateField($f)) {
                 isValid = false;
-                const fieldName = $(this).attr('name') || $(this).attr('id');
-                const label = $(this).prev('.form-label').text().replace('*', '').trim();
-                errors.push(`${label} is required`);
+                const label = $f.closest('.col-md-6, .col-12, .mb-3').find('.form-label').first().text().replace(/\*/g, '').trim()
+                    || $f.attr('name') || $f.attr('id') || 'Field';
+                errors.push('Please check ' + label);
             }
         });
         
-        // Validate phone numbers
-        if (state.phoneInput && !state.phoneInput.isValidNumber()) {
+        const phoneVal = $('#phone').val() ? String($('#phone').val()).trim() : '';
+        if (phoneVal && state.phoneInput && !state.phoneInput.isValidNumber()) {
             isValid = false;
             errors.push('Please enter a valid phone number');
         }
         
-        if (state.emergencyPhoneInput && !state.emergencyPhoneInput.isValidNumber()) {
+        const emVal = $('#emergency_phone').val() ? String($('#emergency_phone').val()).trim() : '';
+        if (emVal && state.emergencyPhoneInput && !state.emergencyPhoneInput.isValidNumber()) {
             isValid = false;
             errors.push('Please enter a valid emergency phone number');
         }
         
-     // Validate required uploaded files (temp upload based)
-const requiredFiles = ['passport', 'photo'];
-
-requiredFiles.forEach(fileId => {
-    if (!state.uploadedFiles[fileId]) {
-        isValid = false;
-        errors.push(`${fileId.replace('_', ' ')} is required`);
-    }
-});
-
-        
-        // Show validation errors
         if (!isValid) {
             showValidationErrors(errors);
-            showToast('Please correct the errors in the form', 'error');
+            showToast('Please correct the highlighted fields', 'error');
         }
         
         return isValid;
@@ -1515,22 +1475,25 @@ requiredFiles.forEach(fileId => {
         // Show success container
         $('#successContainer').show();
         
-        // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        // Show success toast
-        showToast('Application submitted successfully!', 'success', 5000);
     }
     
     // Submit form
-    async function submitForm() {
+    async function submitForm(opts) {
+        opts = opts || {};
+        const lenient = opts.lenient !== false;
+        if (!lenient && typeof validateForm === 'function' && !validateForm()) {
+            return false;
+        }
+        if (lenient && typeof validateForm === 'function' && !validateForm()) {
+            return false;
+        }
+
         // Update UI
         state.isSubmitting = true;
         $('#submitBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i> Submitting...');
-        $('#progressOverlay').show();
-        updateProgress('Preparing submission...', 10);
-        
-        try {
+        document.getElementById('jobSubmitOverlay')?.classList.add('is-visible');
+try {
             // Prepare form data
            const formData = new FormData();
 
@@ -1558,29 +1521,33 @@ Object.keys(state.uploadedFiles).forEach(field => {
             if (mainP && mainP.dial) {
                 formData.set('phone_area_code', mainP.dial);
                 formData.set('phone_number', mainP.national);
+            } else if (lenient) {
+                formData.set('phone_area_code', formData.get('phone_area_code') || '');
+                formData.set('phone_number', formData.get('phone_number') || '');
             }
             const emP = jobPhoneParts(state.emergencyPhoneInput);
             if (emP && emP.dial) {
                 formData.set('emergency_area_code', emP.dial);
                 formData.set('emergency_phone_number', emP.national);
+            } else if (lenient) {
+                formData.set('emergency_area_code', formData.get('emergency_area_code') || '');
+                formData.set('emergency_phone_number', formData.get('emergency_phone_number') || '');
+            }
+
+            if (lenient) {
+                formData.append('lenient_submit', '1');
             }
             
             // Add debug flag
             if (new URLSearchParams(window.location.search).has('debug')) {
                 formData.append('debug', 'true');
             }
-            
-            updateProgress('Uploading files...', 30);
-            
-            // Submit to server
+// Submit to server
             const response = await fetch(CONFIG.endpoints.save, {
                 method: 'POST',
                 body: formData
             });
-            
-            updateProgress('Processing data...', 70);
-            
-            let result;
+let result;
 try {
     result = await response.json();
 } catch (e) {
@@ -1589,24 +1556,14 @@ try {
 
             
             if (response.ok && result.status === 'success') {
-                // Success
-                updateProgress('Success! Redirecting...', 100);
-                
-                setTimeout(() => {
-                    $('#progressOverlay').hide();
-                    
-                    // Generate a reference number if not provided
-                    const referenceNumber = result.data?.reference_number || 
-                                          generateReferenceNumber();
-                    
-                    // Show success message
-                    showSuccessMessage(referenceNumber);
-                    
-                }, 1000);
+                document.getElementById('jobSubmitOverlay')?.classList.remove('is-visible');
+                const referenceNumber = result.data?.reference_number || generateReferenceNumber();
+                showSuccessMessage(referenceNumber);
+                return true;
                 
             } else {
                 // Error
-                $('#progressOverlay').hide();
+                document.getElementById('jobSubmitOverlay')?.classList.remove('is-visible');
                 
                 if (response.status === 409) {
                     // Duplicate submission
@@ -1622,33 +1579,31 @@ try {
                     // Other errors
                     showToast(result.message || 'Submission failed. Please try again.', 'error');
                 }
+                return false;
             }
             
         } catch (error) {
             // Network error
-            $('#progressOverlay').hide();
+            document.getElementById('jobSubmitOverlay')?.classList.remove('is-visible');
             showToast('Network error. Please check your connection and try again.', 'error');
             console.error('Submission error:', error);
+            return false;
             
         } finally {
-    state.isSubmitting = false;
-    $('#submitBtn')
-        .prop('disabled', false)
-        .html('<i class="fas fa-paper-plane me-2"></i> Submit Application');
-}
+            state.isSubmitting = false;
+            $('#submitBtn')
+                .prop('disabled', false)
+                .html('<i class="fas fa-paper-plane me-2"></i> Submit Application');
+        }
     }
+    
+    window.submitForm = submitForm;
     
     // Generate reference number
     function generateReferenceNumber() {
         const timestamp = Date.now();
         const random = Math.floor(Math.random() * 10000);
         return `XGS-${timestamp}-${random}`;
-    }
-    
-    // Update progress
-    function updateProgress(message, percent) {
-        $('#progressText').text(message);
-        $('#progressBar').css('width', `${percent}%`);
     }
     
     // Initialize session timer

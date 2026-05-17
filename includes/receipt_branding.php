@@ -1,9 +1,12 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/receipt_stored_html.php';
+
 /**
- * Receipt branding — Bujumbura office admins get dual-logo receipts.
+ * Receipt branding - Bujumbura office admins get dual-logo receipts.
  */
+
 function xander_receipt_ensure_session(): void
 {
     if (session_status() === PHP_SESSION_NONE) {
@@ -37,14 +40,7 @@ function xander_receipt_is_bujumbura(?string $officeName): bool
     return strcasecmp(trim((string) $officeName), 'Bujumbura') === 0;
 }
 
-/**
- * @return array{
- *   dual: bool,
- *   office_name: string,
- *   primary: array{name: string, logo: string},
- *   secondary: array{name: string, logo: string}
- * }
- */
+/** @return array<string, mixed> */
 function xander_get_receipt_branding(mysqli $conn, ?int $adminId = null): array
 {
     xander_receipt_ensure_session();
@@ -111,23 +107,21 @@ function xander_get_receipt_branding(mysqli $conn, ?int $adminId = null): array
 
 function xander_receipt_brand_css_screen(): string
 {
-    return <<<'CSS'
-.rb-brand{margin-bottom:12px;flex:1;min-width:0}
-.rb-brand-single{display:flex;align-items:center;gap:12px}
-.rb-brand-single img{width:52px;height:52px;object-fit:contain;border-radius:10px;background:#f8fafc;padding:4px;flex-shrink:0}
-.rb-brand-single .rb-titles{line-height:1.25;min-width:0}
-.rb-brand-single .rb-name{font-size:15px;font-weight:800;color:#012F6B;letter-spacing:.02em}
-.rb-brand-single .rb-doc{font-size:11px;color:#64748b;margin-top:2px}
-.rb-brand-dual{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}
-.rb-partner{background:linear-gradient(145deg,#f8fafc 0%,#eef2ff 100%);border:1px solid #e2e8f0;border-radius:12px;padding:10px;text-align:center}
-.rb-partner img{width:48px;height:48px;object-fit:contain;margin:0 auto 6px;display:block}
-.rb-partner .rb-name{font-size:11px;font-weight:800;color:#012F6B;line-height:1.2}
-.rb-partner.rb-hera{background:linear-gradient(145deg,#fffbeb 0%,#fef3c7 100%);border-color:#fde68a}
-.rb-partner.rb-hera .rb-name{color:#92400e}
-.rb-badge{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#fff;background:linear-gradient(135deg,#012F6B,#254D81);padding:4px 10px;border-radius:999px;margin-bottom:6px}
-.rb-meta-ts{font-size:11px;color:#64748b;margin-top:4px}
-.receipt-card .header{align-items:flex-start}
-CSS;
+    return '.rb-brand{margin-bottom:12px;flex:1;min-width:0}'
+        . '.rb-brand-single{display:flex;align-items:center;gap:12px}'
+        . '.rb-brand-single img{width:52px;height:52px;object-fit:contain;border-radius:10px;background:#f8fafc;padding:4px;flex-shrink:0}'
+        . '.rb-brand-single .rb-titles{line-height:1.25;min-width:0}'
+        . '.rb-brand-single .rb-name{font-size:15px;font-weight:800;color:#012F6B;letter-spacing:.02em}'
+        . '.rb-brand-single .rb-doc{font-size:11px;color:#64748b;margin-top:2px}'
+        . '.rb-brand-dual{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}'
+        . '.rb-partner{background:linear-gradient(145deg,#f8fafc 0%,#eef2ff 100%);border:1px solid #e2e8f0;border-radius:12px;padding:10px;text-align:center}'
+        . '.rb-partner img{width:48px;height:48px;object-fit:contain;margin:0 auto 6px;display:block}'
+        . '.rb-partner .rb-name{font-size:11px;font-weight:800;color:#012F6B;line-height:1.2}'
+        . '.rb-partner.rb-hera{background:linear-gradient(145deg,#fffbeb 0%,#fef3c7 100%);border-color:#fde68a}'
+        . '.rb-partner.rb-hera .rb-name{color:#92400e}'
+        . '.rb-badge{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#fff;background:linear-gradient(135deg,#012F6B,#254D81);padding:4px 10px;border-radius:999px;margin-bottom:6px}'
+        . '.rb-meta-ts{font-size:11px;color:#64748b;margin-top:4px}'
+        . '.receipt-card .header{align-items:flex-start}';
 }
 
 function xander_receipt_render_header_screen(array $branding, string $timestamp): string
@@ -181,64 +175,4 @@ function xander_receipt_render_header_print(array $branding): string
         . '<img src="' . $logo . '" class="logo" alt="">'
         . '<div class="company"><div class="name">' . $name . '</div></div>'
         . '</div>';
-}
-
-function xander_receipt_render_stored_html(array $data, array $branding): string
-{
-    $receiptNo = htmlspecialchars((string) ($data['receipt_no'] ?? ''), ENT_QUOTES, 'UTF-8');
-    $studentId = htmlspecialchars((string) ($data['student_id'] ?? ''), ENT_QUOTES, 'UTF-8');
-    $method    = htmlspecialchars((string) ($data['method'] ?? ''), ENT_QUOTES, 'UTF-8');
-    $items     = $data['items'] ?? [];
-    $total     = number_format((float) ($data['total'] ?? 0), 2);
-
-    if (!empty($branding['dual'])) {
-        $pName = htmlspecialchars($branding['primary']['name'], ENT_QUOTES, 'UTF-8');
-        $sName = htmlspecialchars($branding['secondary']['name'], ENT_QUOTES, 'UTF-8');
-        $headerBlock = '<div class="center"><strong>' . $pName . '</strong><br><strong>' . $sName . '</strong><br>OFFICIAL PAYMENT RECEIPT</div>';
-    } else {
-        $headerBlock = '<div class="center"><strong>XANDER GLOBAL SCHOLARS</strong><br>OFFICIAL PAYMENT RECEIPT</div>';
-    }
-
-    ob_start();
-    ?>
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Receipt</title>
-<style>
-@page { size: 80mm auto; margin: 0; }
-body { width: 80mm; margin: 0; padding: 5mm; font-family: monospace; font-size: 12px; }
-.center { text-align: center; }
-.line { border-top: 1px dashed #000; margin: 6px 0; }
-table { width: 100%; border-collapse: collapse; }
-td { padding: 2px 0; }
-.right { text-align: right; }
-</style>
-</head>
-<body>
-<?= $headerBlock ?>
-<div class="center" style="margin-top:4px;">
-    <span>Website: https://xanderglobalscholars.com</span><br>
-    <span>Email: admission@xanderglobalscholars.com</span>
-</div>
-<div class="line"></div>
-Receipt: <?= $receiptNo ?><br>
-Student ID: <?= $studentId ?><br>
-Date: <?= date('Y-m-d H:i') ?><br>
-<div class="line"></div>
-<table>
-<?php foreach ($items as $row): ?>
-<tr><td><?= htmlspecialchars((string) ($row['label'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td><td class="right"><?= number_format((float) ($row['amount'] ?? 0), 2) ?></td></tr>
-<?php endforeach; ?>
-</table>
-<div class="line"></div>
-<table><tr><td><strong>TOTAL</strong></td><td class="right"><strong><?= $total ?></strong></td></tr></table>
-<div class="line"></div>
-Payment: <?= $method ?><br>
-<div class="center">Thank you<br>Keep this receipt</div>
-</body>
-</html>
-<?php
-    return (string) ob_get_clean();
 }

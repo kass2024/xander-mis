@@ -8,6 +8,7 @@ require_once __DIR__ . '/phone_whatsapp_normalize.php';
 function xander_prescreening_ensure_invite_columns(mysqli $conn): void
 {
     xander_prescreening_ensure_submissions_columns($conn);
+    xander_ensure_prescreening_invites_table($conn);
 }
 
 function xander_prescreening_base_url(): string
@@ -44,7 +45,7 @@ function xander_prescreening_create_invite(
     $channel = in_array($channel, ['email', 'whatsapp', 'both'], true) ? $channel : 'whatsapp';
 
     $stmt = $conn->prepare(
-        'INSERT INTO prescreening_submissions (
+        'INSERT INTO prescreening_invites (
             user_id, source, student_name, student_email, whatsapp_number,
             invite_token, invite_channel, created_at
         ) VALUES (?, \'invite\', ?, ?, ?, ?, ?, NOW())'
@@ -67,6 +68,175 @@ function xander_prescreening_create_invite(
         'token' => $token,
         'url' => xander_prescreening_invite_url($token),
     ];
+}
+
+/**
+ * Admin form draft (session user_id) — stored in invites until final save.
+ */
+function xander_prescreening_ensure_admin_draft(mysqli $conn, string $userId): void
+{
+    xander_prescreening_ensure_invite_columns($conn);
+    if (!preg_match('/^user-[0-9]+-[0-9]+$/', $userId)) {
+        return;
+    }
+
+    $check = $conn->prepare('SELECT id FROM prescreening_invites WHERE user_id = ? LIMIT 1');
+    if (!$check) {
+        return;
+    }
+    $check->bind_param('s', $userId);
+    $check->execute();
+    $exists = (bool) $check->get_result()->fetch_row();
+    $check->close();
+    if ($exists) {
+        return;
+    }
+
+    $token = 'admin-' . substr(hash('sha256', $userId), 0, 40);
+    $stmt = $conn->prepare(
+        'INSERT INTO prescreening_invites (
+            user_id, source, invite_token, invite_channel, created_at
+        ) VALUES (?, \'admin\', ?, \'\', NOW())'
+    );
+    if ($stmt) {
+        $stmt->bind_param('ss', $userId, $token);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function xander_prescreening_load_draft_by_user_id(mysqli $conn, string $userId): ?array
+{
+    xander_prescreening_ensure_invite_columns($conn);
+    if ($userId === '') {
+        return null;
+    }
+    $stmt = $conn->prepare('SELECT * FROM prescreening_invites WHERE user_id = ? LIMIT 1');
+    if (!$stmt) {
+        return null;
+    }
+    $stmt->bind_param('s', $userId);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    return $row ?: null;
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function xander_prescreening_load_invite_by_token(mysqli $conn, string $token): ?array
+{
+    xander_prescreening_ensure_invite_columns($conn);
+    $token = trim($token);
+    if ($token === '' || strlen($token) < 16) {
+        return null;
+    }
+    $stmt = $conn->prepare(
+        'SELECT * FROM prescreening_invites WHERE invite_token = ? LIMIT 1'
+    );
+    if (!$stmt) {
+        return null;
+    }
+    $stmt->bind_param('s', $token);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    return $row ?: null;
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function xander_prescreening_submission_by_invite_token(mysqli $conn, string $token): ?array
+{
+    $token = trim($token);
+    if ($token === '') {
+        return null;
+    }
+    xander_prescreening_ensure_submissions_columns($conn);
+    $stmt = $conn->prepare(
+        'SELECT * FROM prescreening_submissions
+         WHERE invite_token = ? AND submitted_at IS NOT NULL
+         ORDER BY id DESC LIMIT 1'
+    );
+    if (!$stmt) {
+        return null;
+    }
+    $stmt->bind_param('s', $token);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    return $row ?: null;
+}
+
+function xander_prescreening_user_has_submission(mysqli $conn, string $userId): bool
+{
+    if ($userId === '') {
+        return false;
+    }
+    $stmt = $conn->prepare(
+        'SELECT id FROM prescreening_submissions WHERE user_id = ? AND submitted_at IS NOT NULL LIMIT 1'
+    );
+    if (!$stmt) {
+        return false;
+    }
+    $stmt->bind_param('s', $userId);
+    $stmt->execute();
+    $ok = (bool) $stmt->get_result()->fetch_row();
+    $stmt->close();
+
+    return $ok;
+}
+
+function xander_prescreening_delete_invite(mysqli $conn, string $userId): void
+{
+    if ($userId === '') {
+        return;
+    }
+    $stmt = $conn->prepare('DELETE FROM prescreening_invites WHERE user_id = ? LIMIT 1');
+    if ($stmt) {
+        $stmt->bind_param('s', $userId);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function xander_prescreening_find_pending_by_whatsapp(mysqli $conn, string $waPhone): ?array
+{
+    $digits = preg_replace('/\D+/', '', $waPhone) ?? '';
+    if ($digits === '') {
+        return null;
+    }
+    xander_prescreening_ensure_invite_columns($conn);
+    $res = $conn->query(
+        "SELECT * FROM prescreening_invites
+         WHERE whatsapp_number != ''
+         ORDER BY id DESC LIMIT 50"
+    );
+    if (!$res) {
+        return null;
+    }
+    while ($row = $res->fetch_assoc()) {
+        $stored = preg_replace('/\D+/', '', (string) ($row['whatsapp_number'] ?? '')) ?? '';
+        if ($stored !== '' && $stored === $digits) {
+            $res->free();
+
+            return $row;
+        }
+    }
+    $res->free();
+
+    return null;
 }
 
 /**
@@ -105,58 +275,4 @@ function xander_prescreening_send_invite_email(string $toEmail, string $studentN
 
         return ['ok' => false, 'error' => 'Could not send email.'];
     }
-}
-
-/**
- * @return array<string,mixed>|null
- */
-function xander_prescreening_load_invite_by_token(mysqli $conn, string $token): ?array
-{
-    xander_prescreening_ensure_invite_columns($conn);
-    $token = trim($token);
-    if ($token === '' || strlen($token) < 16) {
-        return null;
-    }
-    $stmt = $conn->prepare(
-        'SELECT * FROM prescreening_submissions WHERE invite_token = ? LIMIT 1'
-    );
-    if (!$stmt) {
-        return null;
-    }
-    $stmt->bind_param('s', $token);
-    $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-
-    return $row ?: null;
-}
-
-/**
- * @return array<string,mixed>|null
- */
-function xander_prescreening_find_pending_by_whatsapp(mysqli $conn, string $waPhone): ?array
-{
-    $digits = preg_replace('/\D+/', '', $waPhone) ?? '';
-    if ($digits === '') {
-        return null;
-    }
-    $res = $conn->query(
-        "SELECT * FROM prescreening_submissions
-         WHERE submitted_at IS NULL AND whatsapp_number != ''
-         ORDER BY id DESC LIMIT 50"
-    );
-    if (!$res) {
-        return null;
-    }
-    while ($row = $res->fetch_assoc()) {
-        $stored = preg_replace('/\D+/', '', (string) ($row['whatsapp_number'] ?? '')) ?? '';
-        if ($stored !== '' && $stored === $digits) {
-            $res->free();
-
-            return $row;
-        }
-    }
-    $res->free();
-
-    return null;
 }

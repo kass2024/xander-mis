@@ -28,6 +28,7 @@ function pcvc_student_portal_ensure_account_for_email(mysqli $conn, string $emai
     }
 
     $applicationId = null;
+    $jobUserId = null;
     $st = $conn->prepare("
         SELECT id
         FROM student_applications
@@ -40,7 +41,26 @@ function pcvc_student_portal_ensure_account_for_email(mysqli $conn, string $emai
         $st->execute();
         $r = $st->get_result()->fetch_assoc();
         $st->close();
-        if ($r) $applicationId = (int)$r['id'];
+        if ($r) {
+            $applicationId = (int) $r['id'];
+        }
+    }
+
+    $stJob = $conn->prepare("
+        SELECT user_id
+        FROM job_applications
+        WHERE LOWER(TRIM(email)) = ?
+        ORDER BY id DESC
+        LIMIT 1
+    ");
+    if ($stJob) {
+        $stJob->bind_param('s', $email);
+        $stJob->execute();
+        $jr = $stJob->get_result()->fetch_assoc();
+        $stJob->close();
+        if ($jr && trim((string) ($jr['user_id'] ?? '')) !== '') {
+            $jobUserId = trim((string) $jr['user_id']);
+        }
     }
 
     $stmt2 = $conn->prepare("SELECT id FROM student_portal_accounts WHERE email = ? LIMIT 1");
@@ -55,41 +75,31 @@ function pcvc_student_portal_ensure_account_for_email(mysqli $conn, string $emai
 
     $hash = password_hash($defaultPassword, PASSWORD_DEFAULT);
     if ($existingId > 0) {
-        if ($applicationId !== null) {
-            $stU = $conn->prepare("UPDATE student_portal_accounts SET student_application_id = ?, password_hash = ?, status='active' WHERE id = ?");
-            if ($stU) {
-                $aid = $existingId;
-                $app = (int)$applicationId;
-                $stU->bind_param('isi', $app, $hash, $aid);
-                $stU->execute();
-                $stU->close();
-            }
-        } else {
-            $stU = $conn->prepare("UPDATE student_portal_accounts SET password_hash = ?, status='active' WHERE id = ?");
-            if ($stU) {
-                $aid = $existingId;
-                $stU->bind_param('si', $hash, $aid);
-                $stU->execute();
-                $stU->close();
-            }
+        $stU = $conn->prepare(
+            "UPDATE student_portal_accounts
+             SET student_application_id = ?, job_user_id = ?, password_hash = ?, status = 'active'
+             WHERE id = ?"
+        );
+        if ($stU) {
+            $appVal = $applicationId;
+            $jobVal = $jobUserId;
+            $aid = $existingId;
+            $stU->bind_param('issi', $appVal, $jobVal, $hash, $aid);
+            $stU->execute();
+            $stU->close();
         }
+
         return;
     }
 
-    if ($applicationId !== null) {
-        $app = (int)$applicationId;
-        $stmtI = $conn->prepare("INSERT INTO student_portal_accounts (student_application_id, email, password_hash) VALUES (?, ?, ?)");
-        if ($stmtI) {
-            $stmtI->bind_param('iss', $app, $email, $hash);
-            $stmtI->execute();
-            $stmtI->close();
-        }
-        return;
-    }
-
-    $stmtI = $conn->prepare("INSERT INTO student_portal_accounts (student_application_id, email, password_hash) VALUES (NULL, ?, ?)");
+    $stmtI = $conn->prepare(
+        'INSERT INTO student_portal_accounts (student_application_id, job_user_id, email, password_hash)
+         VALUES (?, ?, ?, ?)'
+    );
     if ($stmtI) {
-        $stmtI->bind_param('ss', $email, $hash);
+        $appVal = $applicationId;
+        $jobVal = $jobUserId;
+        $stmtI->bind_param('isss', $appVal, $jobVal, $email, $hash);
         $stmtI->execute();
         $stmtI->close();
     }

@@ -114,6 +114,15 @@ function xander_send_job_application_confirmation_emails($conn, string $userId, 
     } catch (Throwable $e) {
         error_log('[JOB CONFIRM MAIL] applicant send failed: ' . $e->getMessage());
     }
+
+    require_once __DIR__ . '/student_portal_access_email.php';
+    $portalIntro = '<p>Your <strong>My Account</strong> portal is ready. Sign in to track your job application status and upload materials.</p>'
+        . '<p><strong>Job reference:</strong> ' . xander_h($referenceDisplay) . '</p>';
+    try {
+        xander_send_student_portal_access_email($conn, $email, $fullName, $portalIntro);
+    } catch (Throwable $e) {
+        error_log('[JOB CONFIRM MAIL] portal access email: ' . $e->getMessage());
+    }
 }
 
 /**

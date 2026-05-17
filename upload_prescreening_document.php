@@ -22,7 +22,6 @@ try {
     require_once __DIR__ . '/db.php';
     require_once __DIR__ . '/helpers/prescreening_invite.php';
     require_once __DIR__ . '/helpers/prescreening_save.php';
-    require_once __DIR__ . '/helpers/prescreening_notify.php';
 
     $token = trim((string) ($_POST['token'] ?? ''));
     $docKey = trim((string) ($_POST['doc_key'] ?? ''));
@@ -31,22 +30,31 @@ try {
     if ($token !== '') {
         $invite = xander_prescreening_load_invite_by_token($conn, $token);
     } else {
-        session_start();
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
         $userId = trim((string) ($_POST['user_id'] ?? ''));
         if (!empty($_SESSION['admin_id']) && $userId !== '' && preg_match('/^user-[0-9]+-[0-9]+$/', $userId)) {
-            $stmt = $conn->prepare('SELECT * FROM prescreening_submissions WHERE user_id = ? LIMIT 1');
-            $stmt->bind_param('s', $userId);
-            $stmt->execute();
-            $invite = $stmt->get_result()->fetch_assoc() ?: null;
-            $stmt->close();
+            xander_prescreening_ensure_admin_draft($conn, $userId);
+            $invite = xander_prescreening_load_draft_by_user_id($conn, $userId);
         }
     }
 
     if (!$invite) {
         doc_upload_respond(['status' => 'error', 'message' => 'Invalid or expired session.'], 403);
     }
-    if (!empty($invite['submitted_at'])) {
-        doc_upload_respond(['status' => 'error', 'message' => 'This form is already submitted.']);
+    $uid = (string) ($invite['user_id'] ?? '');
+    $done = $conn->prepare(
+        'SELECT id FROM prescreening_submissions WHERE user_id = ? AND submitted_at IS NOT NULL LIMIT 1'
+    );
+    if ($done && $uid !== '') {
+        $done->bind_param('s', $uid);
+        $done->execute();
+        if ($done->get_result()->fetch_row()) {
+            $done->close();
+            doc_upload_respond(['status' => 'error', 'message' => 'This form was already submitted.']);
+        }
+        $done->close();
     }
 
     if (!isset($_FILES['file'])) {

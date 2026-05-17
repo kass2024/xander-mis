@@ -51,6 +51,14 @@ function pcvc_student_portal_ensure_schema(mysqli $conn): void
         $conn->query("ALTER TABLE student_portal_accounts MODIFY student_application_id INT UNSIGNED NULL");
     }
 
+    if (!$hasColumn('student_portal_accounts', 'job_user_id')) {
+        if (!$conn->query("ALTER TABLE student_portal_accounts ADD COLUMN job_user_id VARCHAR(64) NULL DEFAULT NULL AFTER student_application_id")) {
+            if (stripos((string) $conn->error, 'Duplicate column') === false) {
+                error_log('[student_portal_schema] job_user_id: ' . $conn->error);
+            }
+        }
+    }
+
     // Uploads owned by a student portal account.
     $sqlUploads = "
         CREATE TABLE IF NOT EXISTS student_portal_uploads (

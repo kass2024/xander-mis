@@ -3,22 +3,22 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers/prescreening_schema.php';
-require_once __DIR__ . '/helpers/prescreening_notify.php';
 require_once __DIR__ . '/helpers/prescreening_invite.php';
 
 xander_ensure_prescreening_schema($conn);
 
 $token = trim((string) ($_GET['t'] ?? ''));
 $invite = $token !== '' ? xander_prescreening_load_invite_by_token($conn, $token) : null;
+$submittedRow = $token !== '' ? xander_prescreening_submission_by_invite_token($conn, $token) : null;
 
-if (!$invite) {
+if (!$invite && !$submittedRow) {
     http_response_code(404);
     exit('This pre-screening link is invalid or expired.');
 }
 
-$completed = !empty($invite['submitted_at']);
-$docLabels = xander_prescreening_document_labels();
-$prefill = $invite;
+$completed = $submittedRow !== null
+    || ($invite !== null && xander_prescreening_user_has_submission($conn, (string) $invite['user_id']));
+$prefill = $invite ?? $submittedRow;
 $asyncDocs = true;
 ?>
 <!DOCTYPE html>
@@ -59,35 +59,38 @@ $asyncDocs = true;
     <div class="card-panel done-box">
       <i class="bi bi-check-circle-fill text-success" style="font-size:3rem"></i>
       <h2 class="mt-3">Thank you</h2>
-      <p class="text-muted">Your pre-screening was submitted on <?= htmlspecialchars((string) $invite['submitted_at'], ENT_QUOTES, 'UTF-8') ?>.</p>
+      <p class="text-muted">Your pre-screening was submitted on <?= htmlspecialchars((string) ($submittedRow['submitted_at'] ?? $prefill['submitted_at'] ?? ''), ENT_QUOTES, 'UTF-8') ?>.</p>
     </div>
   <?php else: ?>
     <form id="studentForm" novalidate>
       <input type="hidden" name="token" value="<?= htmlspecialchars($token, ENT_QUOTES, 'UTF-8') ?>">
       <input type="hidden" name="user_id" value="<?= htmlspecialchars((string) $invite['user_id'], ENT_QUOTES, 'UTF-8') ?>">
 
-      <div class="card-panel">
+      <div class="card-panel prescreen-contact-readonly">
         <h2>Your details</h2>
         <div class="row g-3">
           <div class="col-md-4">
             <label class="form-label">Full name</label>
-            <input type="text" name="student_name" class="form-control" required readonly
+            <input type="text" name="student_name" class="form-control" readonly
                    value="<?= htmlspecialchars((string) ($invite['student_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
           </div>
           <div class="col-md-4">
             <label class="form-label">Email</label>
-            <input type="email" name="student_email" class="form-control" required readonly
+            <input type="email" name="student_email" class="form-control" readonly
                    value="<?= htmlspecialchars((string) ($invite['student_email'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
           </div>
           <div class="col-md-4">
             <label class="form-label">WhatsApp</label>
-            <input type="tel" name="whatsapp_number" class="form-control" required readonly
+            <input type="tel" name="whatsapp_number" class="form-control" readonly
                    value="<?= htmlspecialchars((string) ($invite['whatsapp_number'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
           </div>
         </div>
       </div>
 
-      <?php include __DIR__ . '/includes/prescreening_questions_form.php'; ?>
+      <?php
+      $hideContactOnWork = false;
+      include __DIR__ . '/includes/prescreening_questions_form.php';
+      ?>
 
       <button type="submit" class="btn btn-primary btn-submit w-100" id="submitBtn">
         <i class="bi bi-send me-1"></i> Submit pre-screening
@@ -161,7 +164,11 @@ $asyncDocs = true;
 
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
-    if (!form.checkValidity()) { form.reportValidity(); return; }
+    const serviceSel = form.querySelector('select[name="service_type"]');
+    if (serviceSel && !serviceSel.value) {
+      serviceSel.reportValidity();
+      return;
+    }
     if (uploadsInFlight.size > 0) {
       alert('Please wait — documents are still uploading.');
       return;
@@ -169,7 +176,7 @@ $asyncDocs = true;
 
     btn.disabled = true;
     if (window.PrescreenSubmitUI) {
-      PrescreenSubmitUI.start('Finalizing your pre-screening…');
+      PrescreenSubmitUI.start('Saving your answers…');
     }
 
     const fd = new FormData();
@@ -185,18 +192,39 @@ $asyncDocs = true;
 
     try {
       const res = await fetch('submit_prescreening_student.php', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.status === 'success') {
+      const raw = await res.text();
+      let data = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch (parseErr) {
+        if (res.ok) {
+          if (window.PrescreenSubmitUI) {
+            PrescreenSubmitUI.success('Thank you! Your pre-screening has been submitted.', 4000);
+          } else {
+            alert('Submitted successfully.');
+            location.reload();
+          }
+          return;
+        }
+      }
+      if (data && data.status === 'success') {
+        const ref = data.reference ? ' Reference: ' + data.reference + '.' : '';
         if (window.PrescreenSubmitUI) {
-          PrescreenSubmitUI.success(data.message || 'Thank you! Your pre-screening has been submitted.', 3000);
+          PrescreenSubmitUI.success((data.message || 'Thank you! Your pre-screening has been submitted.') + ref, 4000);
         } else {
-          alert(data.message || 'Submitted successfully.');
+          alert((data.message || 'Submitted successfully.') + ref);
+          location.reload();
+        }
+      } else if (res.ok) {
+        if (window.PrescreenSubmitUI) {
+          PrescreenSubmitUI.success('Thank you! Your pre-screening has been submitted.', 4000);
+        } else {
           location.reload();
         }
       } else {
         if (window.PrescreenSubmitUI) PrescreenSubmitUI.hide();
         btn.disabled = false;
-        alert(data.message || 'Submission failed.');
+        alert((data && data.message) ? data.message : 'Submission failed.');
       }
     } catch (err) {
       if (window.PrescreenSubmitUI) PrescreenSubmitUI.hide();

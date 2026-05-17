@@ -8,6 +8,7 @@ require_once 'db.php';
 session_start();
 require_once __DIR__ . '/helpers/role.php';
 require_once __DIR__ . '/helpers/job_application_status.php';
+require_once __DIR__ . '/helpers/job_application_delete.php';
 
 xander_ensure_job_applications_process_status_column($conn);
 
@@ -36,35 +37,17 @@ $canEditJobProcessStatus = xander_is_superadmin_role($dbRole) || xander_is_super
 $JOB_PROCESS_STATUSES = xander_job_application_process_statuses();
 $JOB_PROCESS_ORDER = xander_job_application_status_keys_in_order();
 
-// Initialize search variables
-$searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
-$whereClause = '';
-$params = [];
-$paramTypes = '';
-
-// Build search query - Search by name OR email only
-if (!empty($searchTerm)) {
-    $searchTerm = '%' . $searchTerm . '%';
-    $whereClause = "WHERE ja.first_name LIKE ? OR ja.last_name LIKE ? OR ja.email LIKE ?";
-    $params = [$searchTerm, $searchTerm, $searchTerm];
-    $paramTypes = 'sss';
-}
-
-// Fetch applicants with their documents
+// Fetch all applicants (live search filters in the browser)
 $sql = "SELECT ja.*, 
                GROUP_CONCAT(CONCAT_WS(':', jd.document_type, jd.file_path, jd.uploaded_at, jd.id) SEPARATOR '|') as documents
         FROM job_applications ja
         LEFT JOIN job_documents jd ON ja.user_id = jd.user_id
-        $whereClause
         GROUP BY ja.id
         ORDER BY ja.created_at DESC";
 
 // Prepare and execute query
 $stmt = $conn->prepare($sql);
 if ($stmt) {
-    if (!empty($params)) {
-        $stmt->bind_param($paramTypes, ...$params);
-    }
     $stmt->execute();
     $result = $stmt->get_result();
     $applicants = $result->fetch_all(MYSQLI_ASSOC);
@@ -74,6 +57,8 @@ if ($stmt) {
 }
 
 // Xander Color Codes
+$appRoot = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '')), '/');
+
 $colors = [
     'navy' => '#012F6B',
     'secondary_blue' => '#254D81',
@@ -92,33 +77,54 @@ $colors = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Job Applicants - Xander Global Scholars</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
         body {
-            background-color: <?= $colors['light_gray'] ?>;
+            background: linear-gradient(165deg, #eef2f7 0%, <?= $colors['light_gray'] ?> 45%, #f1f5f9 100%);
             color: <?= $colors['navy'] ?>;
+            min-height: 100vh;
         }
 
         .dashboard-container {
-            padding: 20px;
-            max-width: 1400px;
+            padding: 0;
+            max-width: 1520px;
             margin: 0 auto;
+        }
+
+        .ja-sticky-toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 300;
+            padding: 18px 24px 14px;
+            background: rgba(248, 249, 250, 0.9);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(1, 47, 107, 0.07);
+            box-shadow: 0 8px 32px rgba(1, 39, 101, 0.06);
+        }
+
+        .ja-main {
+            padding: 12px 24px 48px;
         }
 
         /* Dashboard Header */
         .dashboard-header {
             background: <?= $colors['white'] ?>;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            border-left: 5px solid <?= $colors['gold'] ?>;
+            padding: 22px 24px;
+            border-radius: 16px;
+            margin-bottom: 14px;
+            box-shadow: 0 2px 8px rgba(1, 47, 107, 0.06), 0 12px 40px rgba(1, 47, 107, 0.06);
+            border: 1px solid rgba(1, 47, 107, 0.06);
+            border-left: 4px solid <?= $colors['gold'] ?>;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -184,10 +190,11 @@ $colors = [
         /* Search Container */
         .search-container {
             background: <?= $colors['white'] ?>;
-            padding: 15px 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding: 16px 20px;
+            border-radius: 14px;
+            margin-bottom: 0;
+            box-shadow: 0 2px 8px rgba(1, 47, 107, 0.05);
+            border: 1px solid rgba(1, 47, 107, 0.06);
         }
 
         .search-form {
@@ -253,8 +260,8 @@ $colors = [
         /* Main Content - Cards Grid */
         .applicants-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 24px;
             margin-bottom: 30px;
         }
 
@@ -267,145 +274,302 @@ $colors = [
         /* Applicant Card */
         .applicant-card {
             background: <?= $colors['white'] ?>;
-            border-radius: 10px;
+            border-radius: 18px;
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s;
-            border: 1px solid <?= $colors['border_gray'] ?>;
+            box-shadow: 0 1px 3px rgba(1, 47, 107, 0.06), 0 16px 48px rgba(1, 47, 107, 0.08);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            border: 1px solid rgba(1, 47, 107, 0.08);
+            display: flex;
+            flex-direction: column;
         }
 
         .applicant-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(1, 47, 107, 0.08), 0 24px 56px rgba(1, 47, 107, 0.12);
+        }
+
+        .applicant-card.is-removing {
+            opacity: 0;
+            transform: scale(0.96);
+            pointer-events: none;
+            transition: opacity 0.35s ease, transform 0.35s ease;
         }
 
         .card-header {
-            background: linear-gradient(135deg, <?= $colors['navy'] ?> 0%, <?= $colors['dark_blue'] ?> 100%);
+            background: linear-gradient(135deg, <?= $colors['navy'] ?> 0%, <?= $colors['secondary_blue'] ?> 55%, <?= $colors['dark_blue'] ?> 100%);
             color: <?= $colors['white'] ?>;
-            padding: 15px;
-        }
-
-        .applicant-name {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-
-        .applicant-id {
-            font-size: 0.85rem;
-            opacity: 0.8;
-            font-family: monospace;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 3px 8px;
-            border-radius: 4px;
-            display: inline-block;
-        }
-
-        .card-body {
-            padding: 15px;
-        }
-
-        .card-section {
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid <?= $colors['light_gray'] ?>;
-        }
-
-        .card-section:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
-        }
-
-        .info-row {
+            padding: 18px 18px 16px;
             display: flex;
             align-items: flex-start;
-            margin-bottom: 10px;
+            justify-content: space-between;
+            gap: 12px;
         }
 
-        .info-label {
-            width: 100px;
-            font-weight: 600;
-            color: <?= $colors['secondary_blue'] ?>;
-            font-size: 0.9rem;
+        .card-header-main {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .applicant-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(242, 166, 90, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.95rem;
+            letter-spacing: 0.02em;
             flex-shrink: 0;
         }
 
-        .info-value {
-            flex: 1;
-            color: <?= $colors['navy'] ?>;
-            font-size: 0.95rem;
-            word-break: break-word;
+        .card-header-text {
+            min-width: 0;
         }
 
-        .info-value i {
-            margin-right: 8px;
-            color: <?= $colors['gold'] ?>;
-            width: 16px;
+        .applicant-name {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+            line-height: 1.25;
+            letter-spacing: -0.02em;
         }
 
-        /* Documents Section */
-        .documents-section {
-            background: rgba(242, 166, 90, 0.05);
-            padding: 12px;
-            border-radius: 6px;
-            border-left: 3px solid <?= $colors['gold'] ?>;
-        }
-
-        .documents-list {
-            list-style: none;
-        }
-
-        .document-item {
-            display: flex;
-            justify-content: space-between;
+        .applicant-id {
+            font-size: 0.72rem;
+            opacity: 0.88;
+            font-family: ui-monospace, 'Cascadia Code', monospace;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 4px 10px;
+            border-radius: 999px;
+            display: inline-flex;
             align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px dashed <?= $colors['border_gray'] ?>;
+            gap: 6px;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
-        .document-item:last-child {
-            border-bottom: none;
+        .card-delete-btn {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            background: rgba(220, 38, 38, 0.2);
+            color: #fecaca;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, transform 0.2s, color 0.2s;
         }
 
-        .document-info {
+        .card-delete-btn:hover {
+            background: #dc2626;
+            color: #fff;
+            transform: scale(1.05);
+        }
+
+        .card-delete-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .card-body {
+            padding: 18px;
+            flex: 1;
+        }
+
+        .card-section {
+            margin-bottom: 14px;
+        }
+
+        .card-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-block {
+            background: #f8fafc;
+            border: 1px solid #e8eef5;
+            border-radius: 12px;
+            padding: 12px 14px;
+        }
+
+        .info-block-title {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: <?= $colors['secondary_blue'] ?>;
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
             gap: 8px;
-            flex: 1;
         }
 
-        .document-info i {
+        .info-block-title i {
             color: <?= $colors['gold'] ?>;
+            font-size: 0.85rem;
         }
 
-        .document-name {
-            font-size: 0.9rem;
+        .info-line {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 0.88rem;
+            color: <?= $colors['navy'] ?>;
+            margin-bottom: 6px;
+            word-break: break-word;
+        }
+
+        .info-line:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-line i {
+            color: <?= $colors['gold'] ?>;
+            width: 18px;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .info-line-muted {
+            font-size: 0.82rem;
+            color: #64748b;
+            padding-left: 28px;
+        }
+
+        /* Documents panel */
+        .docs-panel {
+            background: linear-gradient(180deg, #fffbf7 0%, #fff 100%);
+            border: 1px solid rgba(242, 166, 90, 0.35);
+            border-radius: 14px;
+            padding: 14px;
+        }
+
+        .docs-panel-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            font-weight: 700;
+            font-size: 0.8rem;
             color: <?= $colors['navy'] ?>;
         }
 
-        .document-actions {
+        .docs-panel-head i {
+            color: <?= $colors['gold'] ?>;
+        }
+
+        .docs-count {
+            margin-left: auto;
+            background: <?= $colors['navy'] ?>;
+            color: #fff;
+            font-size: 0.7rem;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-weight: 600;
+        }
+
+        .docs-grid {
             display: flex;
-            gap: 5px;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 220px;
+            overflow-y: auto;
+            padding-right: 4px;
+            scrollbar-width: thin;
+        }
+
+        .doc-tile {
+            display: grid;
+            grid-template-columns: 44px 1fr auto;
+            gap: 12px;
+            align-items: center;
+            padding: 10px 12px;
+            background: #fff;
+            border: 1px solid #e8eef5;
+            border-radius: 12px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .doc-tile:hover {
+            border-color: rgba(242, 166, 90, 0.6);
+            box-shadow: 0 4px 12px rgba(1, 47, 107, 0.06);
+        }
+
+        .doc-tile-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            background: #eff6ff;
+            color: <?= $colors['secondary_blue'] ?>;
+        }
+
+        .doc-tile-icon.pdf {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .doc-tile-icon.image {
+            background: #f0fdf4;
+            color: #16a34a;
+        }
+
+        .doc-tile-type {
+            display: block;
+            font-weight: 700;
+            font-size: 0.82rem;
+            color: <?= $colors['navy'] ?>;
+            margin-bottom: 2px;
+        }
+
+        .doc-tile-file {
+            display: block;
+            font-size: 0.72rem;
+            color: #64748b;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+        }
+
+        .doc-tile-actions {
+            display: flex;
+            gap: 6px;
         }
 
         .doc-btn {
-            background: <?= $colors['secondary_blue'] ?>;
+            background: <?= $colors['navy'] ?>;
             color: <?= $colors['white'] ?>;
             border: none;
-            width: 32px;
-            height: 32px;
-            border-radius: 4px;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             text-decoration: none;
-            transition: all 0.3s;
+            transition: transform 0.2s, background 0.2s;
+            font-size: 0.85rem;
         }
 
         .doc-btn:hover {
-            background: <?= $colors['navy'] ?>;
+            background: <?= $colors['dark_blue'] ?>;
+            transform: translateY(-1px);
         }
 
         .doc-btn.download {
@@ -417,14 +581,23 @@ $colors = [
             background: #e69542;
         }
 
+        .docs-empty {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            font-style: italic;
+            padding: 8px 0;
+        }
+
         /* Card Footer */
         .card-footer {
-            padding: 15px;
-            background: <?= $colors['light_gray'] ?>;
+            padding: 14px 18px;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-top: 1px solid <?= $colors['border_gray'] ?>;
+            border-top: 1px solid #e8eef5;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
         .applied-date {
@@ -678,17 +851,74 @@ $colors = [
             margin-bottom: 20px;
         }
 
-        /* Search Info */
-        .search-info {
-            background: rgba(242, 166, 90, 0.1);
-            padding: 10px 15px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-            border-left: 4px solid <?= $colors['gold'] ?>;
-            font-size: 0.9rem;
+        .search-live-meta {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 12px;
+            min-height: 1.25em;
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .search-live-meta.is-filtering {
+            color: <?= $colors['navy'] ?>;
+            font-weight: 600;
+        }
+
+        .search-live-meta i {
+            color: <?= $colors['gold'] ?>;
+        }
+
+        .search-input-wrap {
+            position: relative;
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .search-input-wrap .search-input {
+            width: 100%;
+            padding-right: 42px;
+        }
+
+        .search-input-clear {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px;
+            display: none;
+            line-height: 1;
+        }
+
+        .search-input-clear:hover {
+            color: <?= $colors['navy'] ?>;
+            background: #f1f5f9;
+        }
+
+        .search-input-clear.is-visible {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .applicant-card.ja-search-hidden {
+            display: none !important;
+        }
+
+        .ja-search-empty {
+            grid-column: 1 / -1;
+            display: none;
+        }
+
+        .ja-search-empty.is-visible {
+            display: block;
         }
 
         /* Responsive */
@@ -866,10 +1096,12 @@ $colors = [
             color: #fff;
         }
         .process-toast.warn { background: linear-gradient(135deg, #b45309, #d97706); }
+        .process-toast.error { background: linear-gradient(135deg, #b91c1c, #dc2626); }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
+        <div class="ja-sticky-toolbar">
         <!-- Dashboard Header -->
         <div class="dashboard-header">
             <div class="header-title">
@@ -877,7 +1109,7 @@ $colors = [
                 <p>Review and manage all job applications and documents</p>
             </div>
             <div class="header-stats">
-                <div class="applicant-count">
+                <div class="applicant-count" id="jaApplicantCount">
                     <i class="fas fa-users"></i>
                     <?php 
                         $total = count($applicants);
@@ -892,45 +1124,40 @@ $colors = [
 
         <!-- Search Section -->
         <div class="search-container">
-            <?php if(!empty($searchTerm)): ?>
-            <div class="search-info">
-                <i class="fas fa-search"></i>
-                Searching for: <strong><?= htmlspecialchars(str_replace('%', '', $searchTerm)) ?></strong>
+            <div class="search-live-meta" id="jaSearchMeta" aria-live="polite">
+                <i class="fas fa-bolt"></i>
+                <span>Type to search by name, email, phone, or user ID</span>
             </div>
-            <?php endif; ?>
-            
-            <form method="GET" action="" class="search-form">
-                <input type="text" 
-                       name="search" 
-                       class="search-input" 
-                       placeholder="Search by name or email..." 
-                       value="<?= htmlspecialchars(str_replace('%', '', $searchTerm)) ?>"
-                       title="Search by applicant's name or email">
-                <button type="submit" class="search-btn">
-                    <i class="fas fa-search"></i> Search
-                </button>
-                <?php if(!empty($searchTerm)): ?>
-                <a href="?" class="clear-btn">
-                    <i class="fas fa-times"></i> Clear
-                </a>
-                <?php endif; ?>
-            </form>
+            <div class="search-form">
+                <div class="search-input-wrap">
+                    <input type="search"
+                           id="jaSearchInput"
+                           class="search-input"
+                           placeholder="Search by name, email, phone, or user ID…"
+                           autocomplete="off"
+                           spellcheck="false"
+                           title="Live search — results update as you type">
+                    <button type="button" class="search-input-clear" id="jaSearchClear" aria-label="Clear search" title="Clear">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
         </div>
 
+        <div class="ja-main">
         <!-- Applicants Grid -->
-        <div class="applicants-grid">
+        <div class="applicants-grid" id="jaApplicantsGrid">
+            <div class="empty-state ja-search-empty" id="jaSearchEmpty" aria-hidden="true">
+                <i class="fas fa-search"></i>
+                <h3>No matches</h3>
+                <p>Try a different name, email, phone, or user ID.</p>
+            </div>
             <?php if(empty($applicants)): ?>
                 <div class="empty-state">
                     <i class="fas fa-inbox"></i>
                     <h3>No applicants found</h3>
-                    <?php if(!empty($searchTerm)): ?>
-                        <p>No applicants match your search criteria. Try a different search term.</p>
-                        <a href="?" class="search-btn" style="display: inline-flex;">
-                            <i class="fas fa-redo"></i> Show All Applicants
-                        </a>
-                    <?php else: ?>
-                        <p>No job applications have been submitted yet.</p>
-                    <?php endif; ?>
+                    <p>No job applications have been submitted yet.</p>
                 </div>
             <?php else: ?>
                 <?php foreach($applicants as $applicant): 
@@ -972,12 +1199,52 @@ $colors = [
                     if ($curIdx === false) {
                         $curIdx = 0;
                     }
+                    $nameParts = preg_split('/\s+/u', trim($fullName), -1, PREG_SPLIT_NO_EMPTY);
+                    $initials = '';
+                    if (!empty($nameParts[0])) {
+                        $initials .= mb_strtoupper(mb_substr($nameParts[0], 0, 1));
+                    }
+                    if (!empty($nameParts[1])) {
+                        $initials .= mb_strtoupper(mb_substr($nameParts[1], 0, 1));
+                    }
+                    if ($initials === '') {
+                        $initials = '?';
+                    }
+                    $jaSearchBlob = mb_strtolower(trim(implode(' ', [
+                        $fullName,
+                        (string) ($applicant['email'] ?? ''),
+                        $phone,
+                        (string) ($applicant['user_id'] ?? ''),
+                        $address,
+                        $detailedArea,
+                        (string) ($applicant['first_name'] ?? ''),
+                        (string) ($applicant['last_name'] ?? ''),
+                        $emergencyContact,
+                        $emergencyPhone,
+                    ])));
                 ?>
-                <div class="applicant-card" data-application-id="<?= (int) $applicant['id'] ?>">
+                <div class="applicant-card"
+                     data-application-id="<?= (int) $applicant['id'] ?>"
+                     data-search="<?= htmlspecialchars($jaSearchBlob, ENT_QUOTES, 'UTF-8') ?>">
                     <!-- Card Header -->
                     <div class="card-header">
-                        <div class="applicant-name"><?= htmlspecialchars($fullName) ?></div>
-                        <div class="applicant-id">ID: <?= htmlspecialchars($applicant['user_id']) ?></div>
+                        <div class="card-header-main">
+                            <div class="applicant-avatar" aria-hidden="true"><?= htmlspecialchars($initials) ?></div>
+                            <div class="card-header-text">
+                                <div class="applicant-name"><?= htmlspecialchars($fullName) ?></div>
+                                <div class="applicant-id"><i class="fas fa-fingerprint"></i> <?= htmlspecialchars($applicant['user_id']) ?></div>
+                            </div>
+                        </div>
+                        <?php if ($canEditJobProcessStatus): ?>
+                        <button type="button"
+                                class="card-delete-btn job-delete-btn"
+                                data-application-id="<?= (int) $applicant['id'] ?>"
+                                data-applicant-name="<?= htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8') ?>"
+                                title="Delete application (Superadmin only)"
+                                aria-label="Delete application for <?= htmlspecialchars($fullName) ?>">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Application process (view: all · edit status: Superadmin only) -->
@@ -1011,79 +1278,78 @@ $colors = [
                             <?php endif; ?>
                         </div>
                     </div>
-                    
                     <!-- Card Body -->
                     <div class="card-body">
-                        <!-- Contact Info -->
                         <div class="card-section">
-                            <div class="info-row">
-                                <div class="info-label">Contact</div>
-                                <div class="info-value">
-                                    <div><i class="fas fa-envelope"></i> <?= htmlspecialchars($applicant['email']) ?></div>
-                                    <div><i class="fas fa-phone"></i> <?= htmlspecialchars($phone) ?></div>
-                                </div>
+                            <div class="info-block">
+                                <div class="info-block-title"><i class="fas fa-address-card"></i> Contact</div>
+                                <div class="info-line"><i class="fas fa-envelope"></i><span><?= htmlspecialchars($applicant['email']) ?></span></div>
+                                <div class="info-line"><i class="fas fa-phone"></i><span><?= htmlspecialchars($phone) ?></span></div>
                             </div>
                         </div>
-                        
-                        <!-- Location -->
                         <div class="card-section">
-                            <div class="info-row">
-                                <div class="info-label">Location</div>
-                                <div class="info-value">
-                                    <div><i class="fas fa-map-marker-alt"></i> <?= htmlspecialchars($address) ?></div>
-                                    <div style="font-size: 0.9rem; color: #666;"><?= htmlspecialchars($detailedArea) ?></div>
-                                </div>
+                            <div class="info-block">
+                                <div class="info-block-title"><i class="fas fa-location-dot"></i> Location</div>
+                                <div class="info-line"><i class="fas fa-map-marker-alt"></i><span><?= htmlspecialchars($address) ?></span></div>
+                                <div class="info-line-muted"><?= htmlspecialchars($detailedArea) ?></div>
                             </div>
                         </div>
-                        
-                        <!-- Emergency Contact -->
                         <div class="card-section">
-                            <div class="info-row">
-                                <div class="info-label">Emergency</div>
-                                <div class="info-value">
-                                    <div><i class="fas fa-user-shield"></i> <?= htmlspecialchars($emergencyContact) ?></div>
-                                    <div><i class="fas fa-phone-alt"></i> <?= htmlspecialchars($emergencyPhone) ?></div>
-                                </div>
+                            <div class="info-block">
+                                <div class="info-block-title"><i class="fas fa-user-shield"></i> Emergency</div>
+                                <div class="info-line"><i class="fas fa-user"></i><span><?= htmlspecialchars($emergencyContact) ?></span></div>
+                                <div class="info-line"><i class="fas fa-phone-alt"></i><span><?= htmlspecialchars($emergencyPhone) ?></span></div>
                             </div>
                         </div>
-                        
-                        <!-- Documents -->
-                        <?php if(!empty($documents)): ?>
                         <div class="card-section">
-                            <div class="info-row">
-                                <div class="info-label">Documents</div>
-                                <div class="info-value">
-                                    <div class="documents-section">
-                                        <ul class="documents-list">
-                                            <?php foreach($documents as $doc): 
-                                                $fileName = basename($doc['path']);
-                                                $fileExtension = pathinfo($doc['path'], PATHINFO_EXTENSION);
-                                                $icon = ($fileExtension == 'pdf') ? 'fa-file-pdf' : 'fa-file';
-                                            ?>
-                                            <li class="document-item">
-                                                <div class="document-info">
-                                                    <i class="fas <?= $icon ?>"></i>
-                                                    <div class="document-name">
-                                                        <?= htmlspecialchars($doc['type']) ?>: <?= $fileName ?>
-                                                    </div>
-                                                </div>
-                                                <div class="document-actions">
-                                                    <a href="<?= htmlspecialchars($doc['path']) ?>" class="doc-btn download" download title="Download">
-                                                        <i class="fas fa-download"></i>
-                                                    </a>
-                                                    <a href="<?= htmlspecialchars($doc['path']) ?>" class="doc-btn" target="_blank" title="View">
-                                                        <i class="fas fa-eye"></i>
-                                                    </a>
-                                                </div>
-                                            </li>
-                                            <?php endforeach; ?>
-                                        </ul>
-                                    </div>
+                            <div class="docs-panel">
+                                <div class="docs-panel-head">
+                                    <i class="fas fa-folder-open"></i>
+                                    <span>Documents</span>
+                                    <span class="docs-count"><?= count($documents) ?></span>
                                 </div>
+                                <?php if (!empty($documents)): ?>
+                                <div class="docs-grid">
+                                    <?php foreach ($documents as $doc):
+                                        $fileName = basename($doc['path']);
+                                        $fileExtension = strtolower(pathinfo($doc['path'], PATHINFO_EXTENSION));
+                                        $docLabel = xander_job_document_display_label((string) $doc['type']);
+                                        $iconClass = 'fa-file';
+                                        $tileClass = '';
+                                        if ($fileExtension === 'pdf') {
+                                            $iconClass = 'fa-file-pdf';
+                                            $tileClass = 'pdf';
+                                        } elseif (in_array($fileExtension, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+                                            $iconClass = 'fa-file-image';
+                                            $tileClass = 'image';
+                                        }
+                                    ?>
+                                    <article class="doc-tile">
+                                        <div class="doc-tile-icon <?= htmlspecialchars($tileClass) ?>">
+                                            <i class="fas <?= $iconClass ?>"></i>
+                                        </div>
+                                        <div>
+                                            <span class="doc-tile-type"><?= htmlspecialchars($docLabel) ?></span>
+                                            <span class="doc-tile-file" title="<?= htmlspecialchars($fileName) ?>"><?= htmlspecialchars($fileName) ?></span>
+                                        </div>
+                                        <div class="doc-tile-actions">
+                                            <a href="<?= htmlspecialchars($doc['path']) ?>" class="doc-btn download" download title="Download <?= htmlspecialchars($fileName) ?>">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                            <a href="<?= htmlspecialchars($doc['path']) ?>" class="doc-btn" target="_blank" rel="noopener" title="View <?= htmlspecialchars($fileName) ?>">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    </article>
+                                    <?php endforeach; ?>
+                                </div>
+                                <?php else: ?>
+                                <p class="docs-empty">No documents uploaded</p>
+                                <?php endif; ?>
                             </div>
                         </div>
-                        <?php endif; ?>
                     </div>
+
                     
                     <!-- Card Footer -->
                     <div class="card-footer">
@@ -1114,6 +1380,7 @@ $colors = [
                 </div>
                 <?php endforeach; ?>
             <?php endif; ?>
+        </div>
         </div>
     </div>
 
@@ -1171,12 +1438,125 @@ $colors = [
     </div>
 
     <script>
+        window.APP_ROOT = <?= json_encode($appRoot, JSON_UNESCAPED_SLASHES) ?>;
         window.JOB_PROCESS_ORDER = <?= json_encode($JOB_PROCESS_ORDER, JSON_UNESCAPED_UNICODE) ?>;
         window.JOB_PROCESS_LABELS = <?= json_encode($JOB_PROCESS_STATUSES, JSON_UNESCAPED_UNICODE) ?>;
+
+        function jaApi(path) {
+            var rel = String(path || '').replace(/^\//, '');
+            var base = (typeof window.APP_ROOT === 'string' && window.APP_ROOT) ? window.APP_ROOT.replace(/\/$/, '') : '';
+            return base ? (base + '/' + rel) : rel;
+        }
+
+        function jaParseJsonResponse(r) {
+            return r.text().then(function(text) {
+                var json = null;
+                try {
+                    json = text ? JSON.parse(text) : null;
+                } catch (e) {
+                    var hint = (text && text.indexOf('<') !== -1) ? 'Server returned HTML instead of JSON (check PHP error log).' : (text || ('HTTP ' + r.status));
+                    throw new Error(hint);
+                }
+                if (!json || typeof json.success === 'undefined') {
+                    throw new Error('Invalid server response');
+                }
+                return json;
+            });
+        }
+
+        function jaNorm(s) {
+            return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        }
+
+        function jaEscapeHtml(s) {
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        }
+
+        function jaUpdateApplicantCount() {
+            var countEl = document.getElementById('jaApplicantCount');
+            if (!countEl) return;
+            var total = document.querySelectorAll('.applicant-card').length;
+            var visible = document.querySelectorAll('.applicant-card:not(.ja-search-hidden)').length;
+            var input = document.getElementById('jaSearchInput');
+            var q = input ? input.value.trim() : '';
+            if (q) {
+                countEl.innerHTML = '<i class="fas fa-users"></i> ' + visible + ' of ' + total;
+            } else {
+                countEl.innerHTML = '<i class="fas fa-users"></i> ' + total + ' Applicant' + (total !== 1 ? 's' : '');
+            }
+        }
+
+        function jaFilterApplicants() {
+            var input = document.getElementById('jaSearchInput');
+            var clearBtn = document.getElementById('jaSearchClear');
+            var meta = document.getElementById('jaSearchMeta');
+            var empty = document.getElementById('jaSearchEmpty');
+            if (!input) return;
+            var raw = input.value.trim();
+            var tokens = jaNorm(raw).split(/\s+/).filter(Boolean);
+            var cards = document.querySelectorAll('.applicant-card');
+            var visible = 0;
+            cards.forEach(function(card) {
+                var hay = jaNorm(card.getAttribute('data-search') || '');
+                var match = tokens.length === 0 || tokens.every(function(t) { return hay.indexOf(t) !== -1; });
+                card.classList.toggle('ja-search-hidden', !match);
+                if (match) visible++;
+            });
+            if (clearBtn) clearBtn.classList.toggle('is-visible', raw.length > 0);
+            if (meta) {
+                meta.classList.toggle('is-filtering', tokens.length > 0);
+                if (tokens.length === 0) {
+                    meta.innerHTML = '<i class="fas fa-bolt"></i><span>Type to search by name, email, phone, or user ID</span>';
+                } else if (visible === 0) {
+                    meta.innerHTML = '<i class="fas fa-search"></i><span>No applicants match “' + jaEscapeHtml(raw) + '”</span>';
+                } else {
+                    meta.innerHTML = '<i class="fas fa-filter"></i><span>Showing ' + visible + ' of ' + cards.length + ' applicants</span>';
+                }
+            }
+            if (empty) {
+                var showEmpty = tokens.length > 0 && visible === 0 && cards.length > 0;
+                empty.classList.toggle('is-visible', showEmpty);
+                empty.setAttribute('aria-hidden', showEmpty ? 'false' : 'true');
+            }
+            jaUpdateApplicantCount();
+        }
+
+        var jaSearchDebounce;
+        function jaScheduleFilter() {
+            clearTimeout(jaSearchDebounce);
+            jaSearchDebounce = setTimeout(jaFilterApplicants, 90);
+        }
     </script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            var searchInput = document.getElementById('jaSearchInput');
+            var searchClear = document.getElementById('jaSearchClear');
+            if (searchInput) {
+                searchInput.addEventListener('input', jaScheduleFilter);
+                searchInput.addEventListener('search', jaFilterApplicants);
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        searchInput.value = '';
+                        jaFilterApplicants();
+                    }
+                });
+                try {
+                    var qParam = new URL(window.location.href).searchParams.get('search');
+                    if (qParam) {
+                        searchInput.value = qParam;
+                        jaFilterApplicants();
+                    }
+                } catch (eUrl) {}
+            }
+            if (searchClear && searchInput) {
+                searchClear.addEventListener('click', function() {
+                    searchInput.value = '';
+                    jaFilterApplicants();
+                    searchInput.focus();
+                });
+            }
+
             document.querySelectorAll('.job-process-select').forEach(function(sel) {
                 sel.setAttribute('data-prev-status', sel.value);
             });
@@ -1197,11 +1577,14 @@ $colors = [
             function showApplicantDetails(data) {
                 let documentsHtml = '';
                 if(data.documents && data.documents.length > 0) {
-                    documentsHtml = data.documents.map(doc => `
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8f9fa; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid <?= $colors['gold'] ?>;">
+                    documentsHtml = data.documents.map(doc => {
+                        const label = (doc.type || 'Document').replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                        const file = doc.path.split('/').pop();
+                        return `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: #fff; border-radius: 12px; margin-bottom: 8px; border: 1px solid #e8eef5;">
                             <div>
-                                <strong>${doc.type}</strong><br>
-                                <small>${doc.path.split('/').pop()}</small>
+                                <strong style="color: <?= $colors['navy'] ?>;">${label}</strong><br>
+                                <small style="color:#64748b;">${file}</small>
                             </div>
                             <div>
                                 <a href="${doc.path}" class="doc-btn download" download style="display: inline-flex; margin-right: 5px;">
@@ -1212,7 +1595,8 @@ $colors = [
                                 </a>
                             </div>
                         </div>
-                    `).join('');
+                    `;
+                    }).join('');
                 } else {
                     documentsHtml = '<p style="color: #666; font-style: italic;">No documents uploaded</p>';
                 }
@@ -1383,12 +1767,12 @@ $colors = [
                 fd.append('notify_email', ne ? '1' : '0');
                 fd.append('notify_whatsapp', nw ? '1' : '0');
                 fd.append('rejection_reason', rejectReason);
-                fetch('api/job-application-status.php', {
+                fetch(jaApi('api/job-application-status.php'), {
                     method: 'POST',
                     body: fd,
                     credentials: 'same-origin'
                 })
-                .then(function(r) { return r.json(); })
+                .then(jaParseJsonResponse)
                 .then(function(json) {
                     sel.disabled = false;
                     if (!json.success) {
@@ -1483,6 +1867,57 @@ $colors = [
                 }
                 jobNotifyPending = { sel: sel, id: id, newKey: newKey, prevKey: prevKey };
                 openJobNotifyModal();
+            });
+
+            document.querySelectorAll('.job-delete-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var id = btn.getAttribute('data-application-id');
+                    var name = btn.getAttribute('data-applicant-name') || 'this applicant';
+                    if (!id) return;
+                    if (!confirm('Permanently delete the application for ' + name + '?\n\nThis removes all uploaded documents and cannot be undone.')) {
+                        return;
+                    }
+                    btn.disabled = true;
+                    var fd = new FormData();
+                    fd.append('application_id', id);
+                    fetch(jaApi('api/delete-job-application.php'), {
+                        method: 'POST',
+                        body: fd,
+                        credentials: 'same-origin'
+                    })
+                    .then(jaParseJsonResponse)
+                    .then(function(json) {
+                        if (!json.success) {
+                            btn.disabled = false;
+                            alert(json.message || 'Could not delete application');
+                            return;
+                        }
+                        var card = btn.closest('.applicant-card');
+                        if (card) {
+                            card.classList.add('is-removing');
+                            setTimeout(function() {
+                                card.remove();
+                                jaFilterApplicants();
+                            }, 320);
+                        }
+                        var toast = document.getElementById('processToast');
+                        var toastMsg = document.getElementById('processToastMsg');
+                        if (toast && toastMsg) {
+                            toast.classList.remove('warn', 'error');
+                            toastMsg.textContent = 'Application deleted';
+                            toast.classList.add('show');
+                            clearTimeout(window._jobToastTimer);
+                            window._jobToastTimer = setTimeout(function() {
+                                toast.classList.remove('show');
+                                toast.classList.remove('error');
+                            }, 2800);
+                        }
+                    })
+                    .catch(function(err) {
+                        btn.disabled = false;
+                        alert(err && err.message ? err.message : 'Network error while deleting.');
+                    });
+                });
             });
         });
     </script>

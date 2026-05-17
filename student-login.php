@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($email === '' || $password === '') {
                 $error = 'Please enter your email and password.';
             } else {
-                $stmt = $conn->prepare("SELECT id, student_application_id, email, password_hash, status FROM student_portal_accounts WHERE email = ? LIMIT 1");
+                $stmt = $conn->prepare("SELECT id, student_application_id, job_user_id, email, password_hash, status FROM student_portal_accounts WHERE email = ? LIMIT 1");
                 if (!$stmt) {
                     $error = 'System error. Please try again later.';
                 } else {
@@ -61,21 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if ($password !== $defaultPw) {
                             $error = 'Invalid email or password.';
                         } else {
-                            // Allow default password login if email exists in ANY supported table.
-                            $exists = false;
-                            foreach ([
-                                "SELECT 1 FROM student_applications WHERE LOWER(TRIM(email)) = ? LIMIT 1",
-                                "SELECT 1 FROM credit_transfer_applications WHERE LOWER(TRIM(email)) = ? LIMIT 1",
-                                "SELECT 1 FROM master_loan_applications WHERE LOWER(TRIM(email)) = ? LIMIT 1",
-                            ] as $q) {
-                                $stX = $conn->prepare($q);
-                                if (!$stX) continue;
-                                $stX->bind_param('s', $email);
-                                $stX->execute();
-                                if ($stX->get_result()->fetch_assoc()) $exists = true;
-                                $stX->close();
-                                if ($exists) break;
-                            }
+                            require_once __DIR__ . '/helpers/student_portal_access_email.php';
+                            $exists = xander_portal_email_has_application_source($conn, $email);
 
                             if (!$exists) {
                                 $error = 'Invalid email or password.';
@@ -83,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 // Create/reset portal account for this email (links to student_applications when available).
                                 pcvc_student_portal_ensure_account_for_email($conn, $email);
 
-                                $stmtR = $conn->prepare("SELECT id, student_application_id, email, password_hash, status FROM student_portal_accounts WHERE email = ? LIMIT 1");
+                                $stmtR = $conn->prepare("SELECT id, student_application_id, job_user_id, email, password_hash, status FROM student_portal_accounts WHERE email = ? LIMIT 1");
                                 if ($stmtR) {
                                     $emailNorm = pcvc_email_norm($email);
                                     $stmtR->bind_param('s', $emailNorm);
@@ -105,26 +92,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } elseif (($acc['status'] ?? '') !== 'active') {
                         $error = 'This account is disabled. Please contact support.';
                     } else {
-                        // Load student name from student_applications.
-                        $sid = (int)$acc['student_application_id'];
-                        $stmt2 = $conn->prepare("SELECT first_name, last_name, email FROM student_applications WHERE id = ? LIMIT 1");
+                        $sid = (int) ($acc['student_application_id'] ?? 0);
+                        $jobUid = trim((string) ($acc['job_user_id'] ?? ''));
                         $name = 'Student';
                         $sEmail = $email;
-                        if ($stmt2) {
-                            $stmt2->bind_param('i', $sid);
-                            $stmt2->execute();
-                            $stu = $stmt2->get_result()->fetch_assoc();
-                            $stmt2->close();
-                            if ($stu) {
-                                $name = trim((string)($stu['first_name'] ?? '') . ' ' . (string)($stu['last_name'] ?? ''));
-                                if ($name === '') $name = 'Student';
-                                if (!empty($stu['email'])) $sEmail = pcvc_email_norm((string)$stu['email']);
+
+                        if ($sid > 0) {
+                            $stmt2 = $conn->prepare('SELECT first_name, last_name, email FROM student_applications WHERE id = ? LIMIT 1');
+                            if ($stmt2) {
+                                $stmt2->bind_param('i', $sid);
+                                $stmt2->execute();
+                                $stu = $stmt2->get_result()->fetch_assoc();
+                                $stmt2->close();
+                                if ($stu) {
+                                    $name = trim((string) ($stu['first_name'] ?? '') . ' ' . (string) ($stu['last_name'] ?? ''));
+                                    if (!empty($stu['email'])) {
+                                        $sEmail = pcvc_email_norm((string) $stu['email']);
+                                    }
+                                }
                             }
+                        } elseif ($jobUid !== '') {
+                            $stmtJ = $conn->prepare('SELECT first_name, last_name, email FROM job_applications WHERE user_id = ? LIMIT 1');
+                            if ($stmtJ) {
+                                $stmtJ->bind_param('s', $jobUid);
+                                $stmtJ->execute();
+                                $job = $stmtJ->get_result()->fetch_assoc();
+                                $stmtJ->close();
+                                if ($job) {
+                                    $name = trim((string) ($job['first_name'] ?? '') . ' ' . (string) ($job['last_name'] ?? ''));
+                                    if (!empty($job['email'])) {
+                                        $sEmail = pcvc_email_norm((string) $job['email']);
+                                    }
+                                }
+                            }
+                        } else {
+                            $stmtJ = $conn->prepare('SELECT first_name, last_name, email, user_id FROM job_applications WHERE LOWER(TRIM(email)) = ? ORDER BY id DESC LIMIT 1');
+                            if ($stmtJ) {
+                                $stmtJ->bind_param('s', $email);
+                                $stmtJ->execute();
+                                $job = $stmtJ->get_result()->fetch_assoc();
+                                $stmtJ->close();
+                                if ($job) {
+                                    $name = trim((string) ($job['first_name'] ?? '') . ' ' . (string) ($job['last_name'] ?? ''));
+                                    $jobUid = trim((string) ($job['user_id'] ?? ''));
+                                    if (!empty($job['email'])) {
+                                        $sEmail = pcvc_email_norm((string) $job['email']);
+                                    }
+                                }
+                            }
+                        }
+                        if ($name === '') {
+                            $name = 'Student';
                         }
 
                         session_regenerate_id(true);
-                        $_SESSION['student_account_id'] = (int)$acc['id'];
+                        $_SESSION['student_account_id'] = (int) $acc['id'];
                         $_SESSION['student_application_id'] = $sid;
+                        $_SESSION['job_user_id'] = $jobUid;
                         $_SESSION['student_email'] = $sEmail;
                         $_SESSION['student_name'] = $name;
 
@@ -194,13 +218,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <img src="XANDER GLOBAL SCHOLARS LOGO1.png" alt="<?= htmlspecialchars(PCVC_COMPANY_DISPLAY_NAME, ENT_QUOTES, 'UTF-8') ?>" onerror="this.style.display='none'">
       </div>
       <h1><?= htmlspecialchars(PCVC_COMPANY_DISPLAY_NAME, ENT_QUOTES, 'UTF-8') ?></h1>
-      <p class="mb-0">Student portal sign in. Track your application status and upload required materials securely.</p>
+      <p class="mb-0">Student Account — sign in to track your application status and upload required materials securely.</p>
     </aside>
     <section class="panel">
       <div class="panel-inner">
         <div class="d-flex justify-content-between align-items-end mb-3">
           <div>
-            <h2 class="h4 fw-bold mb-1">Student access</h2>
+            <h2 class="h4 fw-bold mb-1">My Account</h2>
             <div class="muted small">Use your application email · Default password: <span class="fw-semibold"><?= htmlspecialchars(PCVC_STUDENT_DEFAULT_PASSWORD, ENT_QUOTES, 'UTF-8') ?></span></div>
           </div>
         </div>

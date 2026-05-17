@@ -104,12 +104,14 @@ xander_ensure_prescreening_schema($conn);
       </button>
 
       <div class="link-box" id="linkBox">
-        <label class="form-label small text-muted mb-1">Student link (unique)</label>
-        <div class="input-group input-group-sm">
+        <label class="form-label small text-muted mb-1">Direct link — share via email, WhatsApp, or any channel</label>
+        <div class="input-group input-group-sm mb-2">
           <input type="text" class="form-control" id="inviteLink" readonly>
-          <button type="button" class="btn btn-outline-secondary" id="copyLinkBtn" title="Copy"><i class="bi bi-clipboard"></i></button>
+          <button type="button" class="btn btn-outline-secondary" id="copyLinkBtn" title="Copy link"><i class="bi bi-clipboard"></i></button>
           <button type="button" class="btn btn-outline-primary" id="emailLinkBtn" title="Send email"><i class="bi bi-envelope"></i></button>
+          <button type="button" class="btn btn-outline-success" id="waShareBtn" title="Share on WhatsApp"><i class="bi bi-whatsapp"></i></button>
         </div>
+        <p class="small text-muted mb-0">Applicants choose <strong>Study Abroad</strong> or <strong>Work Abroad</strong> on the form.</p>
       </div>
     </form>
 
@@ -161,6 +163,15 @@ xander_ensure_prescreening_schema($conn);
   document.getElementById('copyLinkBtn')?.addEventListener('click', function () {
     if (!linkInput.value) return;
     navigator.clipboard.writeText(linkInput.value).then(() => showStatus('success', 'Link copied.'));
+  });
+
+  document.getElementById('waShareBtn')?.addEventListener('click', function () {
+    if (!linkInput.value) {
+      showStatus('warning', 'Send an invite first to generate a link.');
+      return;
+    }
+    const text = encodeURIComponent('Complete your Xander Global Scholars pre-screening here: ' + linkInput.value);
+    window.open('https://wa.me/?text=' + text, '_blank', 'noopener');
   });
 
   document.getElementById('emailLinkBtn')?.addEventListener('click', async function () {

@@ -3,18 +3,12 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/helpers/prescreening_apply.php';
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
-
 $token = trim((string) ($_GET['h'] ?? ''));
 $key = trim((string) ($_GET['key'] ?? ''));
-$handoff = $_SESSION['xander_prescreen_handoff'] ?? null;
+$handoff = xander_prescreening_load_handoff_by_token($token);
 
 if (
     !is_array($handoff)
-    || $token === ''
-    || !hash_equals((string) ($handoff['token'] ?? ''), $token)
     || $key === ''
     || !isset($handoff['paths'][$key])
 ) {

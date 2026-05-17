@@ -88,56 +88,105 @@ if ($check->num_rows > 0) {
 }
 $check->close();
 
-/* =============================
-   REQUIRED FIELDS
-============================= */
-$required = [
-    'first_name','last_name','email',
-    'phone_area_code','phone_number',
-    'work_country_id','address_country_id',
-    'province_state','district','sector',
-    'cell_ward','village',
-    'emergency_full_name','emergency_relationship',
-    'emergency_email','emergency_area_code',
-    'emergency_phone_number'
-];
+$lenient = in_array((string) ($_POST['lenient_submit'] ?? ''), ['1', 'true', 'yes'], true);
 
-foreach ($required as $field) {
-    if (empty($_POST[$field])) {
-        $conn->rollback();
-        respond('error', "Missing field: {$field}", [], 422);
+if (!$lenient) {
+    $required = [
+        'first_name', 'last_name', 'email',
+        'phone_area_code', 'phone_number',
+        'work_country_id', 'address_country_id',
+        'province_state', 'district', 'sector',
+        'cell_ward', 'village',
+        'emergency_full_name', 'emergency_relationship',
+        'emergency_email', 'emergency_area_code',
+        'emergency_phone_number',
+    ];
+
+    foreach ($required as $field) {
+        if (empty($_POST[$field])) {
+            $conn->rollback();
+            respond('error', "Missing field: {$field}", [], 422);
+        }
     }
 }
 
-[$phone_area_code, $phone_number] = xander_normalize_job_phone_pair(
-    (string) $_POST['phone_area_code'],
-    (string) $_POST['phone_number']
-);
-[$emergency_area_code, $emergency_phone_number] = xander_normalize_job_phone_pair(
-    (string) $_POST['emergency_area_code'],
-    (string) $_POST['emergency_phone_number']
-);
+$jobStr = static function (string $key, string $default = '') use ($lenient): string {
+    $v = trim((string) ($_POST[$key] ?? ''));
+    if ($v !== '') {
+        return $v;
+    }
 
-$phone_full_len = strlen($phone_area_code . $phone_number);
-$em_full_len = strlen($emergency_area_code . $emergency_phone_number);
-if ($phone_full_len < 10 || $phone_full_len > 15) {
-    $conn->rollback();
-    respond('error', 'Invalid phone: include country code (saved as digits only, no +).', [], 422);
-}
-if ($em_full_len < 10 || $em_full_len > 15) {
-    $conn->rollback();
-    respond('error', 'Invalid emergency phone: include country code (digits only, no +).', [], 422);
-}
+    return $lenient ? $default : '';
+};
 
-/* =============================
-   REQUIRED FILE PATHS (TEMP)
-============================= */
-$requiredFiles = ['passport', 'photo'];
+$jobInt = static function (string $key) use ($jobStr): int {
+    $v = $jobStr($key, '0');
 
-foreach ($requiredFiles as $file) {
-    if (empty($_POST[$file])) {
+    return (int) $v;
+};
+
+$_POST['first_name'] = $jobStr('first_name', 'Applicant');
+$_POST['last_name'] = $jobStr('last_name', '—');
+$_POST['email'] = $jobStr('email', 'pending@xander.local');
+$_POST['work_country_id'] = (string) $jobInt('work_country_id');
+$_POST['address_country_id'] = (string) $jobInt('address_country_id');
+$_POST['province_state'] = $jobStr('province_state', '—');
+$_POST['district'] = $jobStr('district', '—');
+$_POST['sector'] = $jobStr('sector', '—');
+$_POST['cell_ward'] = $jobStr('cell_ward', '—');
+$_POST['village'] = $jobStr('village', '—');
+$_POST['emergency_full_name'] = $jobStr('emergency_full_name', '—');
+$_POST['emergency_relationship'] = $jobStr('emergency_relationship', '—');
+$_POST['emergency_email'] = $jobStr('emergency_email', '—');
+
+$mainPhoneRaw = trim((string) ($_POST['phone_area_code'] ?? '') . (string) ($_POST['phone_number'] ?? ''));
+$emPhoneRaw = trim((string) ($_POST['emergency_area_code'] ?? '') . (string) ($_POST['emergency_phone_number'] ?? ''));
+
+if ($lenient && $mainPhoneRaw === '') {
+    $phone_area_code = '';
+    $phone_number = '';
+} else {
+    [$phone_area_code, $phone_number] = xander_normalize_job_phone_pair(
+        (string) $_POST['phone_area_code'],
+        (string) $_POST['phone_number']
+    );
+    $phone_full_len = strlen($phone_area_code . $phone_number);
+    if (!$lenient && ($phone_full_len < 10 || $phone_full_len > 15)) {
         $conn->rollback();
-        respond('error', ucfirst($file) . ' is required', [], 422);
+        respond('error', 'Invalid phone: include country code (saved as digits only, no +).', [], 422);
+    }
+    if ($lenient && $mainPhoneRaw !== '' && ($phone_full_len < 10 || $phone_full_len > 15)) {
+        $conn->rollback();
+        respond('error', 'Invalid phone: include country code (saved as digits only, no +).', [], 422);
+    }
+}
+
+if ($lenient && $emPhoneRaw === '') {
+    $emergency_area_code = '';
+    $emergency_phone_number = '';
+} else {
+    [$emergency_area_code, $emergency_phone_number] = xander_normalize_job_phone_pair(
+        (string) $_POST['emergency_area_code'],
+        (string) $_POST['emergency_phone_number']
+    );
+    $em_full_len = strlen($emergency_area_code . $emergency_phone_number);
+    if (!$lenient && ($em_full_len < 10 || $em_full_len > 15)) {
+        $conn->rollback();
+        respond('error', 'Invalid emergency phone: include country code (digits only, no +).', [], 422);
+    }
+    if ($lenient && $emPhoneRaw !== '' && ($em_full_len < 10 || $em_full_len > 15)) {
+        $conn->rollback();
+        respond('error', 'Invalid emergency phone: include country code (digits only, no +).', [], 422);
+    }
+}
+
+if (!$lenient) {
+    $requiredFiles = ['passport', 'photo'];
+    foreach ($requiredFiles as $file) {
+        if (empty($_POST[$file])) {
+            $conn->rollback();
+            respond('error', ucfirst($file) . ' is required', [], 422);
+        }
     }
 }
 
@@ -276,16 +325,9 @@ $conn->commit();
 
 $reference = 'XGS-' . strtoupper(substr(hash('sha256', $user_id), 0, 8));
 
-require_once __DIR__ . '/helpers/application_confirmation_emails.php';
-try {
-    xander_send_job_application_confirmation_emails($conn, $user_id, $reference);
-} catch (Throwable $e) {
-    error_log('[save_job_application] confirmation email: ' . $e->getMessage());
-}
-
-/* =============================
-   SUCCESS
-============================= */
-respond('success', 'Application submitted successfully', [
-    'reference_number' => $reference
-]);
+require_once __DIR__ . '/helpers/job_application_async_notify.php';
+xander_job_application_flush_json([
+    'status' => 'success',
+    'message' => 'Application submitted successfully',
+    'data' => ['reference_number' => $reference],
+], $conn, $user_id, $reference);

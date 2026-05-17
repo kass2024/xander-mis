@@ -23,6 +23,16 @@
   animation: none; border: none; background: #dcfce7; color: #15803d;
   font-size: 26px; font-weight: 700; line-height: 44px;
 }
+.ps-submit-overlay.is-success .ps-submit-box {
+  border: 2px solid #86efac;
+}
+.ps-submit-overlay.is-success #psSubmitTitle {
+  color: #15803d;
+}
+.ps-submit-overlay.is-success #psSubmitMsg {
+  color: #166534 !important;
+  font-weight: 600;
+}
 @keyframes ps-spin { to { transform: rotate(360deg); } }
 .ps-doc-status.uploading { color: #2563eb !important; }
 .ps-doc-status.uploading .prescreen-doc-status-idle::before { content: ''; }
@@ -53,11 +63,15 @@ window.PrescreenSubmitUI = (function () {
   function success(message, reloadMs) {
     const o = overlay();
     if (!o) return;
+    o.classList.remove('hidden');
     o.classList.add('is-success');
     if (spinner()) spinner().textContent = '\u2713';
-    if (title()) title().textContent = 'Thank you';
-    if (msg()) msg().textContent = message || 'Pre-screening submitted successfully.';
-    setTimeout(() => location.reload(), reloadMs || 2800);
+    if (title()) title().textContent = 'Submitted successfully';
+    if (msg()) {
+      msg().textContent = message || 'Thank you! Your pre-screening has been received. A confirmation email is on its way.';
+      msg().classList.remove('text-muted');
+    }
+    setTimeout(() => location.reload(), reloadMs || 4000);
   }
 
   function error(message) {

@@ -1,0 +1,12 @@
+<?php
+declare(strict_types=1);
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (empty($_SESSION['institution_account_id'])) {
+    require_once __DIR__ . '/../helpers/urls.php';
+    header('Location: ' . pcvc_url('/institution-login.php'));
+    exit;
+}
