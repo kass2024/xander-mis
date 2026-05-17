@@ -11,10 +11,10 @@
     cfg = {};
   }
 
-  var tab = cfg.tab || 'scholarship';
+  var tab = cfg.tab || 'overview';
   var uniName = cfg.uniName || '';
   var uploadSection = document.getElementById('upload_section');
-  if (uploadSection) {
+  if (uploadSection && (tab === 'scholarship' || tab === 'loan')) {
     uploadSection.value = tab;
   }
 
@@ -146,13 +146,15 @@
     }
   }
 
-  ['f_sch_name', 'f_sch_tagline', 'f_sch_summary', 'f_sch_amt', 'f_loan_name', 'f_loan_summary'].forEach(function (id) {
-    var el = document.getElementById(id);
-    if (el) {
-      el.addEventListener('input', syncPreview);
-    }
-  });
-  syncPreview();
+  if (tab === 'scholarship' || tab === 'loan') {
+    ['f_sch_name', 'f_sch_tagline', 'f_sch_summary', 'f_sch_amt', 'f_loan_name', 'f_loan_summary'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', syncPreview);
+      }
+    });
+    syncPreview();
+  }
 
   if (profileForm) {
     profileForm.addEventListener('submit', function () {

@@ -84,6 +84,14 @@ $appRoot = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '')),
     .panel::before{content:'';display:block;height:4px;background:linear-gradient(90deg,var(--navy),var(--gold));margin:-44px -40px 28px}
     .btn-navy{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:600}
     .btn-navy:hover{background:#002765;border-color:#002765;color:#fff}
+    .password-field{position:relative}
+    .password-field .form-control{padding-right:2.75rem}
+    .password-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--muted);padding:4px 6px;cursor:pointer;line-height:1;font-size:1rem}
+    .password-toggle:hover{color:var(--navy)}
+    .password-toggle:focus{outline:2px solid var(--navy);outline-offset:2px;border-radius:4px}
+    .password-reset-link{margin:0 0 12px;text-align:center;font-size:.875rem}
+    .password-reset-link a{color:var(--navy);font-weight:600;text-decoration:none}
+    .password-reset-link a:hover{text-decoration:underline}
   </style>
 </head>
 <body>
@@ -93,7 +101,7 @@ $appRoot = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '')),
         <img src="XANDER GLOBAL SCHOLARS LOGO1.png" alt="" onerror="this.parentElement.style.display='none'">
       </div>
       <h1 class="h4 fw-bold">Institution Portal</h1>
-      <p class="mb-0 opacity-90 small">Universities & schools — track applicants and manage your partnership profile.</p>
+      <p class="mb-0 opacity-90 small">Universities & schools — manage scholarship and loan content for your institution’s public profile.</p>
     </aside>
     <section class="panel">
       <h2 class="h4 fw-bold mb-1">Sign in</h2>
@@ -107,17 +115,48 @@ $appRoot = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '')),
       <form method="post" autocomplete="off">
         <?= pcvc_csrf_input() ?>
         <div class="mb-3">
-          <label class="form-label fw-semibold">Work email</label>
-          <input class="form-control" type="email" name="email" required value="<?= htmlspecialchars($prefillEmail, ENT_QUOTES, 'UTF-8') ?>">
+          <label class="form-label fw-semibold" for="login-email">Email</label>
+          <input class="form-control" type="email" id="login-email" name="email" required value="<?= htmlspecialchars($prefillEmail, ENT_QUOTES, 'UTF-8') ?>">
         </div>
         <div class="mb-3">
-          <label class="form-label fw-semibold">Password</label>
-          <input class="form-control" type="password" name="password" required>
+          <label class="form-label fw-semibold" for="login-password">Password</label>
+          <div class="password-field">
+            <input class="form-control" type="password" id="login-password" name="password" required autocomplete="current-password">
+            <button type="button" class="password-toggle" id="passwordToggle" aria-label="Show password" aria-pressed="false">
+              <i class="fas fa-eye" id="passwordIcon" aria-hidden="true"></i>
+            </button>
+          </div>
         </div>
-        <button class="btn btn-navy w-100 mb-3" type="submit">Sign in</button>
+        <button class="btn btn-navy w-100 mb-2" type="submit">Sign in</button>
+        <p class="password-reset-link">
+          <a href="institution-forgot-password.php<?= $prefillEmail !== '' ? '?email=' . rawurlencode($prefillEmail) : '' ?>">Password reset</a>
+        </p>
         <p class="text-center small text-muted mb-0">No account? <a href="institution-signup.php">Register your institution</a></p>
       </form>
     </section>
   </div>
+  <script>
+  (function () {
+    var input = document.getElementById('login-password');
+    var btn = document.getElementById('passwordToggle');
+    var icon = document.getElementById('passwordIcon');
+    if (!input || !btn || !icon) return;
+    function toggle() {
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      icon.classList.toggle('fa-eye', !show);
+      icon.classList.toggle('fa-eye-slash', show);
+      btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+      btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+    }
+    btn.addEventListener('click', toggle);
+    btn.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggle();
+      }
+    });
+  })();
+  </script>
 </body>
 </html>

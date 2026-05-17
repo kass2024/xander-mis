@@ -204,7 +204,7 @@ $fontsCssUrl = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;
             <input class="form-control" name="contact_title" placeholder="Job title">
           </div>
           <div class="col-md-6">
-            <input class="form-control" type="email" name="email" required placeholder="Work email (login) *">
+            <input class="form-control" type="email" name="email" required placeholder="Email (login) *">
           </div>
           <div class="col-md-6">
             <input class="form-control" name="phone" placeholder="Your phone">

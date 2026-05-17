@@ -79,6 +79,13 @@ function xander_institution_portal_ensure_schema(mysqli $conn): void
         throw new RuntimeException('Failed creating institution_portal_accounts: ' . $conn->error);
     }
 
+    if (!$hasColumn('institution_portal_accounts', 'password_reset_token')) {
+        $addColumn('institution_portal_accounts', 'ALTER TABLE institution_portal_accounts ADD COLUMN password_reset_token VARCHAR(64) NULL DEFAULT NULL');
+    }
+    if (!$hasColumn('institution_portal_accounts', 'password_reset_expires')) {
+        $addColumn('institution_portal_accounts', 'ALTER TABLE institution_portal_accounts ADD COLUMN password_reset_expires DATETIME NULL DEFAULT NULL');
+    }
+
     $sqlProfiles = "
         CREATE TABLE IF NOT EXISTS institution_university_profiles (
             university_id INT UNSIGNED NOT NULL,

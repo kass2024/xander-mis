@@ -488,6 +488,112 @@ function xander_institution_load_profile(mysqli $conn, int $universityId): array
 }
 
 /**
+ * Dashboard overview metrics (field fill %, documents, next steps).
+ *
+ * @param array<string, mixed> $profile
+ * @return array<string, mixed>
+ */
+function xander_institution_dashboard_overview(array $profile, int $docsScholarship, int $docsLoan): array
+{
+    $schKeys = [
+        'scholarship_program_name',
+        'scholarship_summary',
+        'scholarship_tagline',
+        'scholarship_eligibility',
+        'scholarship_benefits',
+        'scholarship_amount_notes',
+        'scholarship_deadline',
+        'scholarship_apply_url',
+    ];
+    $loanKeys = [
+        'loan_institution_name',
+        'loan_summary',
+        'loan_program_name',
+        'loan_coverage',
+        'loan_eligibility',
+        'loan_rates_notes',
+        'loan_contact_email',
+        'loan_apply_url',
+    ];
+
+    $pctForKeys = static function (array $row, array $keys): int {
+        if ($keys === []) {
+            return 0;
+        }
+        $filled = 0;
+        foreach ($keys as $key) {
+            if (trim((string) ($row[$key] ?? '')) !== '') {
+                $filled++;
+            }
+        }
+
+        return (int) round(($filled / count($keys)) * 100);
+    };
+
+    $schPct = $pctForKeys($profile, $schKeys);
+    $loanPct = $pctForKeys($profile, $loanKeys);
+    $overallPct = (int) round(($schPct + $loanPct) / 2);
+    $docsTotal = $docsScholarship + $docsLoan;
+
+    $nextSteps = [];
+    if ($schPct < 100) {
+        $nextSteps[] = [
+            'icon' => 'fa-award',
+            'tone' => 'sch',
+            'text' => 'Complete your scholarship program details',
+            'url' => 'index.php?tab=scholarship',
+        ];
+    }
+    if ($loanPct < 100) {
+        $nextSteps[] = [
+            'icon' => 'fa-hand-holding-dollar',
+            'tone' => 'loan',
+            'text' => 'Add your loan partnership information',
+            'url' => 'index.php?tab=loan',
+        ];
+    }
+    if ($docsScholarship === 0 && $schPct > 0) {
+        $nextSteps[] = [
+            'icon' => 'fa-file-arrow-up',
+            'tone' => 'sch',
+            'text' => 'Upload scholarship brochures or guides',
+            'url' => 'index.php?tab=scholarship',
+        ];
+    }
+    if ($docsLoan === 0 && $loanPct > 0) {
+        $nextSteps[] = [
+            'icon' => 'fa-file-invoice-dollar',
+            'tone' => 'loan',
+            'text' => 'Upload loan program documents',
+            'url' => 'index.php?tab=loan',
+        ];
+    }
+    if ($nextSteps === []) {
+        $nextSteps[] = [
+            'icon' => 'fa-circle-check',
+            'tone' => 'ok',
+            'text' => 'Content looks great — review the live preview before publishing',
+            'url' => 'index.php?tab=scholarship',
+        ];
+    }
+
+    return [
+        'scholarship_pct' => $schPct,
+        'loan_pct' => $loanPct,
+        'overall_pct' => $overallPct,
+        'docs_scholarship' => $docsScholarship,
+        'docs_loan' => $docsLoan,
+        'docs_total' => $docsTotal,
+        'scholarship_complete' => !empty($profile['profile_complete_scholarship']),
+        'loan_complete' => !empty($profile['profile_complete_loan']),
+        'homepage_published' => !empty($profile['homepage_published']),
+        'scholarship_title' => trim((string) ($profile['scholarship_program_name'] ?? '')),
+        'loan_title' => trim((string) ($profile['loan_institution_name'] ?? '')),
+        'next_steps' => $nextSteps,
+    ];
+}
+
+/**
  * @return array<int, array<string, mixed>>
  */
 function xander_institution_list_documents(mysqli $conn, int $universityId, ?string $section = null): array
