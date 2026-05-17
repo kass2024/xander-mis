@@ -18,19 +18,20 @@ if (!empty($_SESSION['institution_account_id'])) {
 
 $error = '';
 $info = '';
-$prefillEmail = '';
-if (!empty($_GET['email'])) {
-    $prefillEmail = xander_institution_email_norm((string) $_GET['email']);
-}
+$loginEmail = '';
 if (!empty($_GET['registered'])) {
     $info = 'Account created. Check your email for your temporary password, then sign in below.';
 }
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST' && !empty($_GET['email'])) {
+    $loginEmail = xander_institution_email_norm((string) $_GET['email']);
+}
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+    $loginEmail = xander_institution_email_norm((string) ($_POST['email'] ?? ''));
     if (!pcvc_csrf_validate_post()) {
         $error = 'Security check failed. Please refresh and try again.';
     } else {
-        $email = xander_institution_email_norm((string) ($_POST['email'] ?? ''));
+        $email = $loginEmail;
         $password = (string) ($_POST['password'] ?? '');
         $auth = xander_institution_authenticate($conn, $email, $password);
         if (!$auth['ok']) {
@@ -112,11 +113,13 @@ $appRoot = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '')),
       <?php if ($error): ?>
         <div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
       <?php endif; ?>
-      <form method="post" autocomplete="off">
+      <form method="post" autocomplete="on">
         <?= pcvc_csrf_input() ?>
         <div class="mb-3">
           <label class="form-label fw-semibold" for="login-email">Email</label>
-          <input class="form-control" type="email" id="login-email" name="email" required value="<?= htmlspecialchars($prefillEmail, ENT_QUOTES, 'UTF-8') ?>">
+          <input class="form-control" type="email" id="login-email" name="email" required
+            autocomplete="username" inputmode="email" spellcheck="false"
+            value="<?= htmlspecialchars($loginEmail, ENT_QUOTES, 'UTF-8') ?>">
         </div>
         <div class="mb-3">
           <label class="form-label fw-semibold" for="login-password">Password</label>
@@ -129,7 +132,7 @@ $appRoot = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '')),
         </div>
         <button class="btn btn-navy w-100 mb-2" type="submit">Sign in</button>
         <p class="password-reset-link">
-          <a href="institution-forgot-password.php<?= $prefillEmail !== '' ? '?email=' . rawurlencode($prefillEmail) : '' ?>">Password reset</a>
+          <a href="institution-forgot-password.php<?= $loginEmail !== '' ? '?email=' . rawurlencode($loginEmail) : '' ?>">Password reset</a>
         </p>
         <p class="text-center small text-muted mb-0">No account? <a href="institution-signup.php">Register your institution</a></p>
       </form>
