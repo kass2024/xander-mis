@@ -130,6 +130,15 @@ function xander_admin_menu_registry(): array
                 'job-applicant.php' => 'Check job Applicants',
             ],
         ],
+        'institutions_monitor' => [
+            'title' => 'Institution portals',
+            'icon' => 'bi-building',
+            'section' => 'Applications',
+            'links' => [
+                'admin-institutions-monitor.php' => 'All registered institutions',
+                'admin-institution-overview.php' => 'Institution dashboard',
+            ],
+        ],
         'platform' => [
             'title' => 'Platforms management',
             'icon' => 'bi-diagram-3',
@@ -176,7 +185,7 @@ function xander_admin_menu_role_defaults(): array
         'superadmin' => [
             'all_admissions', 'loan_applications', 'I-20_applications', 'staff_reporting',
             'commission_request', 'credit_transfer', 'visit_study_visa', 'prescreening', 'staff_attendance',
-            'university_portal', 'marketing', 'ticketing', 'jobsabrod', 'platform', 'contracts', 'chart',
+            'university_portal', 'institutions_monitor', 'marketing', 'ticketing', 'jobsabrod', 'platform', 'contracts', 'chart',
         ],
         'agent' => [
             'staff_attendance', 'university_portal', 'commission_request',

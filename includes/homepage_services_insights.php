@@ -8,7 +8,7 @@ declare(strict_types=1);
 
 $hp_services = [
     ['id' => 'admissions', 'icon' => '🎓', 'title' => 'card1_title', 'tag' => 'card1_subtitle', 'tip' => 'insight_tip_admissions', 'form' => 'student-application.php'],
-    ['id' => 'scholarships', 'icon' => '💰', 'title' => 'card2_title', 'tag' => 'card2_subtitle', 'tip' => 'insight_tip_scholarships', 'form' => 'index.php#scholarships'],
+    ['id' => 'scholarships', 'icon' => '💰', 'title' => 'card2_title', 'tag' => 'card2_subtitle', 'tip' => 'insight_tip_scholarships', 'form' => 'master-loan.php'],
     ['id' => 'i20', 'icon' => '📄', 'title' => 'card3_title', 'tag' => 'card3_subtitle', 'tip' => 'insight_tip_i20', 'form' => 'form-20.php'],
     ['id' => 'credit', 'icon' => '🔁', 'title' => 'card4_title', 'tag' => 'card4_subtitle', 'tip' => 'insight_tip_credit', 'form' => 'credit_transfer.php'],
     ['id' => 'visa', 'icon' => '✈️', 'title' => 'card5_title', 'tag' => 'card5_subtitle', 'tip' => 'insight_tip_visa', 'form' => 'visa.php'],

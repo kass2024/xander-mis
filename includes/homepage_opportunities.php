@@ -2,8 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Homepage: institution scholarships, education loans, or promotional banners.
- * Expects $conn (mysqli), optional it() and $current_lang from index.php.
+ * Homepage: institution dashboard scholarships & loans (banner cards), or Xander promos if empty.
  */
 
 if (!isset($conn) || !($conn instanceof mysqli)) {
@@ -15,14 +14,10 @@ require_once dirname(__DIR__) . '/helpers/urls.php';
 
 $langQs = !empty($current_lang) ? '?lang=' . rawurlencode((string) $current_lang) : '';
 
-$scholarships = xander_homepage_published_scholarships($conn, 12);
-$loans = xander_homepage_published_loans($conn, 12);
+$highlights = xander_homepage_institution_highlights($conn, 12);
+$showPromo = $highlights === [];
 
-$hasScholarships = $scholarships !== [];
-$hasLoans = $loans !== [];
-$showPromo = !$hasScholarships && !$hasLoans;
-
-$t = static function (string $key, string $fallback) use ($langQs): string {
+$t = static function (string $key, string $fallback): string {
     if (function_exists('it')) {
         $v = it($key);
         if ($v !== $key && $v !== '') {
@@ -40,6 +35,8 @@ $promoBanners = [
         'desc' => $t('promo_apply_desc', 'AI-assisted admissions with expert review — universities, visas, and documents in one flow.'),
         'cta' => $t('promo_apply_cta', 'Apply now'),
         'url' => 'student-application.php' . $langQs,
+        'uni' => '',
+        'meta' => '',
     ],
     [
         'icon' => 'fa-hand-holding-dollar',
@@ -48,6 +45,8 @@ $promoBanners = [
         'desc' => $t('promo_loan_desc', 'Explore funding up to 90% and loan partners for Canada, USA, UK, and more.'),
         'cta' => $t('promo_loan_cta', 'View funding options'),
         'url' => 'loan-providers.php' . $langQs,
+        'uni' => '',
+        'meta' => '',
     ],
     [
         'icon' => 'fa-calendar-check',
@@ -56,8 +55,17 @@ $promoBanners = [
         'desc' => $t('promo_consult_desc', 'Book a no-cost session with our advisors to plan your international journey.'),
         'cta' => $t('promo_consult_cta', 'Book consultation'),
         'url' => 'contact.php' . $langQs,
+        'uni' => '',
+        'meta' => '',
     ],
 ];
+
+$sectionTitle = $showPromo
+    ? $t('promo_section_title', 'Plan your journey with Xander')
+    : $t('inst_opp_title', 'Opportunities from our partner institutions');
+$sectionDesc = $showPromo
+    ? $t('promo_section_desc', 'Apply, fund your studies, or speak with an advisor — we guide you end to end.')
+    : $t('inst_opp_desc', 'Scholarships and education loans published by institutions on Xander Global Scholars.');
 ?>
 <style>
 .hp-opp {
@@ -65,131 +73,102 @@ $promoBanners = [
   background: linear-gradient(180deg, #f8fafc 0%, #fff 55%, #fef9f3 100%);
 }
 .hp-opp__wrap { max-width: 1180px; margin: 0 auto; }
-.hp-opp__head { text-align: center; max-width: 680px; margin: 0 auto 2rem; }
+.hp-opp__head { text-align: center; max-width: 720px; margin: 0 auto 2rem; }
 .hp-opp__head h2 {
   font-size: clamp(1.6rem, 3.5vw, 2.1rem);
   font-weight: 800;
   color: #0a1f44;
   margin: 0 0 .5rem;
 }
-.hp-opp__head p { color: #64748b; margin: 0; }
-.hp-opp__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.25rem;
-}
-.hp-opp-card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 1.35rem;
-  box-shadow: 0 8px 28px rgba(10, 31, 68, .06);
-  display: flex;
-  flex-direction: column;
-  transition: transform .2s, box-shadow .2s;
-}
-.hp-opp-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 40px rgba(10, 31, 68, .1);
-}
-.hp-opp-card--sch::before,
-.hp-opp-card--loan::before {
-  content: '';
-  display: block;
-  height: 4px;
-  border-radius: 4px 4px 0 0;
-  margin: -1.35rem -1.35rem 1rem;
-}
-.hp-opp-card--sch::before { background: linear-gradient(90deg, #0a1f44, #e87722); }
-.hp-opp-card--loan::before { background: linear-gradient(90deg, #0d9488, #1e4a8c); }
-.hp-opp-top {
-  display: flex;
-  justify-content: space-between;
-  gap: .5rem;
-  font-size: .78rem;
-  margin-bottom: .5rem;
-}
-.hp-opp-uni { font-weight: 700; color: #0a1f44; }
-.hp-opp-country { color: #64748b; }
-.hp-opp-card h3 {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #0a1f44;
-  margin: 0 0 .4rem;
-  line-height: 1.3;
-}
-.hp-opp-tag { font-size: .85rem; color: #475569; margin: 0 0 .5rem; }
-.hp-opp-summary { font-size: .86rem; color: #64748b; flex: 1; margin-bottom: .75rem; line-height: 1.5; }
-.hp-opp-meta {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 1rem;
-  font-size: .8rem;
-  color: #334155;
-}
-.hp-opp-meta li { margin-bottom: .25rem; }
-.hp-opp-meta i { color: #e87722; width: 1.1rem; }
-.hp-opp-meta--loan i { color: #0d9488; }
-.hp-opp-btn {
+.hp-opp__head p { color: #64748b; margin: 0; line-height: 1.65; }
+.hp-opp__badge {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: .4rem;
-  padding: .55rem 1rem;
-  border-radius: 8px;
+  gap: .35rem;
+  font-size: .75rem;
   font-weight: 700;
-  font-size: .88rem;
-  text-decoration: none;
-  margin-top: auto;
-}
-.hp-opp-btn--sch { background: #0a1f44; color: #fff; }
-.hp-opp-btn--sch:hover { background: #1e4a8c; color: #fff; }
-.hp-opp-btn--loan { background: #0d9488; color: #fff; }
-.hp-opp-btn--loan:hover { background: #0f766e; color: #fff; }
-.hp-opp-sub { margin-top: 2.5rem; }
-.hp-opp-sub h3 {
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: #0a1f44;
-  text-align: center;
-  margin-bottom: 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #0d9488;
+  background: rgba(13, 148, 136, .1);
+  padding: .3rem .75rem;
+  border-radius: 999px;
+  margin-bottom: .75rem;
 }
 .hp-promo-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.15rem;
 }
 .hp-promo-banner {
   border-radius: 18px;
-  padding: 1.75rem 1.5rem;
+  padding: 1.65rem 1.45rem;
   color: #fff;
-  min-height: 200px;
+  min-height: 220px;
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 12px 32px rgba(10, 31, 68, .15);
+  box-shadow: 0 14px 36px rgba(10, 31, 68, .16);
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.hp-promo-banner:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 22px 48px rgba(10, 31, 68, .22);
 }
 .hp-promo-banner::after {
   content: '';
   position: absolute;
-  width: 180px;
-  height: 180px;
+  width: 200px;
+  height: 200px;
   border-radius: 50%;
-  background: rgba(255,255,255,.08);
-  right: -40px;
-  top: -40px;
+  background: rgba(255,255,255,.09);
+  right: -50px;
+  top: -50px;
 }
 .hp-promo-banner.promo-a { background: linear-gradient(135deg, #0a1f44, #1e4a8c); }
 .hp-promo-banner.promo-b { background: linear-gradient(135deg, #b45309, #e87722); }
 .hp-promo-banner.promo-c { background: linear-gradient(135deg, #0d9488, #0369a1); }
-.hp-promo-banner i.fa {
-  font-size: 1.75rem;
-  margin-bottom: .75rem;
-  opacity: .9;
+.hp-promo-banner i.fa.icon-main {
+  font-size: 1.6rem;
+  margin-bottom: .65rem;
+  opacity: .95;
+  position: relative;
+  z-index: 1;
 }
-.hp-promo-banner h4 { font-size: 1.1rem; font-weight: 800; margin: 0 0 .5rem; position: relative; z-index: 1; }
-.hp-promo-banner p { font-size: .88rem; opacity: .92; flex: 1; margin: 0 0 1rem; line-height: 1.5; position: relative; z-index: 1; }
+.hp-promo-uni {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  opacity: .85;
+  position: relative;
+  z-index: 1;
+}
+.hp-promo-banner h4 {
+  font-size: 1.12rem;
+  font-weight: 800;
+  margin: .35rem 0 .45rem;
+  line-height: 1.3;
+  position: relative;
+  z-index: 1;
+}
+.hp-promo-banner p.desc {
+  font-size: .88rem;
+  opacity: .93;
+  flex: 1;
+  margin: 0 0 .65rem;
+  line-height: 1.55;
+  position: relative;
+  z-index: 1;
+}
+.hp-promo-meta {
+  font-size: .78rem;
+  opacity: .88;
+  margin-bottom: .85rem;
+  position: relative;
+  z-index: 1;
+}
 .hp-promo-banner a {
   align-self: flex-start;
   background: #fff;
@@ -201,123 +180,68 @@ $promoBanners = [
   font-size: .85rem;
   position: relative;
   z-index: 1;
+  transition: transform .2s;
 }
-.hp-promo-banner a:hover { filter: brightness(1.05); color: #0a1f44; }
+.hp-promo-banner a:hover { transform: scale(1.03); color: #0a1f44; }
+.hp-promo-banner.promo-b a { color: #b45309; }
+.hp-promo-banner.promo-c a { color: #0d9488; }
+.hp-opp__cta-row { text-align: center; margin-top: 1.75rem; }
+.hp-opp__cta-row a {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .65rem 1.25rem;
+  border-radius: 999px;
+  background: #0a1f44;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  font-size: .9rem;
+}
+.hp-opp__cta-row a:hover { background: #1e4a8c; color: #fff; }
 </style>
 
 <section class="hp-opp" id="opportunities">
   <div class="hp-opp__wrap">
     <header class="hp-opp__head fade-in">
-      <h2>
-        <?php if ($showPromo): ?>
-        <?= htmlspecialchars($t('promo_section_title', 'Plan your journey with Xander'), ENT_QUOTES, 'UTF-8') ?>
-        <?php elseif ($hasScholarships && $hasLoans): ?>
-        <?= htmlspecialchars($t('opp_mixed_title', 'Scholarships & education loans'), ENT_QUOTES, 'UTF-8') ?>
-        <?php elseif ($hasLoans): ?>
-        <?= htmlspecialchars($t('loans_home_title', 'Institution education loans'), ENT_QUOTES, 'UTF-8') ?>
-        <?php else: ?>
-        <?= htmlspecialchars($t('scholarships_home_title', 'Institution scholarships'), ENT_QUOTES, 'UTF-8') ?>
-        <?php endif; ?>
-      </h2>
-      <p>
-        <?php if ($showPromo): ?>
-        <?= htmlspecialchars($t('promo_section_desc', 'Apply, fund your studies, or speak with an advisor — we guide you end to end.'), ENT_QUOTES, 'UTF-8') ?>
-        <?php elseif ($hasScholarships && $hasLoans): ?>
-        <?= htmlspecialchars($t('opp_mixed_desc', 'Funding opportunities published by our partner institutions.'), ENT_QUOTES, 'UTF-8') ?>
-        <?php elseif ($hasLoans): ?>
-        <?= htmlspecialchars($t('loans_home_desc', 'Student loan programs from partner institutions — apply directly.'), ENT_QUOTES, 'UTF-8') ?>
-        <?php else: ?>
-        <?= htmlspecialchars($t('scholarships_home_desc', 'Apply directly to scholarship programs from partner universities.'), ENT_QUOTES, 'UTF-8') ?>
-        <?php endif; ?>
-      </p>
+      <?php if (!$showPromo): ?>
+      <span class="hp-opp__badge"><i class="fas fa-building-columns"></i> <?= htmlspecialchars($t('inst_opp_badge', 'From institution dashboard'), ENT_QUOTES, 'UTF-8') ?></span>
+      <?php endif; ?>
+      <h2><?= htmlspecialchars($sectionTitle, ENT_QUOTES, 'UTF-8') ?></h2>
+      <p><?= htmlspecialchars($sectionDesc, ENT_QUOTES, 'UTF-8') ?></p>
     </header>
 
-    <?php if ($showPromo): ?>
     <div class="hp-promo-grid">
-      <?php foreach ($promoBanners as $banner): ?>
-      <article class="hp-promo-banner <?= htmlspecialchars($banner['accent'], ENT_QUOTES, 'UTF-8') ?> fade-in">
-        <i class="fas <?= htmlspecialchars($banner['icon'], ENT_QUOTES, 'UTF-8') ?>"></i>
-        <h4><?= htmlspecialchars($banner['title'], ENT_QUOTES, 'UTF-8') ?></h4>
-        <p><?= htmlspecialchars($banner['desc'], ENT_QUOTES, 'UTF-8') ?></p>
-        <a href="<?= htmlspecialchars($banner['url'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($banner['cta'], ENT_QUOTES, 'UTF-8') ?> →</a>
-      </article>
-      <?php endforeach; ?>
-    </div>
-    <?php else: ?>
-
-    <?php if ($hasScholarships): ?>
-    <?php if ($hasLoans): ?>
-    <h3 class="hp-opp-subtitle text-center h6 fw-bold text-muted mb-3"><?= htmlspecialchars($t('scholarships_home_title', 'Scholarships'), ENT_QUOTES, 'UTF-8') ?></h3>
-    <?php endif; ?>
-    <div class="hp-opp__grid mb-4">
-      <?php foreach ($scholarships as $sch):
-          $schId = (int) ($sch['id'] ?? 0);
-          $applyUrl = $schId > 0
-              ? xander_institution_scholarship_apply_url($schId)
-              : pcvc_url('/scholarship-apply.php');
-          if ($schId <= 0 && !empty($sch['university_id'])) {
-              $applyUrl = pcvc_url('/student-application.php');
-          }
-          ?>
-      <article class="hp-opp-card hp-opp-card--sch fade-in">
-        <div class="hp-opp-top">
-          <span class="hp-opp-uni"><?= htmlspecialchars((string) ($sch['university_name'] ?? '')) ?></span>
-          <?php if (!empty($sch['country_name'])): ?>
-          <span class="hp-opp-country"><?= htmlspecialchars((string) $sch['country_name']) ?></span>
-          <?php endif; ?>
-        </div>
-        <h3><?= htmlspecialchars((string) ($sch['title'] ?? '')) ?></h3>
-        <?php if (!empty($sch['tagline'])): ?>
-        <p class="hp-opp-tag"><?= htmlspecialchars((string) $sch['tagline']) ?></p>
+      <?php
+      $cards = $showPromo ? $promoBanners : $highlights;
+      foreach ($cards as $card):
+          $accent = (string) ($card['accent'] ?? 'promo-a');
+          $ext = !empty($card['url']) && str_starts_with((string) $card['url'], 'http');
+      ?>
+      <article class="hp-promo-banner <?= htmlspecialchars($accent, ENT_QUOTES, 'UTF-8') ?> fade-in">
+        <i class="fas <?= htmlspecialchars((string) ($card['icon'] ?? 'fa-star'), ENT_QUOTES, 'UTF-8') ?> icon-main"></i>
+        <?php if (!empty($card['uni'])): ?>
+        <span class="hp-promo-uni"><?= htmlspecialchars((string) $card['uni']) ?><?php if (!empty($card['country'])): ?> · <?= htmlspecialchars((string) $card['country']) ?><?php endif; ?></span>
         <?php endif; ?>
-        <p class="hp-opp-summary"><?= htmlspecialchars(mb_substr((string) ($sch['summary'] ?? ''), 0, 140)) ?><?= mb_strlen((string) ($sch['summary'] ?? '')) > 140 ? '…' : '' ?></p>
-        <ul class="hp-opp-meta">
-          <?php if (!empty($sch['award_amount'])): ?><li><i class="fas fa-coins"></i> <?= htmlspecialchars((string) $sch['award_amount']) ?></li><?php endif; ?>
-          <?php if (!empty($sch['tuition_coverage'])): ?><li><i class="fas fa-graduation-cap"></i> <?= htmlspecialchars((string) $sch['tuition_coverage']) ?></li><?php endif; ?>
-          <?php if (!empty($sch['deadline'])): ?><li><i class="fas fa-calendar"></i> <?= htmlspecialchars(date('M j, Y', strtotime((string) $sch['deadline']))) ?></li><?php endif; ?>
-        </ul>
-        <a href="<?= htmlspecialchars($applyUrl) ?>" class="hp-opp-btn hp-opp-btn--sch">
-          <i class="fas fa-paper-plane"></i> <?= htmlspecialchars($t('card_apply', 'Apply now'), ENT_QUOTES, 'UTF-8') ?>
+        <h4><?= htmlspecialchars((string) ($card['title'] ?? ''), ENT_QUOTES, 'UTF-8') ?></h4>
+        <p class="desc"><?= htmlspecialchars((string) ($card['desc'] ?? ''), ENT_QUOTES, 'UTF-8') ?></p>
+        <?php if (!empty($card['meta'])): ?>
+        <p class="hp-promo-meta"><?= htmlspecialchars((string) $card['meta'], ENT_QUOTES, 'UTF-8') ?></p>
+        <?php endif; ?>
+        <a href="<?= htmlspecialchars((string) ($card['url'] ?? '#'), ENT_QUOTES, 'UTF-8') ?>"<?= $ext ? ' target="_blank" rel="noopener"' : '' ?>>
+          <?= htmlspecialchars((string) ($card['cta'] ?? 'Learn more'), ENT_QUOTES, 'UTF-8') ?> →
         </a>
       </article>
       <?php endforeach; ?>
     </div>
-    <?php endif; ?>
 
-    <?php if ($hasLoans): ?>
-    <div class="hp-opp-sub">
-      <h3><?= htmlspecialchars($t('loans_home_title', 'Education loan opportunities'), ENT_QUOTES, 'UTF-8') ?></h3>
-      <div class="hp-opp__grid">
-        <?php foreach ($loans as $loan):
-            $loanUrl = xander_institution_loan_apply_url($loan);
-            $loanTitle = (string) ($loan['title'] ?? '');
-            $lender = trim((string) ($loan['loan_institution_name'] ?? ''));
-            ?>
-        <article class="hp-opp-card hp-opp-card--loan fade-in">
-          <div class="hp-opp-top">
-            <span class="hp-opp-uni"><?= htmlspecialchars((string) ($loan['university_name'] ?? '')) ?></span>
-            <?php if (!empty($loan['country_name'])): ?>
-            <span class="hp-opp-country"><?= htmlspecialchars((string) $loan['country_name']) ?></span>
-            <?php endif; ?>
-          </div>
-          <h3><?= htmlspecialchars($loanTitle) ?></h3>
-          <?php if ($lender !== ''): ?>
-          <p class="hp-opp-tag"><i class="fas fa-building-columns me-1"></i><?= htmlspecialchars($lender) ?></p>
-          <?php endif; ?>
-          <p class="hp-opp-summary"><?= htmlspecialchars(mb_substr((string) ($loan['summary'] ?? ''), 0, 140)) ?><?= mb_strlen((string) ($loan['summary'] ?? '')) > 140 ? '…' : '' ?></p>
-          <ul class="hp-opp-meta hp-opp-meta--loan">
-            <?php if (!empty($loan['loan_coverage'])): ?><li><i class="fas fa-shield-halved"></i> <?= htmlspecialchars((string) $loan['loan_coverage']) ?></li><?php endif; ?>
-            <?php if (!empty($loan['rates_notes'])): ?><li><i class="fas fa-percent"></i> <?= htmlspecialchars((string) $loan['rates_notes']) ?></li><?php endif; ?>
-          </ul>
-          <a href="<?= htmlspecialchars($loanUrl) ?>" class="hp-opp-btn hp-opp-btn--loan"<?= str_starts_with($loanUrl, 'http') ? ' target="_blank" rel="noopener"' : '' ?>>
-            <i class="fas fa-arrow-right"></i> <?= htmlspecialchars($t('loan_apply_cta', 'Explore loan'), ENT_QUOTES, 'UTF-8') ?>
-          </a>
-        </article>
-        <?php endforeach; ?>
-      </div>
+    <?php if (!$showPromo): ?>
+    <div class="hp-opp__cta-row fade-in">
+      <a href="services.php<?= htmlspecialchars($langQs, ENT_QUOTES, 'UTF-8') ?>">
+        <?= htmlspecialchars($t('insights_cta_all', 'Explore all services'), ENT_QUOTES, 'UTF-8') ?>
+        <i class="fas fa-arrow-right"></i>
+      </a>
     </div>
-    <?php endif; ?>
-
     <?php endif; ?>
   </div>
 </section>

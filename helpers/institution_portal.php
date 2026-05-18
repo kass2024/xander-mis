@@ -989,3 +989,56 @@ function xander_institution_change_account_password(
 
     return ['ok' => true, 'message' => 'Password changed successfully.'];
 }
+
+/**
+ * All registered institution portal accounts for admin monitoring.
+ *
+ * @return array<int, array<string, mixed>>
+ */
+function xander_institution_admin_list_accounts(mysqli $conn): array
+{
+    xander_institution_portal_ensure_schema($conn);
+
+    $sql = "
+        SELECT ipa.id AS account_id, ipa.email, ipa.contact_name, ipa.contact_title,
+               ipa.phone, ipa.status AS account_status, ipa.last_login_at, ipa.created_at AS registered_at,
+               u.id AS university_id, u.name AS university_name, u.city, u.website, u.institution_kind,
+               c.name AS country_name,
+               COALESCE(p.homepage_published, 0) AS homepage_published,
+               COALESCE(p.profile_complete_scholarship, 0) AS profile_complete_scholarship,
+               COALESCE(p.profile_complete_loan, 0) AS profile_complete_loan
+        FROM institution_portal_accounts ipa
+        INNER JOIN universities u ON u.id = ipa.university_id
+        LEFT JOIN countries c ON c.id = u.country_id
+        LEFT JOIN institution_university_profiles p ON p.university_id = u.id
+        ORDER BY u.name ASC, ipa.created_at DESC
+    ";
+    $res = $conn->query($sql);
+    if (!$res) {
+        return [];
+    }
+    $rows = [];
+    while ($row = $res->fetch_assoc()) {
+        $rows[] = $row;
+    }
+    $res->free();
+
+    return $rows;
+}
+
+/**
+ * @return array<string, mixed>|null
+ */
+function xander_institution_admin_account_by_university(mysqli $conn, int $universityId): ?array
+{
+    if ($universityId <= 0) {
+        return null;
+    }
+    foreach (xander_institution_admin_list_accounts($conn) as $row) {
+        if ((int) ($row['university_id'] ?? 0) === $universityId) {
+            return $row;
+        }
+    }
+
+    return null;
+}

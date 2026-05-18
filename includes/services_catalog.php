@@ -74,7 +74,7 @@ $service_catalog_translations = [
 
 $service_catalog_cards = [
     ['id' => 'admissions', 'icon' => '🎓', 'title_key' => 'card1_title', 'subtitle_key' => 'card1_subtitle', 'highlight_key' => 'card1_point1', 'form' => 'student-application.php'],
-    ['id' => 'scholarships', 'icon' => '💰', 'title_key' => 'card2_title', 'subtitle_key' => 'card2_subtitle', 'highlight_key' => 'card2_point1', 'form' => 'index.php#scholarships'],
+    ['id' => 'scholarships', 'icon' => '💰', 'title_key' => 'card2_title', 'subtitle_key' => 'card2_subtitle', 'highlight_key' => 'card2_point1', 'form' => 'master-loan.php'],
     ['id' => 'i20', 'icon' => '📄', 'title_key' => 'card3_title', 'subtitle_key' => 'card3_subtitle', 'highlight_key' => 'card3_point1', 'form' => 'form-20.php'],
     ['id' => 'credit', 'icon' => '🔁', 'title_key' => 'card4_title', 'subtitle_key' => 'card4_subtitle', 'highlight_key' => 'card4_point1', 'form' => 'credit_transfer.php'],
     ['id' => 'visa', 'icon' => '✈️', 'title_key' => 'card5_title', 'subtitle_key' => 'card5_subtitle', 'highlight_key' => 'card5_point1', 'form' => 'visa.php'],

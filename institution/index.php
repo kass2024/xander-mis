@@ -22,7 +22,7 @@ if ($university) {
     $uniName = (string) ($university['name'] ?? $uniName);
 }
 
-$allowedTabs = ['dashboard', 'scholarships', 'programs', 'applications', 'profile'];
+$allowedTabs = ['dashboard', 'scholarships', 'programs', 'applications', 'website', 'profile'];
 $activeTab = (string) ($_GET['tab'] ?? 'dashboard');
 if (!in_array($activeTab, $allowedTabs, true)) {
     $activeTab = 'dashboard';
@@ -98,6 +98,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && pcvc_csrf_validate_post()) {
         $flash = $upd['message'];
         $flashType = $upd['ok'] ? 'success' : 'danger';
         $redirectSection = $activeSection;
+    } elseif ($action === 'save_institution_profile') {
+        $redirectTab = 'website';
+        $save = xander_institution_save_profile($conn, $universityId, $_POST);
+        $flash = $save['message'];
+        $flashType = $save['ok'] ? 'success' : 'danger';
     }
 
     $_SESSION['institution_flash'] = ['message' => $flash, 'type' => $flashType];
@@ -176,6 +181,8 @@ if ($activeTab === 'applications') {
     }
 }
 
+$instProfile = xander_institution_load_profile($conn, $universityId);
+
 require __DIR__ . '/views/layout_top.php';
 
 if ($activeTab === 'dashboard') {
@@ -186,6 +193,8 @@ if ($activeTab === 'dashboard') {
     require __DIR__ . '/views/programs.php';
 } elseif ($activeTab === 'applications') {
     require __DIR__ . '/views/applications.php';
+} elseif ($activeTab === 'website') {
+    require __DIR__ . '/views/website.php';
 } else {
     require __DIR__ . '/views/profile.php';
 }

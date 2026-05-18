@@ -305,6 +305,14 @@ $cards = [
       'job-applicant.php' => 'Check job Applicants',
     ]
   ],
+  'institutions_monitor' => [
+    'title' => 'Institution portals',
+    'icon' => 'bi-building',
+    'links' => [
+      'admin-institutions-monitor.php' => 'All registered institutions',
+      'admin-institution-overview.php' => 'Institution dashboard',
+    ]
+  ],
   'platform' => [
     'title' => 'Platforms management',
     'icon' => 'bi-diagram-3',
@@ -344,7 +352,7 @@ $sidebarAccess = [
   'superadmin' => [
     'all_admissions', 'loan_applications', 'I-20_applications', 'staff_reporting', 
     'commission_request', 'credit_transfer', 'visit_study_visa', 'prescreening', 'staff_attendance',
-    'university_portal', 'marketing', 'ticketing', 'jobsabrod', 'platform', 'contracts', 'chart'
+    'university_portal', 'institutions_monitor', 'marketing', 'ticketing', 'jobsabrod', 'platform', 'contracts', 'chart'
   ],
   'agent' => [
     'staff_attendance', 'agent_report', 'university_portal', 'commission_request',
@@ -1607,6 +1615,28 @@ if (strtolower($role) !== 'catholic university of america') {
       </div>
       <?php endif; ?>
       
+      <?php if (adm_menu('institutions_monitor')): ?>
+      <a href="#institutions_monitor" class="sidebar-link" onclick="toggleSidebarMenu('institutions_monitor')">
+        <i class="bi bi-building"></i>
+        <span>Institution portals</span>
+        <i class="bi bi-chevron-down arrow"></i>
+      </a>
+      <div class="sidebar-submenu" id="submenu_institutions_monitor">
+        <?php if (adm_sub('institutions_monitor', 'admin-institutions-monitor.php')): ?>
+        <a href="#" onclick="loadInFrame('admin-institutions-monitor.php', 'Registered institutions')">
+          <i class="bi bi-list-ul"></i>
+          All registered institutions
+        </a>
+        <?php endif; ?>
+        <?php if (adm_sub('institutions_monitor', 'admin-institution-overview.php')): ?>
+        <a href="#" onclick="loadInFrame('admin-institution-overview.php', 'Institution dashboard')">
+          <i class="bi bi-speedometer2"></i>
+          Institution dashboard
+        </a>
+        <?php endif; ?>
+      </div>
+      <?php endif; ?>
+
       <?php if (adm_menu('platform')): ?>
       <!-- Platforms management - Superadmin only -->
       <a href="#platform" class="sidebar-link" onclick="toggleSidebarMenu('platform')">

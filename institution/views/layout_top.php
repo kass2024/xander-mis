@@ -6,6 +6,7 @@ $navTabs = [
     'scholarships' => ['icon' => 'fa-award', 'label' => 'Scholarships'],
     'programs' => ['icon' => 'fa-graduation-cap', 'label' => 'Programs'],
     'applications' => ['icon' => 'fa-inbox', 'label' => 'Applications'],
+    'website' => ['icon' => 'fa-globe', 'label' => 'Homepage'],
     'profile' => ['icon' => 'fa-user-gear', 'label' => 'Settings'],
 ];
 $activeSection = $activeSection ?? '';

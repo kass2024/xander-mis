@@ -220,6 +220,9 @@ $index_translations = [
         'promo_consult_title' => 'Free expert consultation',
         'promo_consult_desc' => 'Book a no-cost session with our advisors to plan your international journey.',
         'promo_consult_cta' => 'Book consultation',
+        'inst_opp_title' => 'Opportunities from Our Partner Institutions',
+        'inst_opp_desc' => 'Scholarships and education loans published by institutions through the Xander institution dashboard.',
+        'inst_opp_badge' => 'Live from institution dashboard',
         
         // Card 3: I-20 Application
         'card3_title' => 'I-20 Application',
@@ -466,6 +469,9 @@ $index_translations = [
         'promo_consult_title' => 'Consultation gratuite',
         'promo_consult_desc' => 'Session gratuite avec nos conseillers.',
         'promo_consult_cta' => 'Réserver',
+        'inst_opp_title' => 'Opportunités de nos institutions partenaires',
+        'inst_opp_desc' => 'Bourses et prêts publiés par les institutions via le tableau de bord Xander.',
+        'inst_opp_badge' => 'Publié depuis le tableau de bord',
         
         // Card 3: I-20 Application
         'card3_title' => 'Demande I-20',

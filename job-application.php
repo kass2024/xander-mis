@@ -18,13 +18,19 @@ session_start([
     'use_strict_mode' => true
 ]);
 
-// Check if session ID is provided
-if (!isset($_GET['id']) || empty($_GET['id'])) {
-    die('Invalid access. Please use the provided application link.');
+// Applicant id from link (services page, agents, or pre-screening handoff)
+if (!isset($_GET['id']) || trim((string) $_GET['id']) === '') {
+    $newId = 'user-' . time() . '-' . random_int(1000, 9999);
+    header('Location: job-application.php?id=' . rawurlencode($newId));
+    exit;
 }
 
-// Validate and sanitize user ID
 $user_id = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) $_GET['id']);
+if ($user_id === '') {
+    $user_id = 'user-' . time() . '-' . random_int(1000, 9999);
+    header('Location: job-application.php?id=' . rawurlencode($user_id));
+    exit;
+}
 
 // Store in session (must match save_job_application.php)
 $_SESSION['user_id'] = $user_id;

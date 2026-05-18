@@ -1,4 +1,34 @@
 <?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/site_session_bootstrap.php';
+
+// Assign applicant id before any HTML output (header.php sends the document).
+$providerId = isset($_GET['provider_id']) && $_GET['provider_id'] !== ''
+    ? (string) $_GET['provider_id']
+    : '';
+if (!isset($_GET['id']) || trim((string) $_GET['id']) === '') {
+    $newId = 'loan-' . time() . '-' . random_int(1000, 9999);
+    $redirectParams = ['id' => $newId];
+    if ($providerId !== null && $providerId !== '') {
+        $redirectParams['provider_id'] = $providerId;
+    }
+    if (!empty($_GET['lang'])) {
+        $redirectParams['lang'] = preg_replace('/[^a-z]/', '', (string) $_GET['lang']);
+    }
+    header('Location: master-loan.php?' . http_build_query($redirectParams));
+    exit;
+}
+
+$userId = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) $_GET['id']);
+if ($userId === '') {
+    $newId = 'loan-' . time() . '-' . random_int(1000, 9999);
+    header('Location: master-loan.php?id=' . rawurlencode($newId));
+    exit;
+}
+
+$pageTitle = 'Masters Loan Application | Xander Global Scholars';
+
 // ============================================
 // INCLUDE HEADER FOR LANGUAGE SWITCHING LOGIC
 // ============================================
@@ -260,7 +290,6 @@ if (!isset($_SESSION['master_loan_data'])) {
 }
 
 $formData = [];
-$providerId = $_GET['provider_id'] ?? null;
 $providerName = '';
 
 // Sample provider names for demo
@@ -271,26 +300,9 @@ $providerNames = [
     4 => 'BMO Bank - Graduate Funding',
 ];
 
-// Load existing user
-if (isset($_GET['id'])) {
-    $userId = $_GET['id'];
-    
-    // Load from session for demo
-    if (isset($_SESSION['master_loan_data'][$userId])) {
-        $formData = $_SESSION['master_loan_data'][$userId];
-        $providerId = $formData['loan_provider_id'] ?? $providerId;
-    }
-} else {
-    // Generate new user ID
-    $userId = 'user-' . time() . '-' . rand(1000, 9999);
-    
-    // Redirect with provider_id preserved
-    $redirectUrl = "master-loan.php?id=$userId";
-    if ($providerId) {
-        $redirectUrl .= "&provider_id=$providerId";
-    }
-    header("Location: $redirectUrl");
-    exit;
+if (isset($_SESSION['master_loan_data'][$userId])) {
+    $formData = $_SESSION['master_loan_data'][$userId];
+    $providerId = $formData['loan_provider_id'] ?? $providerId;
 }
 
 // Load provider name for display
@@ -309,19 +321,9 @@ function selected($field, $value) {
     return (isset($formData[$field]) && $formData[$field] == $value) ? 'selected' : '';
 }
 ?>
-<!DOCTYPE html>
-<html lang="<?php echo $current_lang; ?>">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="<?php echo lft('page_description'); ?>">
-<title><?php echo lft('page_title'); ?></title>
-
-<!-- External Styles -->
+<!-- Master loan form assets (header.php already opened the document) -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
 /* =========================================================
@@ -917,8 +919,6 @@ textarea {
   }
 }
 </style>
-</head>
-<body>
 
 <!-- FORM PAGE HEADER -->
 <header class="form-page-header">
@@ -974,7 +974,7 @@ textarea {
 
     <form id="applicationForm" enctype="multipart/form-data">
       <input type="hidden" name="user_id" value="<?= htmlspecialchars($userId) ?>">
-      <input type="hidden" name="loan_provider_id" value="<?= htmlspecialchars($providerId) ?>">
+      <input type="hidden" name="loan_provider_id" value="<?= htmlspecialchars($providerId, ENT_QUOTES, 'UTF-8') ?>">
 
       <!-- Step 1: Personal Information -->
       <div class="form-step active" id="step1">

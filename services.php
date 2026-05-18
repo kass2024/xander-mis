@@ -2,6 +2,7 @@
 require_once __DIR__ . '/site_session_bootstrap.php';
 $current_lang = $_SESSION['current_language'] ?? 'en';
 require __DIR__ . '/includes/services_catalog.php';
+require_once __DIR__ . '/helpers/service_apply_links.php';
 $pageTitle = st('page_title');
 require_once __DIR__ . '/header.php';
 
@@ -218,11 +219,15 @@ if ($direct_card !== '' && !in_array($direct_card, $valid_ids, true)) {
         <?php echo htmlspecialchars(st($card['highlight_key']), ENT_QUOTES, 'UTF-8'); ?>
       </p>
       <div class="svc-card-actions">
-        <a class="svc-btn svc-btn-primary" href="<?php echo htmlspecialchars($card['form'], ENT_QUOTES, 'UTF-8'); ?>">
+        <?php
+        $applyHref = xander_service_apply_url($card['id'], $card['form'], $current_lang ?: null, true);
+        $copyHref = xander_service_copy_url($card['id'], $card['form'], $current_lang ?: null);
+        ?>
+        <a class="svc-btn svc-btn-primary" href="<?php echo htmlspecialchars($applyHref, ENT_QUOTES, 'UTF-8'); ?>">
           <i class="fas fa-paper-plane" aria-hidden="true"></i>
           <?php echo htmlspecialchars(st('card_apply'), ENT_QUOTES, 'UTF-8'); ?>
         </a>
-        <button type="button" class="svc-btn svc-btn-outline svc-copy-link" data-card="<?php echo htmlspecialchars($card['id'], ENT_QUOTES, 'UTF-8'); ?>">
+        <button type="button" class="svc-btn svc-btn-outline svc-copy-link" data-copy-url="<?php echo htmlspecialchars($copyHref, ENT_QUOTES, 'UTF-8'); ?>">
           <i class="fas fa-link" aria-hidden="true"></i>
           <?php echo htmlspecialchars(st('card_copy'), ENT_QUOTES, 'UTF-8'); ?>
         </button>
@@ -249,11 +254,7 @@ if ($direct_card !== '' && !in_array($direct_card, $valid_ids, true)) {
 
   document.querySelectorAll('.svc-copy-link').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      const card = btn.getAttribute('data-card') || '';
-      let url = new URL('services.php', window.location.href);
-      url.searchParams.set('card', card);
-      if (lang) url.searchParams.set('lang', lang);
-      url = url.href;
+      const url = btn.getAttribute('data-copy-url') || window.location.href;
       const copied = <?php echo json_encode(st('card_copy') . ' ✓', JSON_UNESCAPED_UNICODE); ?>;
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(function () { showToast(copied); }).catch(function () { fallbackCopy(url, copied); });

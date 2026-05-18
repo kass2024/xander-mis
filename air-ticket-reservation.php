@@ -1,11 +1,20 @@
 <?php
 session_start();
 
-if (!isset($_GET['id']) || trim($_GET['id']) === '') {
-    die("Invalid reservation session.");
+if (!isset($_GET['id']) || trim((string) $_GET['id']) === '') {
+    $newId = 'ticket-' . time() . '-' . random_int(1000, 9999);
+    header('Location: air-ticket-reservation.php?id=' . rawurlencode($newId));
+    exit;
 }
 
-$_SESSION['user_id'] = $_GET['id'];
+$user_id = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) $_GET['id']);
+if ($user_id === '') {
+    $user_id = 'ticket-' . time() . '-' . random_int(1000, 9999);
+    header('Location: air-ticket-reservation.php?id=' . rawurlencode($user_id));
+    exit;
+}
+
+$_SESSION['user_id'] = $user_id;
 ?>
 <!DOCTYPE html>
 <html lang="en">

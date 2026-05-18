@@ -297,6 +297,10 @@ function xander_institution_save_scholarship(mysqli $conn, int $universityId, ar
     }
     $st->close();
 
+    if ($isPublished === 1 && $status === 'active') {
+        xander_institution_sync_homepage_publish_flag($conn, $universityId, true);
+    }
+
     return ['ok' => true, 'message' => 'Scholarship saved successfully.', 'id' => $id];
 }
 
@@ -954,13 +958,14 @@ function xander_homepage_published_loans(mysqli $conn, int $limit = 12): array
                p.loan_contact_email AS loan_contact_email,
                p.university_id,
                u.name AS university_name,
-               c.name AS country_name
+               c.name AS country_name,
+               'profile' AS source
         FROM institution_university_profiles p
         INNER JOIN universities u ON u.id = p.university_id
         LEFT JOIN countries c ON c.id = u.country_id
         WHERE p.homepage_published = 1
-          AND p.profile_complete_loan = 1
           AND TRIM(COALESCE(p.loan_program_name, '')) <> ''
+          AND TRIM(COALESCE(p.loan_summary, '')) <> ''
         ORDER BY p.updated_at DESC
         LIMIT ?
     ";
@@ -984,6 +989,111 @@ function xander_institution_loan_apply_url(array $loan): string
     }
 
     return pcvc_url('/loan-providers.php');
+}
+
+/**
+ * Normalized homepage cards from institution dashboard (scholarships + loans).
+ *
+ * @return array<int, array<string, mixed>>
+ */
+function xander_homepage_institution_highlights(mysqli $conn, int $limit = 12): array
+{
+    $scholarships = xander_homepage_published_scholarships($conn, $limit);
+    $loans = xander_homepage_published_loans($conn, $limit);
+    $items = [];
+    $accents = ['promo-a', 'promo-b', 'promo-c'];
+    $i = 0;
+
+    foreach ($scholarships as $sch) {
+        $schId = (int) ($sch['id'] ?? 0);
+        $url = $schId > 0
+            ? xander_institution_scholarship_apply_url($schId)
+            : pcvc_url('/scholarship-apply.php');
+        if ($schId <= 0 && !empty($sch['scholarship_apply_url'])) {
+            $legacyUrl = trim((string) $sch['scholarship_apply_url']);
+            if ($legacyUrl !== '' && filter_var($legacyUrl, FILTER_VALIDATE_URL)) {
+                $url = $legacyUrl;
+            }
+        }
+
+        $metaParts = [];
+        if (!empty($sch['award_amount'])) {
+            $metaParts[] = (string) $sch['award_amount'];
+        } elseif (!empty($sch['tuition_coverage'])) {
+            $metaParts[] = (string) $sch['tuition_coverage'];
+        }
+        if (!empty($sch['deadline'])) {
+            $metaParts[] = 'Deadline: ' . date('M j, Y', strtotime((string) $sch['deadline']));
+        }
+
+        $items[] = [
+            'type' => 'scholarship',
+            'accent' => $accents[$i % 3],
+            'icon' => 'fa-award',
+            'title' => (string) ($sch['title'] ?? ''),
+            'desc' => trim((string) ($sch['tagline'] ?? '')) !== ''
+                ? (string) $sch['tagline']
+                : mb_substr((string) ($sch['summary'] ?? ''), 0, 160),
+            'uni' => (string) ($sch['university_name'] ?? ''),
+            'country' => (string) ($sch['country_name'] ?? ''),
+            'meta' => implode(' · ', $metaParts),
+            'cta' => 'Apply now',
+            'url' => $url,
+        ];
+        $i++;
+    }
+
+    foreach ($loans as $loan) {
+        $metaParts = [];
+        if (!empty($loan['loan_coverage'])) {
+            $metaParts[] = (string) $loan['loan_coverage'];
+        }
+        if (!empty($loan['rates_notes'])) {
+            $metaParts[] = (string) $loan['rates_notes'];
+        }
+        $lender = trim((string) ($loan['loan_institution_name'] ?? ''));
+        if ($lender !== '') {
+            $metaParts[] = $lender;
+        }
+
+        $items[] = [
+            'type' => 'loan',
+            'accent' => $accents[$i % 3],
+            'icon' => 'fa-hand-holding-dollar',
+            'title' => (string) ($loan['title'] ?? ''),
+            'desc' => mb_substr((string) ($loan['summary'] ?? ''), 0, 160),
+            'uni' => (string) ($loan['university_name'] ?? ''),
+            'country' => (string) ($loan['country_name'] ?? ''),
+            'meta' => implode(' · ', $metaParts),
+            'cta' => 'Explore loan',
+            'url' => xander_institution_loan_apply_url($loan),
+        ];
+        $i++;
+    }
+
+    return array_slice($items, 0, $limit);
+}
+
+/**
+ * When a scholarship is published on the homepage, flag the institution profile as visible too.
+ */
+function xander_institution_sync_homepage_publish_flag(mysqli $conn, int $universityId, bool $published): void
+{
+    if ($universityId <= 0) {
+        return;
+    }
+    xander_institution_portal_ensure_schema($conn);
+    $val = $published ? 1 : 0;
+    $st = $conn->prepare('
+        INSERT INTO institution_university_profiles (university_id, homepage_published)
+        VALUES (?, ?)
+        ON DUPLICATE KEY UPDATE homepage_published = GREATEST(homepage_published, VALUES(homepage_published))
+    ');
+    if ($st) {
+        $st->bind_param('ii', $universityId, $val);
+        $st->execute();
+        $st->close();
+    }
 }
 
 /**

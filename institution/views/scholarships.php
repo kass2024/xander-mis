@@ -79,6 +79,7 @@ $schId = (int) ($sch['id'] ?? 0);
       <div class="form-check">
         <input class="form-check-input" type="checkbox" name="is_published" value="1" id="pubSch" <?= !empty($sch['is_published']) ? 'checked' : '' ?>>
         <label class="form-check-label" for="pubSch">Publish on homepage</label>
+        <a href="index.php?tab=website" class="small ms-2">Loan programs →</a>
       </div>
     </div>
     <div class="col-md-4">
