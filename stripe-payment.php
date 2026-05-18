@@ -370,7 +370,8 @@ $source_table = $_GET['table'] ?? $_POST['table'] ?? '';
 $package_id = (int)($_GET['package_id'] ?? $_POST['package_id'] ?? 0);
 $payment_method = $_GET['payment_method'] ?? $_POST['payment_method'] ?? 'stripe';
 $items_param = $_GET['items'] ?? $_POST['items'] ?? '';
-$currency = $_GET['currency'] ?? $_POST['currency'] ?? 'EUR';
+$currency = strtoupper(trim((string)($_GET['currency'] ?? $_POST['currency'] ?? 'EUR')));
+$other_service_name = trim((string)($_GET['other_service_name'] ?? $_POST['other_service_name'] ?? ''));
 
 // Parse items from JSON string
 $items = [];
@@ -417,7 +418,26 @@ if ($package_id > 0) {
     $stmt->close();
 }
 
-$description = "Payment for " . ($package_details['title'] ?? 'Package') . " - " . ($app_details['first_name'] ?? 'Student') . " " . ($app_details['last_name'] ?? '');
+$studentLabel = trim(($app_details['first_name'] ?? 'Student') . ' ' . ($app_details['last_name'] ?? ''));
+if ($other_service_name === '' && is_array($items)) {
+    $otherLabels = [];
+    foreach (array_keys($items) as $itemKey) {
+        $k = (string) $itemKey;
+        if (str_starts_with($k, 'other:')) {
+            $otherLabels[] = substr($k, 6);
+        }
+    }
+    if (!empty($otherLabels)) {
+        $other_service_name = implode(', ', $otherLabels);
+    }
+}
+if ($package_id > 0 && !empty($package_details['title'])) {
+    $description = 'Payment for ' . $package_details['title'] . ' - ' . $studentLabel;
+} elseif ($other_service_name !== '') {
+    $description = 'Payment: ' . $other_service_name . ' - ' . $studentLabel;
+} else {
+    $description = 'Custom payment - ' . $studentLabel;
+}
 
 // -------------------------------------------------------------------
 // HANDLE PAYMENT RECORDING (POST request) – ONLY INSERT INTO payments TABLE
@@ -452,6 +472,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
     $items         = $data['items'] ?? [];
     $stripePaymentIntentId = trim((string)($data['stripe_payment_intent_id'] ?? ''));
     $currency      = strtoupper(trim((string) ($data['currency'] ?? ($_GET['currency'] ?? 'EUR'))));
+    $otherServiceNameRecord = trim((string)($data['other_service_name'] ?? $other_service_name));
     
     // Validation
     $allowedTables = [
@@ -460,9 +481,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
         'turkey_applications'
     ];
     
+    $isCustomOther = false;
+    if ($packageId === 0 && is_array($items)) {
+        foreach (array_keys($items) as $itemKey) {
+            $k = (string) $itemKey;
+            if ($k === 'other' || str_starts_with($k, 'other:')) {
+                $isCustomOther = true;
+                break;
+            }
+        }
+    }
     if (
         $applicationId <= 0 ||
-        $packageId <= 0 ||
+        ($packageId <= 0 && !$isCustomOther) ||
         $method === '' ||
         !in_array($sourceTable, $allowedTables, true) ||
         !is_array($items) ||
@@ -554,6 +585,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
                         $pkgTitle = (string)$pkg['title'];
                     }
                 }
+            } elseif ($otherServiceNameRecord !== '') {
+                $pkgTitle = $otherServiceNameRecord;
             }
 
             $emailSent = sendStripePaymentEmail(
@@ -593,7 +626,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
  ***********************/
 $data = http_build_query([
     "amount" => $AMOUNT,
-    "currency" => "eur",
+    "currency" => strtolower($currency ?: 'eur'),
     "payment_method_types[]" => "card",
     "description" => $description,
     "metadata[student_id]" => $student_id,
@@ -1015,7 +1048,8 @@ async function recordPayment(paymentIntent) {
             items: items,
             stripe_payment_intent_id: paymentIntent.id,
             amount: <?= $total_amount ?>,
-            currency: '<?= $currency ?>'
+            currency: '<?= $currency ?>',
+            other_service_name: <?= json_encode($other_service_name) ?>
         })
     });
     

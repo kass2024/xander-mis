@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_student'])) 
     
     if ($first_name && $last_name && $email && $phone_number) {
         require_once __DIR__ . '/helpers/application_spam_guard.php';
-        $spamVerdict = pcvc_spam_check_post([
+        $spamVerdict = pcvc_spam_check_payment_customer([
             'first_name' => $first_name,
             'last_name' => $last_name,
             'email' => $email,
@@ -21,7 +21,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_student'])) 
             'phone_number' => $phone_number,
         ]);
         if ($spamVerdict['is_spam']) {
-            header('Location: payment-complete.php?error=' . urlencode('Registration blocked. Please use your real name and a valid personal email.'));
+            $msg = trim((string) ($spamVerdict['reason'] ?? ''));
+            if ($msg === '') {
+                $msg = 'Could not create account. Check your name, email, and phone.';
+            }
+            header('Location: payment-complete.php?error=' . urlencode($msg));
             exit();
         }
 

@@ -52,6 +52,7 @@ if (!file_exists(__DIR__ . '/db.php')) {
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers/payment_config.php';
 require_once __DIR__ . '/helpers/mailer.php';
+require_once __DIR__ . '/helpers/phone_utils.php';
 
 if (!class_exists('mysqli')) {
     if (!headers_sent()) {
@@ -1052,12 +1053,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_student'])) 
     $first_name = trim($_POST['first_name'] ?? '');
     $last_name = trim($_POST['last_name'] ?? '');
     $email = trim($_POST['email'] ?? '');
-    $phone_number = trim($_POST['phone_number'] ?? '');
+    $phone_number = pcvc_normalize_national_phone(trim($_POST['phone_number'] ?? ''));
     $area_code = trim($_POST['area_code'] ?? '');
     
-    if ($first_name && $last_name && $email && $phone_number && $area_code) {
+    if ($first_name && $last_name && $email && $phone_number !== '' && $area_code) {
+        $phoneError = pcvc_validate_national_phone($phone_number, $area_code);
+        if ($phoneError !== null) {
+            header('Location: payment.php?error=' . urlencode($phoneError));
+            exit();
+        }
+
         require_once __DIR__ . '/helpers/application_spam_guard.php';
-        $spamVerdict = pcvc_spam_check_post([
+        $spamVerdict = pcvc_spam_check_payment_customer([
             'first_name' => $first_name,
             'last_name' => $last_name,
             'email' => $email,
@@ -1065,19 +1072,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_student'])) 
             'phone_number' => $phone_number,
         ]);
         if ($spamVerdict['is_spam']) {
-            header('Location: payment.php?error=' . urlencode('Registration blocked. Please use your real name and a valid personal email.'));
+            $msg = trim((string) ($spamVerdict['reason'] ?? ''));
+            if ($msg === '') {
+                $msg = 'Could not create account. Check your name, email, and phone.';
+            }
+            header('Location: payment.php?error=' . urlencode($msg));
             exit();
         }
 
-        // Check if email already exists
-        $stmt = $conn->prepare("SELECT id FROM student_applications WHERE email = ?");
-        $stmt->bind_param('s', $email);
+        $emailNorm = strtolower($email);
+        $stmt = $conn->prepare('SELECT id FROM student_applications WHERE LOWER(TRIM(email)) = ? LIMIT 1');
+        $stmt->bind_param('s', $emailNorm);
         $stmt->execute();
         $existing = stmt_fetch_assoc($stmt);
         $stmt->close();
-        
+
         if ($existing) {
-            header("Location: payment.php?error=" . urlencode('Email already registered. Please search for your existing account.'));
+            header('Location: payment.php?student_id=' . (int) $existing['id']);
             exit();
         }
         
@@ -1130,32 +1141,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_payment'])) {
             exit();
         }
 
-        $package_id = (int)($_POST['package_id'] ?? 0);
+        $package_id_raw = (string) ($_POST['package_id'] ?? '');
+        $is_other_package = ($package_id_raw === 'other');
+        $package_id = $is_other_package ? 0 : (int) $package_id_raw;
         $selected_items = $_POST['selected_items'] ?? [];
         $item_amounts = $_POST['item_amount'] ?? [];
         $payment_method = (string)($_POST['payment_method'] ?? 'stripe');
+        $other_service_name = trim((string) ($_POST['other_service_name'] ?? ''));
+        $other_service_amount = (float) ($_POST['other_service_amount'] ?? 0);
+        $other_currency = strtoupper(trim((string) ($_POST['other_currency'] ?? 'USD')));
 
-        if ($package_id > 0 && !empty($selected_items)) {
-            $items_data = [];
-            $total = 0;
+        $items_data = [];
+        $total = 0;
+        $package_currency = 'USD';
 
+        if ($is_other_package) {
+            $other_names = $_POST['other_service_name'] ?? [];
+            $other_amounts = $_POST['other_service_amount'] ?? [];
+            if (!is_array($other_names)) {
+                $other_names = $other_names !== '' ? [$other_names] : [];
+            }
+            if (!is_array($other_amounts)) {
+                $other_amounts = [$other_amounts];
+            }
+
+            $other_labels = [];
+            foreach ($other_names as $idx => $rawName) {
+                $name = trim((string) $rawName);
+                $amt = isset($other_amounts[$idx]) ? (float) $other_amounts[$idx] : 0;
+                if ($name === '' || $amt <= 0) {
+                    continue;
+                }
+                $items_data['other:' . $name] = round($amt, 2);
+                $total += round($amt, 2);
+                $other_labels[] = $name;
+            }
+
+            if (empty($items_data)) {
+                header('Location: payment.php?student_id=' . $student_id . '&error=' . urlencode('Add at least one service with a name and amount greater than zero.'));
+                exit();
+            }
+
+            $allowedCurrencies = ['USD', 'EUR', 'RWF'];
+            if (!in_array($other_currency, $allowedCurrencies, true)) {
+                $other_currency = 'USD';
+            }
+            $other_service_name = implode(', ', $other_labels);
+            $package_currency = $other_currency;
+        } elseif ($package_id > 0 && !empty($selected_items)) {
             foreach ($selected_items as $item_id) {
-                $amount = isset($item_amounts[$item_id]) ? (float)$item_amounts[$item_id] : 0;
+                $amount = isset($item_amounts[$item_id]) ? (float) $item_amounts[$item_id] : 0;
                 if ($amount > 0) {
                     $items_data[$item_id] = $amount;
                     $total += $amount;
                 }
             }
+        }
 
-            if ($total > 0) {
-                $items_json = json_encode($items_data);
+        if ($total > 0 && ($is_other_package || $package_id > 0)) {
+            $items_json = json_encode($items_data);
 
-                $package_currency = 'USD';
-                $stmt = $conn->prepare("SELECT currency FROM fee_packages WHERE id = ? LIMIT 1");
+            if (!$is_other_package) {
+                $stmt = $conn->prepare('SELECT currency FROM fee_packages WHERE id = ? LIMIT 1');
                 if (!$stmt) {
                     $msg = 'Database error while reading package currency.';
-                    if ($debug_mode) $msg .= ' ' . mysqli_error($conn);
-                    header("Location: payment.php?student_id=$student_id&error=" . urlencode($msg));
+                    if ($debug_mode) {
+                        $msg .= ' ' . mysqli_error($conn);
+                    }
+                    header('Location: payment.php?student_id=' . $student_id . '&error=' . urlencode($msg));
                     exit();
                 }
                 $stmt->bind_param('i', $package_id);
@@ -1164,13 +1217,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_payment'])) {
                 $stmt->close();
 
                 if (!$pkgRow) {
-                    header("Location: payment.php?student_id=$student_id&error=" . urlencode('Selected package not found. Please choose another package.'));
+                    header('Location: payment.php?student_id=' . $student_id . '&error=' . urlencode('Selected package not found. Please choose another package.'));
                     exit();
                 }
 
                 if (!empty($pkgRow['currency'])) {
-                    $package_currency = (string)$pkgRow['currency'];
+                    $package_currency = (string) $pkgRow['currency'];
                 }
+            }
 
                 if ($payment_method === 'momo') {
                     $stmt = $conn->prepare("SELECT first_name, last_name, email, area_code, phone_number FROM student_applications WHERE id = ? LIMIT 1");
@@ -1225,15 +1279,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_payment'])) {
                     exit();
                 }
 
-                header("Location: stripe-payment.php?student_id=$student_id&package_id=$package_id&payment_method=$payment_method&currency=$package_currency&items=" . urlencode($items_json));
+                $stripeUrl = 'stripe-payment.php?student_id=' . $student_id
+                    . '&package_id=' . $package_id
+                    . '&payment_method=' . rawurlencode($payment_method)
+                    . '&currency=' . rawurlencode($package_currency)
+                    . '&items=' . urlencode($items_json);
+                if ($is_other_package) {
+                    $stripeUrl .= '&other_service_name=' . rawurlencode($other_service_name);
+                }
+                header('Location: ' . $stripeUrl);
                 exit();
-            }
+        }
 
-            header("Location: payment.php?student_id=$student_id&error=" . urlencode('Please select at least one item with amount greater than 0.'));
+        if ($is_other_package || $package_id > 0) {
+            header('Location: payment.php?student_id=' . $student_id . '&error=' . urlencode('Please select at least one item with amount greater than 0.'));
             exit();
         }
 
-        header("Location: payment.php?student_id=$student_id&error=" . urlencode('Please select a package and at least one item.'));
+        header('Location: payment.php?student_id=' . $student_id . '&error=' . urlencode('Please select a package or choose Other and enter service details.'));
         exit();
     } catch (\Throwable $e) {
         error_log('process_payment failed: ' . $e->getMessage());
@@ -1682,38 +1745,54 @@ $prefillSrcAmount = (string)($_GET['src_amount'] ?? '');
             <div class="dashboard-card">
                 <div class="card-header">
                     <h2><i class="fas fa-user-graduate"></i> Customer Verification</h2>
-                    <p class="card-subtitle">To proceed with your payment, you can either create a new account or search for an existing one.</p>
+                    <p class="card-subtitle">Search for your account by name, email, or phone. If you are not in our system yet, complete the form below and we will create your profile automatically.</p>
                 </div>
                 
-                <div class="card-body">
-                    <!-- Mode Toggle Buttons (styled consistently) -->
-                    <div class="customer-mode-toggle">
-                        <button type="button" id="mode-create" class="mode-btn active">
+                <div class="card-body unified-customer-flow">
+                    <div class="smart-search-block">
+                        <label for="search-input" class="search-label">
+                            <i class="fas fa-search"></i> Find your account
+                        </label>
+                        <div class="search-container">
+                            <div class="input-with-icon">
+                                <i class="fas fa-search input-icon"></i>
+                                <input type="text"
+                                       id="search-input"
+                                       placeholder="Type your name, email, or phone number..."
+                                       autocomplete="off"
+                                       class="search-input">
+                            </div>
+                            <div id="search-results" class="search-results"></div>
+                        </div>
+                        <p class="input-hint"><i class="fas fa-info-circle"></i> Select a match to continue, or register below if you are new.</p>
+
+                        <form method="POST" id="student-search-form" class="search-form" style="display:none;">
+                            <input type="hidden" name="select_student" value="1">
+                            <input type="hidden" name="student_id" id="selected-student-id" value="">
+                        </form>
+
+                        <div id="search-no-match" class="search-no-match-prompt" style="display:none;">
                             <i class="fas fa-user-plus"></i>
-                            <span>Create as New Customer</span>
-                        </button>
-                        <button type="button" id="mode-search" class="mode-btn">
-                            <i class="fas fa-search"></i>
-                            <span>Search Existing Customer</span>
-                        </button>
+                            <p>No matching account found. Enter your details below to create one and continue.</p>
+                            <button type="button" class="btn btn-outline btn-sm" id="scroll-to-register-btn">
+                                Fill registration form
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Registration / Create Section (default visible) -->
-                    <div id="create-section" class="create-section">
-                        <div class="divider">
-                            <span>OR</span>
-                        </div>
-                        
-                        <div class="create-prompt">
+                    <div class="divider unified-divider"><span>New customer</span></div>
+
+                    <div id="register-panel" class="register-panel">
+                        <div class="create-prompt compact">
                             <div class="prompt-icon">
                                 <i class="fas fa-user-plus"></i>
                             </div>
                             <div class="prompt-content">
-                                <h4>Create as New Customer</h4>
-                                <p>New here? Fill in your details to create an account and continue.</p>
+                                <h4>Your details</h4>
+                                <p>We will save your profile and take you to package selection.</p>
                             </div>
                         </div>
-                        
+
                         <form method="POST" id="registration-form" class="registration-form">
                             <input type="hidden" name="register_student" value="1">
                             
@@ -1787,8 +1866,11 @@ $prefillSrcAmount = (string)($_GET['src_amount'] ?? '');
                                            name="phone_number" 
                                            id="phone_number" 
                                            required 
-                                           placeholder="Enter Your Phone Number"
-                                           class="form-control">
+                                           placeholder="e.g. 780123456 (without +250)"
+                                           class="form-control"
+                                           inputmode="numeric"
+                                           autocomplete="tel-national">
+                                    <small class="form-help" id="phone-number-hint">Enter your mobile number without the country code.</small>
                                 </div>
                             </div>
                             
@@ -1800,46 +1882,6 @@ $prefillSrcAmount = (string)($_GET['src_amount'] ?? '');
                         </form>
                     </div>
 
-                    <!-- Live Search Section (hidden until Search tab is clicked) -->
-                    <div class="search-section" id="search-section" style="display: none;">
-                        <h3>
-                            <i class="fas fa-search"></i>
-                            Type Your Email, Phone Number, or Full Name to Proceed
-                        </h3>
-
-                        <p class="section-description">
-                            Start typing to search for an existing account using your name, email, or phone number.
-                            If you are not registered, please switch to "Create as New Customer".
-                        </p>
-
-                        <form method="POST" id="student-search-form" class="search-form">
-                            <input type="hidden" name="select_student" value="1">
-                            <input type="hidden" name="student_id" id="selected-student-id" value="">
-                            
-                            <div class="form-group">
-                                <div class="search-container">
-                                    <div class="input-with-icon">
-                                        <i class="fas fa-search input-icon"></i>
-                                        <input type="text" 
-                                               id="search-input" 
-                                               placeholder="Type student name, email, or phone..." 
-                                               autocomplete="off"
-                                               class="search-input">
-                                    </div>
-                                    <div id="search-results" class="search-results"></div>
-                                </div>
-                                <div class="input-hint">
-                                    <i class="fas fa-info-circle"></i> Search by name, email, or phone number
-                                </div>
-                            </div>
-                            
-                            <div class="form-actions">
-                                <button type="submit" class="btn btn-primary" id="select-btn" disabled>
-                                    <i class="fas fa-user-check"></i> Select Student
-                                </button>
-                            </div>
-                        </form>
-                    </div>
                 </div>
             </div>
         <?php else: ?>
@@ -1917,10 +1959,11 @@ $prefillSrcAmount = (string)($_GET['src_amount'] ?? '');
                                                 - <?= $package['currency'] ?> <?= number_format($package['total_amount'], 2) ?>
                                             </option>
                                         <?php endforeach; ?>
+                                        <option value="other">Other (service not listed)</option>
                                     </select>
                                     <i class="fas fa-chevron-down select-icon"></i>
                                 </div>
-                                <small class="form-help">Choose the package that best fits your needs</small>
+                                <small class="form-help">Choose a package or select Other to enter a custom service and amount</small>
                             </div>
                             
                             <!-- Package Info (shown when package is selected) -->
@@ -2061,40 +2104,45 @@ $prefillSrcAmount = (string)($_GET['src_amount'] ?? '');
 const feeItemsData = <?= json_encode($fee_items) ?>;
 const packagesData = <?= json_encode($packages_summary) ?>;
 
-// Mode Toggle Functionality
 document.addEventListener('DOMContentLoaded', function() {
-    const modeCreate = document.getElementById('mode-create');
-    const modeSearch = document.getElementById('mode-search');
-    const createSection = document.getElementById('create-section');
-    const searchSection = document.getElementById('search-section');
+    const searchNoMatch = document.getElementById('search-no-match');
+    const scrollToRegisterBtn = document.getElementById('scroll-to-register-btn');
+    const registerPanel = document.getElementById('register-panel');
 
-    if (modeCreate && modeSearch && createSection && searchSection) {
-        // Function to switch mode
-        function setMode(mode) {
-            if (mode === 'create') {
-                modeCreate.classList.add('active');
-                modeSearch.classList.remove('active');
-                createSection.style.display = 'block';
-                searchSection.style.display = 'none';
-            } else {
-                modeSearch.classList.add('active');
-                modeCreate.classList.remove('active');
-                searchSection.style.display = 'block';
-                createSection.style.display = 'none';
-                // Optional: focus search input
-                document.getElementById('search-input')?.focus();
-            }
+    function prefillRegisterFromQuery(query) {
+        if (!query) return;
+        const emailEl = document.getElementById('reg-email');
+        const firstEl = document.getElementById('first_name');
+        const lastEl = document.getElementById('last_name');
+        const phoneEl = document.getElementById('phone_number');
+        if (query.includes('@') && emailEl && !emailEl.value) {
+            emailEl.value = query;
+            return;
         }
-
-        modeCreate.addEventListener('click', () => setMode('create'));
-        modeSearch.addEventListener('click', () => setMode('search'));
+        const digits = query.replace(/\D/g, '');
+        if (digits.length >= 8 && phoneEl && !phoneEl.value) {
+            phoneEl.value = digits;
+            return;
+        }
+        const parts = query.split(/\s+/).filter(Boolean);
+        if (parts.length >= 2) {
+            if (firstEl && !firstEl.value) firstEl.value = parts[0];
+            if (lastEl && !lastEl.value) lastEl.value = parts.slice(1).join(' ');
+        } else if (parts.length === 1 && firstEl && !firstEl.value) {
+            firstEl.value = parts[0];
+        }
     }
 
-    // Live Search Functionality
+    if (scrollToRegisterBtn && registerPanel) {
+        scrollToRegisterBtn.addEventListener('click', () => {
+            registerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            document.getElementById('first_name')?.focus();
+        });
+    }
+
     let searchTimeout;
     const searchInput = document.getElementById('search-input');
     const searchResults = document.getElementById('search-results');
-    const selectBtn = document.getElementById('select-btn');
     const selectedStudentId = document.getElementById('selected-student-id');
 
     if (searchInput && searchResults) {
@@ -2104,8 +2152,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (query.length < 2) {
                 searchResults.innerHTML = '';
-                selectBtn.disabled = true;
-                selectedStudentId.value = '';
+                if (searchNoMatch) searchNoMatch.style.display = 'none';
+                if (selectedStudentId) selectedStudentId.value = '';
                 return;
             }
             
@@ -2135,12 +2183,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function displaySearchResults(students) {
+        const query = searchInput ? searchInput.value.trim() : '';
         if (!students || students.length === 0) {
-            searchResults.innerHTML = '<div class="search-no-results"><i class="fas fa-search"></i> No students found matching your search.</div>';
-            selectBtn.disabled = true;
-            selectedStudentId.value = '';
+            searchResults.innerHTML = '';
+            if (searchNoMatch) searchNoMatch.style.display = 'block';
+            if (selectedStudentId) selectedStudentId.value = '';
+            prefillRegisterFromQuery(query);
             return;
         }
+
+        if (searchNoMatch) searchNoMatch.style.display = 'none';
         
         let html = '<div class="search-results-list">';
         students.forEach(student => {
@@ -2175,18 +2227,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     window.selectStudent = function(studentId, email, firstName, lastName) {
-        searchInput.value = `${firstName} ${lastName} (${email})`;
-        selectedStudentId.value = studentId;
+        if (searchInput) {
+            searchInput.value = `${firstName} ${lastName} (${email})`;
+        }
+        if (selectedStudentId) selectedStudentId.value = studentId;
         searchResults.innerHTML = '';
-        selectBtn.disabled = false;
-        
-        selectBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Selecting...';
-        selectBtn.disabled = true;
-        
+        if (searchNoMatch) searchNoMatch.style.display = 'none';
+
         const form = document.getElementById('student-search-form');
-        setTimeout(() => {
-            form.submit();
-        }, 100);
+        if (!form) return;
+        setTimeout(() => form.submit(), 100);
     };
 
     // Payment method selection
@@ -2203,33 +2253,79 @@ document.addEventListener('DOMContentLoaded', function() {
         methodOptions[0].classList.add('active');
     }
     
-    // Form validation for registration
+    function normalizePhoneDigits(raw) {
+        return String(raw || '').replace(/\D/g, '').replace(/^0+/, '');
+    }
+
+    function validateRegistrationPhone(digits, areaCode) {
+        const ac = String(areaCode || '').replace(/\D/g, '');
+        if (!digits) {
+            return 'Enter your phone number.';
+        }
+        if (ac === '250') {
+            if (digits.length !== 9) {
+                return 'Rwanda numbers are 9 digits without +250 (e.g. 780123456).';
+            }
+            if (digits.charAt(0) !== '7') {
+                return 'Rwanda mobile numbers start with 7.';
+            }
+            return null;
+        }
+        if (ac === '1' && digits.length !== 10) {
+            return 'US/Canada numbers are 10 digits without the country code.';
+        }
+        if (digits.length < 7 || digits.length > 15) {
+            return 'Enter 7–15 digits (national number only, without country code).';
+        }
+        return null;
+    }
+
+    function updatePhoneHint() {
+        const hint = document.getElementById('phone-number-hint');
+        const areaSelect = document.getElementById('area_code');
+        if (!hint || !areaSelect) return;
+        const ac = String(areaSelect.value || '').replace(/\D/g, '');
+        if (ac === '250') {
+            hint.textContent = 'Rwanda: 9 digits, no +250 (e.g. 780699435).';
+        } else if (ac === '1') {
+            hint.textContent = 'US/Canada: 10 digits without +1.';
+        } else {
+            hint.textContent = 'Enter your mobile number without the country code (7–15 digits).';
+        }
+    }
+
+    const areaCodeSelect = document.getElementById('area_code');
+    if (areaCodeSelect) {
+        areaCodeSelect.addEventListener('change', updatePhoneHint);
+        updatePhoneHint();
+    }
+
     const registrationForm = document.getElementById('registration-form');
     if (registrationForm) {
         registrationForm.addEventListener('submit', function(e) {
             const phoneInput = document.getElementById('phone_number');
-            const phoneValue = phoneInput.value.trim();
-            
-            if (!/^\d{10,15}$/.test(phoneValue)) {
+            const areaSelect = document.getElementById('area_code');
+            if (!phoneInput) return true;
+
+            const digits = normalizePhoneDigits(phoneInput.value);
+            phoneInput.value = digits;
+
+            const err = validateRegistrationPhone(digits, areaSelect ? areaSelect.value : '');
+            if (err) {
                 e.preventDefault();
-                showMessage('Please enter a valid phone number (10-15 digits, numbers only).', 'warning');
+                showMessage(err, 'warning');
                 phoneInput.focus();
                 return false;
             }
-            
-            // Area code is now a dropdown, so it will always be valid if selected.
-            // We only need to ensure it's not empty (already handled by 'required' attribute)
-            
             return true;
         });
     }
-    
-    // Phone number formatting
+
     const phoneInput = document.getElementById('phone_number');
     if (phoneInput) {
         phoneInput.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            if (value.length > 15) value = value.substr(0, 15);
+            let value = normalizePhoneDigits(e.target.value);
+            if (value.length > 15) value = value.slice(0, 15);
             e.target.value = value;
         });
     }
@@ -2252,21 +2348,216 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+let otherPaymentListenersBound = false;
+let otherServiceRowCounter = 0;
+
+function revealFeeItemsSection(section) {
+    if (!section) return;
+    section.style.display = 'block';
+    requestAnimationFrame(() => {
+        section.style.opacity = '1';
+        section.style.transform = 'translateY(0)';
+    });
+}
+
+function hideFeeItemsSection(section) {
+    if (!section) return;
+    section.style.display = 'none';
+    section.style.opacity = '0';
+    section.style.transform = 'translateY(20px)';
+}
+
+function buildOtherServiceRow(index) {
+    return `
+        <div class="other-service-row" data-row="${index}">
+            <div class="form-grid other-service-row-grid">
+                <div class="form-group">
+                    <label>Service name <span class="required">*</span></label>
+                    <input type="text" name="other_service_name[]" class="form-control other-service-name" required placeholder="e.g. Application fee">
+                </div>
+                <div class="form-group">
+                    <label>Amount <span class="required">*</span></label>
+                    <input type="number" name="other_service_amount[]" class="form-control other-service-amount" required min="0.01" step="0.01" placeholder="0.00">
+                </div>
+            </div>
+            <button type="button" class="btn btn-outline btn-sm remove-other-service" title="Remove service" aria-label="Remove service">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>`;
+}
+
+function addOtherServiceRow(focusName) {
+    const list = document.getElementById('other-services-list');
+    if (!list) return;
+    const index = ++otherServiceRowCounter;
+    list.insertAdjacentHTML('beforeend', buildOtherServiceRow(index));
+    const rows = list.querySelectorAll('.other-service-row');
+    const row = rows[rows.length - 1];
+    updateOtherServiceRemoveButtons();
+    if (focusName) {
+        row.querySelector('.other-service-name')?.focus();
+    }
+    updateOtherPaymentTotal();
+}
+
+function updateOtherServiceRemoveButtons() {
+    const rows = document.querySelectorAll('#other-services-list .other-service-row');
+    rows.forEach((row) => {
+        const btn = row.querySelector('.remove-other-service');
+        if (btn) {
+            btn.style.display = rows.length > 1 ? 'inline-flex' : 'none';
+        }
+    });
+}
+
+function bindOtherPaymentListeners() {
+    if (otherPaymentListenersBound) {
+        updateOtherPaymentTotal();
+        return;
+    }
+    otherPaymentListenersBound = true;
+
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('#add-other-service')) {
+            e.preventDefault();
+            addOtherServiceRow(true);
+        }
+        const removeBtn = e.target.closest('.remove-other-service');
+        if (removeBtn) {
+            e.preventDefault();
+            const row = removeBtn.closest('.other-service-row');
+            const list = document.getElementById('other-services-list');
+            if (row && list && list.querySelectorAll('.other-service-row').length > 1) {
+                row.remove();
+                updateOtherServiceRemoveButtons();
+                updateOtherPaymentTotal();
+            }
+        }
+    });
+
+    document.addEventListener('input', function(e) {
+        if (!e.target) return;
+        if (e.target.classList.contains('other-service-name')
+            || e.target.classList.contains('other-service-amount')
+            || e.target.id === 'other_currency') {
+            updateOtherPaymentTotal();
+        }
+    });
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.id === 'other_currency') {
+            updateOtherPaymentTotal();
+        }
+    });
+}
+
+function updateOtherPaymentTotal() {
+    const currencySelect = document.getElementById('other_currency');
+    const submitBtn = document.getElementById('submit-btn');
+    const orderList = document.getElementById('selected-items-list');
+    if (!submitBtn) return;
+
+    const currency = currencySelect ? currencySelect.value : 'USD';
+    let total = 0;
+    let validCount = 0;
+    let orderHtml = '';
+
+    document.querySelectorAll('#other-services-list .other-service-row').forEach((row) => {
+        const name = row.querySelector('.other-service-name')?.value.trim() || '';
+        const amt = parseFloat(row.querySelector('.other-service-amount')?.value) || 0;
+        if (name !== '' && amt > 0) {
+            total += amt;
+            validCount++;
+            orderHtml += `<div class="summary-item"><span>${escapeHtml(name)}</span><span>${currency} ${amt.toFixed(2)}</span></div>`;
+        }
+    });
+
+    if (orderList) {
+        orderList.innerHTML = orderHtml || '<p class="text-muted">Add services above to see your order.</p>';
+    }
+
+    const totalEl = document.getElementById('total-amount');
+    if (totalEl) {
+        totalEl.textContent = `${currency} ${total.toFixed(2)}`;
+    }
+    const remainingEl = document.getElementById('remaining-amount');
+    if (remainingEl) {
+        remainingEl.textContent = validCount > 0
+            ? `${validCount} custom service${validCount > 1 ? 's' : ''}`
+            : 'Enter service name(s) and amount(s)';
+    }
+    const pkgRemainingEl = document.getElementById('package-remaining');
+    if (pkgRemainingEl) {
+        pkgRemainingEl.textContent = 'N/A';
+    }
+
+    submitBtn.disabled = validCount === 0;
+    const span = submitBtn.querySelector('span');
+    if (span) {
+        span.textContent = validCount > 0
+            ? `Pay ${currency} ${total.toFixed(2)}`
+            : 'Proceed to Secure Payment';
+    }
+}
+
 // Fee items functions (loadFeeItems, toggleFeeItem, updateAmount, etc.)
 function loadFeeItems(packageId) {
     const feeItemsSection = document.getElementById('fee-items-section');
     const feeItemsList = document.getElementById('fee-items-list');
     const submitBtn = document.getElementById('submit-btn');
-    const packageSelect = document.getElementById('package-select');
     const packageInfo = document.getElementById('package-info');
     const selectedSummary = document.getElementById('selected-summary');
     
     if (!packageId) {
-        feeItemsSection.style.display = 'none';
+        hideFeeItemsSection(feeItemsSection);
         packageInfo.style.display = 'none';
         selectedSummary.style.display = 'none';
-        submitBtn.disabled = true;
+        if (submitBtn) submitBtn.disabled = true;
+        const defaultHeaderClear = feeItemsSection.querySelector('.section-header');
+        if (defaultHeaderClear) defaultHeaderClear.style.display = '';
         return;
+    }
+
+    if (packageId === 'other') {
+        packageInfo.style.display = 'none';
+        selectedSummary.style.display = 'none';
+        const defaultHeader = feeItemsSection.querySelector('.section-header');
+        if (defaultHeader) {
+            defaultHeader.style.display = 'none';
+        }
+        otherServiceRowCounter = 0;
+        feeItemsList.innerHTML = `
+            <div class="other-service-panel">
+                <div class="section-header">
+                    <h4><i class="fas fa-hand-holding-usd"></i> Unlisted services</h4>
+                    <p class="section-description">Add one or more services with name and price. Use the button below to add more lines.</p>
+                </div>
+                <div class="form-group">
+                    <label for="other_currency"><i class="fas fa-coins"></i> Currency <span class="required">*</span></label>
+                    <select name="other_currency" id="other_currency" class="form-control" required>
+                        <option value="USD">USD — US Dollar</option>
+                        <option value="EUR">EUR — Euro</option>
+                        <option value="RWF">RWF — Rwandan Franc</option>
+                    </select>
+                </div>
+                <div id="other-services-list" class="other-services-list"></div>
+                <button type="button" class="btn btn-outline" id="add-other-service">
+                    <i class="fas fa-plus"></i> Add another service
+                </button>
+            </div>`;
+        const list = document.getElementById('other-services-list');
+        if (list) {
+            list.innerHTML = buildOtherServiceRow(++otherServiceRowCounter);
+        }
+        revealFeeItemsSection(feeItemsSection);
+        bindOtherPaymentListeners();
+        updateOtherServiceRemoveButtons();
+        updateOtherPaymentTotal();
+        return;
+    }
+
+    const defaultHeaderRestore = feeItemsSection.querySelector('.section-header');
+    if (defaultHeaderRestore) {
+        defaultHeaderRestore.style.display = '';
     }
     
     const package = packagesData[packageId];
@@ -2867,7 +3158,96 @@ body {
     }
 }
 
-/* Mode Toggle Buttons */
+/* Unified customer verification */
+.unified-customer-flow .search-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--dark);
+}
+
+.unified-customer-flow .search-label i {
+    color: var(--primary);
+    margin-right: 6px;
+}
+
+.search-no-match-prompt {
+    margin-top: 16px;
+    padding: 16px 18px;
+    border-radius: var(--radius-sm);
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e3a5f;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.search-no-match-prompt i {
+    font-size: 1.25rem;
+    color: var(--primary);
+}
+
+.search-no-match-prompt p {
+    flex: 1 1 200px;
+    margin: 0;
+}
+
+.unified-divider {
+    margin: 28px 0 22px;
+}
+
+.register-panel .create-prompt.compact {
+    margin-bottom: 20px;
+}
+
+.other-service-panel {
+    padding: 8px 0 4px;
+}
+
+.other-service-panel .section-header h4 {
+    margin-bottom: 6px;
+}
+
+.other-services-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.other-service-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: #f8fafc;
+}
+
+.other-service-row-grid {
+    flex: 1;
+    margin: 0;
+}
+
+.other-service-row .remove-other-service {
+    flex-shrink: 0;
+    align-self: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#add-other-service {
+    margin-top: 4px;
+}
+
+/* Mode Toggle Buttons (legacy) */
 .customer-mode-toggle {
     display: flex;
     gap: 15px;

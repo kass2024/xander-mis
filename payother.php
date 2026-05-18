@@ -1,4 +1,7 @@
 <?php
+header('Location: payment.php', true, 302);
+exit;
+
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers/payment_config.php';
 

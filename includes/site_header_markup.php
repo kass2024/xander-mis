@@ -68,17 +68,7 @@
 
     <div class="header-row header-row-sub">
       <a href="https://elearning.xanderglobalscholars.com/" target="_blank" rel="noopener noreferrer"><?php echo ht('nav_elearning'); ?></a>
-      <div class="hdr-sub-dropdown hdr-dropdown" data-dropdown>
-        <button type="button" class="hdr-sub-trigger hdr-sub-link" data-dropdown-toggle aria-expanded="false">
-          <i class="fas fa-credit-card" aria-hidden="true"></i>
-          <?php echo ht('nav_payment'); ?>
-          <i class="fas fa-chevron-down" style="font-size:0.65rem" aria-hidden="true"></i>
-        </button>
-        <div class="hdr-dropdown-menu" role="menu">
-          <a href="payment.php" role="menuitem"><i class="fas fa-file-invoice-dollar"></i> <?php echo ht('nav_pay_service'); ?></a>
-          <a href="payother.php" role="menuitem"><i class="fas fa-hand-holding-usd"></i> <?php echo ht('nav_other_payment'); ?></a>
-        </div>
-      </div>
+      <a href="payment.php" class="hdr-sub-link"><i class="fas fa-credit-card" aria-hidden="true"></i> <?php echo ht('nav_payment'); ?></a>
     </div>
 
     <nav id="mobileNavPanel" class="mobile-nav-panel" aria-label="<?php echo htmlspecialchars($current_lang === 'fr' ? 'Menu mobile' : 'Mobile menu', ENT_QUOTES, 'UTF-8'); ?>">

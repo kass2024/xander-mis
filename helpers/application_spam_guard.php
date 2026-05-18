@@ -405,6 +405,54 @@ function pcvc_spam_evaluate(array $fields, bool $useAi = true, bool $trustExtrac
  * @param array<string, mixed> $post
  * @return array{is_spam: bool, reason: string, method: string}
  */
+/**
+ * Lightweight check for payment portal quick customer registration (no AI / random-name blocks).
+ *
+ * @param array<string, mixed> $post
+ * @return array{is_spam: bool, reason: string, method: string, confidence: int}
+ */
+function pcvc_spam_check_payment_customer(array $post): array
+{
+    $fields = pcvc_spam_fields_from_post($post);
+    $email = $fields['email'] ?? '';
+    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return [
+            'is_spam' => true,
+            'reason' => 'A valid email address is required.',
+            'method' => 'payment_email',
+            'confidence' => 100,
+        ];
+    }
+
+    $heuristic = pcvc_spam_heuristic_verdict($fields, true);
+    if ($heuristic !== null && !empty($heuristic['is_spam'])) {
+        return [
+            'is_spam' => true,
+            'reason' => (string) ($heuristic['reason'] ?? 'Email not allowed.'),
+            'method' => (string) ($heuristic['method'] ?? 'payment_heuristic'),
+            'confidence' => 100,
+        ];
+    }
+
+    $first = trim((string) ($fields['first_name'] ?? ''));
+    $last = trim((string) ($fields['last_name'] ?? ''));
+    if ($first === '' || $last === '' || mb_strlen($first) < 2 || mb_strlen($last) < 2) {
+        return [
+            'is_spam' => true,
+            'reason' => 'Please enter your real first and last name.',
+            'method' => 'payment_name',
+            'confidence' => 100,
+        ];
+    }
+
+    return [
+        'is_spam' => false,
+        'reason' => '',
+        'method' => 'payment_portal_ok',
+        'confidence' => 0,
+    ];
+}
+
 function pcvc_spam_check_post(array $post, ?mysqli $conn = null): array
 {
     $trustNames = pcvc_spam_trust_extracted_names($post, $conn);
