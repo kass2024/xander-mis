@@ -22,13 +22,7 @@ db.php
 database.php
 helpers/db.php
 
-# Stripe (keys still hardcoded — migrate to .env later)
-stripe-payment.php
-process-stripe-payment.php
-Stripe-check_transactions.php
-payment-success.php
-create-payment-intent.php
-strip-test.php
+# Payment secrets live in .env — PHP files below are safe to commit (no keys in code)
 
 # Logs & temp
 *.log

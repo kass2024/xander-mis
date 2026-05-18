@@ -605,7 +605,17 @@ function sendRegistrationConfirmation($studentId, $firstName, $lastName, $email,
     global $phpmailer_available;
     if (!$phpmailer_available) return false;
     try {
-        $mail = app_mailer();
+        $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+        $mail->isSMTP();
+        $mail->Host       = 'xanderglobalscholars.com';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = 'admissions@xanderglobalscholars.com';
+        $mail->Password   = 'Xander2026$';
+        $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
+        $mail->Port       = 465;
+        $mail->CharSet = 'UTF-8';
+        $mail->isHTML(true);
+        $mail->setFrom('admissions@xanderglobalscholars.com', 'Xander Global Scholars');
         $mail->addAddress($email, trim($firstName . ' ' . $lastName));
         $mail->Subject = 'Welcome to Xander Global Scholars – Registration Confirmed';
 
@@ -1046,6 +1056,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_student'])) 
     $area_code = trim($_POST['area_code'] ?? '');
     
     if ($first_name && $last_name && $email && $phone_number && $area_code) {
+        require_once __DIR__ . '/helpers/application_spam_guard.php';
+        $spamVerdict = pcvc_spam_check_post([
+            'first_name' => $first_name,
+            'last_name' => $last_name,
+            'email' => $email,
+            'area_code' => $area_code,
+            'phone_number' => $phone_number,
+        ]);
+        if ($spamVerdict['is_spam']) {
+            header('Location: payment.php?error=' . urlencode('Registration blocked. Please use your real name and a valid personal email.'));
+            exit();
+        }
+
         // Check if email already exists
         $stmt = $conn->prepare("SELECT id FROM student_applications WHERE email = ?");
         $stmt->bind_param('s', $email);
@@ -1229,7 +1252,7 @@ $fee_items = [];
 $packages_summary = [];
 
 if (!$momo_mode) {
-    $packages_result = $conn->query("SELECT * FROM fee_packages ORDER BY title ASC");
+    $packages_result = $conn->query("SELECT * FROM fee_packages ORDER BY display_order ASC, id ASC");
     if (!$packages_result) {
         error_log('Failed to fetch packages: ' . $conn->error);
         $registration_error = $debug_mode

@@ -16,20 +16,6 @@ if ($debug_mode) {
     error_reporting(E_ALL);
 }
 
-if (strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'GET') {
-    $ref = trim((string)($_GET['req_ref'] ?? ($_GET['ref'] ?? '')));
-    if ($ref !== '') {
-        $redir = xander_payment_public_url('/payment.php?momo=1&ref=' . rawurlencode($ref));
-        if ($debug_mode) {
-            $redir .= '&debug=1';
-        }
-        if (!headers_sent()) {
-            header('Location: ' . $redir);
-        }
-        exit;
-    }
-}
-
 header('Content-Type: application/json; charset=utf-8');
 
 function momo_json_response(int $code, array $payload): void
@@ -167,6 +153,9 @@ function sendMomoReceiptEmail(string $toEmail, string $toName, int $amountRwf, s
                     <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;box-shadow:0 5px 20px rgba(0,0,0,0.05);overflow:hidden;border:4px solid #1e3a5f;">
                         <tr>
                             <td style="background:linear-gradient(135deg,#1e3a5f 0%, #0f2542 100%);padding:22px 24px;text-align:center;">
+                                <div style="margin-bottom:10px;">
+                                    <img src="' . ($logoDataUri !== '' ? $logoDataUri : $logoUrl) . '" alt="Xander Global Scholars" style="height:98px;max-width:300px;width:auto;display:block;margin:0 auto;background:#ffffff;padding:8px 12px;border-radius:12px;">
+                                </div>
                                 <div style="color:#ffffff;font-weight:800;font-size:18px;letter-spacing:.2px;">Xander Global Scholars</div>
                                 <div style="color:#dbeafe;font-size:12px;margin-top:6px;">Official Payment Receipt</div>
                                 <div style="color:#dbeafe;font-size:12px;margin-top:6px;">https://xanderglobalscholars.com</div>
