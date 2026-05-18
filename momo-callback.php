@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/helpers/payment_config.php';
 
 $receipt_pdf_available = file_exists(__DIR__ . '/generateReceiptPdf.php');
 if ($receipt_pdf_available) {
@@ -15,9 +16,21 @@ if ($debug_mode) {
     error_reporting(E_ALL);
 }
 
-header('Content-Type: application/json; charset=utf-8');
+if (strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'GET') {
+    $ref = trim((string)($_GET['req_ref'] ?? ($_GET['ref'] ?? '')));
+    if ($ref !== '') {
+        $redir = xander_payment_public_url('/payment.php?momo=1&ref=' . rawurlencode($ref));
+        if ($debug_mode) {
+            $redir .= '&debug=1';
+        }
+        if (!headers_sent()) {
+            header('Location: ' . $redir);
+        }
+        exit;
+    }
+}
 
-const MOMO_CALLBACK_SECRET = 'MOMO_CB_9fA8kKx_2026_SECURE';
+header('Content-Type: application/json; charset=utf-8');
 
 function momo_json_response(int $code, array $payload): void
 {
@@ -27,7 +40,8 @@ function momo_json_response(int $code, array $payload): void
 }
 
 $secret = (string)($_GET['secret'] ?? '');
-$hasValidSecret = ($secret !== '' && hash_equals(MOMO_CALLBACK_SECRET, $secret));
+$momoCallbackSecret = xander_momo_callback_secret();
+$hasValidSecret = ($momoCallbackSecret !== '' && $secret !== '' && hash_equals($momoCallbackSecret, $secret));
 
 function stmt_fetch_assoc(mysqli_stmt $stmt): ?array
 {
@@ -153,9 +167,6 @@ function sendMomoReceiptEmail(string $toEmail, string $toName, int $amountRwf, s
                     <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;box-shadow:0 5px 20px rgba(0,0,0,0.05);overflow:hidden;border:4px solid #1e3a5f;">
                         <tr>
                             <td style="background:linear-gradient(135deg,#1e3a5f 0%, #0f2542 100%);padding:22px 24px;text-align:center;">
-                                <div style="margin-bottom:10px;">
-                                    <img src="' . ($logoDataUri !== '' ? $logoDataUri : $logoUrl) . '" alt="Xander Global Scholars" style="height:98px;max-width:300px;width:auto;display:block;margin:0 auto;background:#ffffff;padding:8px 12px;border-radius:12px;">
-                                </div>
                                 <div style="color:#ffffff;font-weight:800;font-size:18px;letter-spacing:.2px;">Xander Global Scholars</div>
                                 <div style="color:#dbeafe;font-size:12px;margin-top:6px;">Official Payment Receipt</div>
                                 <div style="color:#dbeafe;font-size:12px;margin-top:6px;">https://xanderglobalscholars.com</div>
@@ -296,7 +307,7 @@ if (!$hasValidSecret) {
     $verifyPayload = json_encode([
         'action' => 'status_check',
         'req_ref' => $reference,
-        'key' => 'eGx562IiN7y31CmZCnYgFWahrSBi/BbXSz5+6ElZvoCBtf4sYdZ2NipQ8UlKoZ0v9vH6wPtAHEjvNANLqYy3yw==',
+        'key' => xander_payment_require_momo_key(),
     ]);
 
     $verifyResp = '';
@@ -305,7 +316,7 @@ if (!$hasValidSecret) {
 
     $ch = curl_init();
     curl_setopt_array($ch, [
-        CURLOPT_URL => 'https://pay.itecpay.rw/api2/verify',
+        CURLOPT_URL => xander_momo_verify_api_url(),
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 20,
         CURLOPT_CONNECTTIMEOUT => 10,

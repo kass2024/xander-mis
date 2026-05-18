@@ -40,7 +40,7 @@ function generateReceiptPdf(string $receiptHtml, string $receiptNo): void
             $options->setHttpContext($httpContext);
 
             $dompdf = new \Dompdf\Dompdf($options);
-            $dompdf->loadHtml($receiptHtml, 'UTF-8');
+            $dompdf->loadHtml($receiptHtml);
             $dompdf->setPaper('A4', 'portrait');
             $dompdf->render();
             file_put_contents($pdfFile, $dompdf->output());
@@ -54,3 +54,4 @@ function generateReceiptPdf(string $receiptHtml, string $receiptNo): void
     file_put_contents($pdfFile . '.html', $receiptHtml);
     error_log("Receipt HTML saved (PDF lib missing): $receiptNo");
 }
+?>

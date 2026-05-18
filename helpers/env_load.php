@@ -146,6 +146,15 @@ function xander_env_get(string $key): string
             'META_GRAPH_VERSION' => true,
             'WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG' => true,
             'XANDER_AUTO_SCHEMA' => true,
+            'STRIPE_SECRET_KEY' => true,
+            'STRIPE_PUBLIC_KEY' => true,
+            'MOMO_ITECPAY_API_KEY' => true,
+            'MOMO_CALLBACK_SECRET' => true,
+            'MOMO_ITECPAY_PAY_URL' => true,
+            'MOMO_ITECPAY_VERIFY_URL' => true,
+            'SMTP_PASSWORD' => true,
+            'SMTP_HOST' => true,
+            'SMTP_USERNAME' => true,
         ];
     }
     if (isset($directKeys[$key])) {

@@ -1,5 +1,11 @@
 <?php
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/helpers/payment_config.php';
+
+$stripePublicKey = xander_stripe_public_key();
+if ($stripePublicKey === '') {
+    die('Payment is not configured. Set STRIPE_PUBLIC_KEY in .env.');
+}
 
 $pageTitle = 'International Payment Portal - Xander Global Scholars';
 include 'header.php';
@@ -415,7 +421,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <script>
 // Initialize Stripe with your publishable key
-const stripe = Stripe('pk_live_51QFHH407kiMzoDBYPoHleRsS7DLLW2ht2nvv2Xh4Byj3jtWl2TJKVmhWWO6kombLEoPoUoESUgkRpQtR0kfao9Ns002S8xUF40');
+const stripe = Stripe(<?= json_encode($stripePublicKey, JSON_UNESCAPED_UNICODE) ?>);
 const elements = stripe.elements();
 
 // Create card elements

@@ -50,6 +50,8 @@ if (!file_exists(__DIR__ . '/db.php')) {
     die('Database configuration file (db.php) is missing.');
 }
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/helpers/payment_config.php';
+require_once __DIR__ . '/helpers/mailer.php';
 
 if (!class_exists('mysqli')) {
     if (!headers_sent()) {
@@ -166,7 +168,7 @@ if ($momo_mode && $momo_reference !== '') {
     $verifyPayload = json_encode([
         'action' => 'status_check',
         'req_ref' => $momo_reference,
-        'key' => 'eGx562IiN7y31CmZCnYgFWahrSBi/BbXSz5+6ElZvoCBtf4sYdZ2NipQ8UlKoZ0v9vH6wPtAHEjvNANLqYy3yw==',
+        'key' => xander_payment_require_momo_key(),
     ]);
 
     $verifyResp = null;
@@ -178,7 +180,7 @@ if ($momo_mode && $momo_reference !== '') {
     } else {
         $ch = curl_init();
         $opts = [
-            CURLOPT_URL => 'https://pay.itecpay.rw/api2/verify',
+            CURLOPT_URL => xander_momo_verify_api_url(),
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 20,
             CURLOPT_CONNECTTIMEOUT => 10,
@@ -298,17 +300,17 @@ if ($momo_mode && isset($_POST['btn'])) {
         $payload = json_encode([
             "amount"  => $amount,
             "phone"   => $phone,
-            "key"     => "eGx562IiN7y31CmZCnYgFWahrSBi/BbXSz5+6ElZvoCBtf4sYdZ2NipQ8UlKoZ0v9vH6wPtAHEjvNANLqYy3yw==",
+            "key"     => xander_payment_require_momo_key(),
             "req_ref" => $req_ref,
             "note"    => "Payment from $name",
             "message" => "MoMo payment for $name",
-            "callback_url" => "https://xanderglobalscholars.com/momo-callback.php?secret=" . urlencode('MOMO_CB_9fA8kKx_2026_SECURE'),
-            "return_url" => "https://xanderglobalscholars.com/payment.php?momo=1"
+            "callback_url" => xander_payment_public_url('/momo-callback.php?secret=' . rawurlencode(xander_momo_callback_secret())),
+            "return_url" => xander_payment_public_url('/payment.php?momo=1')
         ]);
 
         $curl = curl_init();
         curl_setopt_array($curl, [
-            CURLOPT_URL            => 'https://pay.itecpay.rw/api2/pay',
+            CURLOPT_URL            => xander_momo_pay_api_url(),
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 30,
             CURLOPT_FOLLOWLOCATION => true,
@@ -603,17 +605,7 @@ function sendRegistrationConfirmation($studentId, $firstName, $lastName, $email,
     global $phpmailer_available;
     if (!$phpmailer_available) return false;
     try {
-        $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
-        $mail->isSMTP();
-        $mail->Host       = 'xanderglobalscholars.com';
-        $mail->SMTPAuth   = true;
-        $mail->Username   = 'admissions@xanderglobalscholars.com';
-        $mail->Password   = 'Xander2026$';
-        $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
-        $mail->Port       = 465;
-        $mail->CharSet = 'UTF-8';
-        $mail->isHTML(true);
-        $mail->setFrom('admissions@xanderglobalscholars.com', 'Xander Global Scholars');
+        $mail = app_mailer();
         $mail->addAddress($email, trim($firstName . ' ' . $lastName));
         $mail->Subject = 'Welcome to Xander Global Scholars – Registration Confirmed';
 
@@ -724,18 +716,7 @@ function sendMomoThankYouEmail($toEmail, $toName, $amountRwf, $reference) {
     global $phpmailer_available;
     if (!$phpmailer_available || !trim($toEmail)) return false;
     try {
-        $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
-
-        $mail->isSMTP();
-        $mail->Host       = 'xanderglobalscholars.com';
-        $mail->SMTPAuth   = true;
-        $mail->Username   = 'admissions@xanderglobalscholars.com';
-        $mail->Password   = 'Xander2026$';
-        $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
-        $mail->Port       = 465;
-        $mail->CharSet = 'UTF-8';
-        $mail->isHTML(true);
-        $mail->setFrom('admissions@xanderglobalscholars.com', 'Xander Global Scholars');
+        $mail = app_mailer();
         $mail->addAddress($toEmail, $toName !== '' ? $toName : $toEmail);
 
         $logoPath = __DIR__ . '/logo.png';
@@ -831,18 +812,7 @@ function sendMomoReceiptEmail($toEmail, $toName, $amountRwf, $reference, $status
     global $phpmailer_available;
     if (!$phpmailer_available || !trim($toEmail)) return false;
     try {
-        $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
-
-        $mail->isSMTP();
-        $mail->Host       = 'xanderglobalscholars.com';
-        $mail->SMTPAuth   = true;
-        $mail->Username   = 'admissions@xanderglobalscholars.com';
-        $mail->Password   = 'Xander2026$';
-        $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
-        $mail->Port       = 465;
-        $mail->CharSet = 'UTF-8';
-        $mail->isHTML(true);
-        $mail->setFrom('admissions@xanderglobalscholars.com', 'Xander Global Scholars');
+        $mail = app_mailer();
         $mail->addAddress($toEmail, $toName !== '' ? $toName : $toEmail);
 
         $logoPath = __DIR__ . '/logo.png';
@@ -1076,19 +1046,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_student'])) 
     $area_code = trim($_POST['area_code'] ?? '');
     
     if ($first_name && $last_name && $email && $phone_number && $area_code) {
-        require_once __DIR__ . '/helpers/application_spam_guard.php';
-        $spamVerdict = pcvc_spam_check_post([
-            'first_name' => $first_name,
-            'last_name' => $last_name,
-            'email' => $email,
-            'area_code' => $area_code,
-            'phone_number' => $phone_number,
-        ]);
-        if ($spamVerdict['is_spam']) {
-            header('Location: payment.php?error=' . urlencode('Registration blocked. Please use your real name and a valid personal email.'));
-            exit();
-        }
-
         // Check if email already exists
         $stmt = $conn->prepare("SELECT id FROM student_applications WHERE email = ?");
         $stmt->bind_param('s', $email);
@@ -1272,7 +1229,7 @@ $fee_items = [];
 $packages_summary = [];
 
 if (!$momo_mode) {
-    $packages_result = $conn->query("SELECT * FROM fee_packages ORDER BY display_order ASC, id ASC");
+    $packages_result = $conn->query("SELECT * FROM fee_packages ORDER BY title ASC");
     if (!$packages_result) {
         error_log('Failed to fetch packages: ' . $conn->error);
         $registration_error = $debug_mode

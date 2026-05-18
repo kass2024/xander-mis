@@ -17,13 +17,16 @@ function app_mailer(): PHPMailer
     $mail->isSMTP();
 
     // Prefer env variables when present (works on cPanel/production).
-    $host = getenv('SMTP_HOST') ?: 'xanderglobalscholars.com';
-    $username = getenv('SMTP_USERNAME') ?: 'admissions@xanderglobalscholars.com';
-    $password = getenv('SMTP_PASSWORD') ?: 'Xander2026$';
-    $port = (int)(getenv('SMTP_PORT') ?: 465);
+    require_once __DIR__ . '/env_load.php';
+    xander_load_env_file();
 
-    $fromEmail = getenv('SMTP_FROM_EMAIL') ?: $username;
-    $fromName = getenv('SMTP_FROM_NAME') ?: 'Xander Global Scholars';
+    $host = xander_env_get('SMTP_HOST') ?: 'xanderglobalscholars.com';
+    $username = xander_env_get('SMTP_USERNAME') ?: 'admissions@xanderglobalscholars.com';
+    $password = xander_env_get('SMTP_PASSWORD');
+    $port = (int) (xander_env_get('SMTP_PORT') ?: 465);
+
+    $fromEmail = xander_env_get('SMTP_FROM_EMAIL') ?: $username;
+    $fromName = xander_env_get('SMTP_FROM_NAME') ?: 'Xander Global Scholars';
 
     $mail->Host = $host;
     $mail->SMTPAuth = true;
