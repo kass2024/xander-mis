@@ -136,7 +136,7 @@ p { text-align: justify; margin: 0 0 6pt; }
 .pdf-sig-title { font-weight: bold; margin: 0 0 4pt; font-size: 9.5pt; }
 .pdf-sig-cell p { margin: 0 0 3pt; text-align: left; }
 .pdf-sig-img { max-width: 140px; max-height: 42px; display: block; margin: 4pt 0; }
-.pdf-xander-sig-img { max-width: 180px; max-height: 48px; }
+.pdf-xander-sig-img { max-width: 220px; max-height: 90px; margin: 6pt 0; }
 .pdf-sig-line { margin: 6pt 0; }
 .pdf-contract-ref {
   text-align: center;

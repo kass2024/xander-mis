@@ -834,14 +834,15 @@ The remaining <strong>70% is non-refundable</strong> as it covers services alrea
             </p>
 
             <div style="
-                width:7cm;
-                height:3cm;
-                border-bottom:1px solid #000;
-                margin-bottom:4pt;
+                width:7.5cm;
+                height:4cm;
+                border-bottom:1.2px solid #000;
+                margin-bottom:6pt;
+                padding:4pt 0;
             ">
                 <img src="<?= $consultantSignature ?>"
-                     alt="Authorized Signature"
-                     style="width:100%; height:100%; object-fit:contain;">
+                     alt="Authorized Signature & Stamp"
+                     style="max-width:100%; max-height:100%; display:block;">
             </div>
 
             <p style="margin:0;">

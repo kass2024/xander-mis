@@ -193,8 +193,26 @@ body{
   font-size:11.5pt; padding:18pt;
   background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;
 }
-.bc-xander-sig-wrap{border-bottom:1px solid #000;min-height:48px;position:relative;max-width:300px;margin:4pt 0 8pt}
-.bc-xander-sig-img{max-height:42px;position:absolute;bottom:2px;left:0}
+.bc-xander-sig-wrap{
+  border-bottom:1.5px solid #000;
+  min-height:110px;
+  position:relative;
+  max-width:340px;
+  margin:6pt 0 10pt;
+  display:flex;
+  align-items:flex-end;
+  padding:6px 0;
+}
+.bc-xander-sig-img{
+  max-height:105px;
+  max-width:100%;
+  height:auto;
+  display:block;
+  position:relative;
+  bottom:auto; left:auto;
+  filter:contrast(1.15) saturate(1.1);
+  -webkit-filter:contrast(1.15) saturate(1.1);
+}
 .bc-sig-canvas-wrap{
   border:2px dashed #cbd5e1; height:130px;
   margin:8pt 0; border-radius:8px; background:#fff;

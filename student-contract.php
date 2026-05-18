@@ -631,12 +631,12 @@ and supersedes all prior agreements.
   <p>Name: <strong>Jean de Dieu Hakizimana</strong></p>
   <p>Title: <strong>Owner / Managing Director</strong></p>
 
-  <p>Signature:</p>
-  <div style="border-bottom:1.5px solid #000; height:48px; position:relative;">
+  <p>Stamp/Signature:</p>
+  <div style="border-bottom:1.5px solid #000; min-height:110px; max-width:340px; display:flex; align-items:flex-end; padding:6px 0; margin:6px 0 10px;">
     <img
       src="assets/signatures/xander-signature.png"
       alt="Authorized Signature"
-      style="max-height:42px; position:absolute; bottom:2px; left:0;"
+      style="max-height:105px; max-width:100%; height:auto; display:block; filter:contrast(1.15) saturate(1.1); -webkit-filter:contrast(1.15) saturate(1.1);"
     >
   </div>
 
