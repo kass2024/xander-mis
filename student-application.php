@@ -60,6 +60,9 @@ if (!empty($_GET['from_prescreen']) && !empty($_SESSION['xander_prescreen_handof
             'docs' => $handoff['docs'] ?? [],
             'prefill' => $handoff['prefill'] ?? [],
             'hints' => $handoff['hints'] ?? [],
+            'from_prescreen' => true,
+            'auto_run' => false,
+            'doc_count' => count($handoff['docs'] ?? []),
         ];
     }
 }
@@ -127,7 +130,13 @@ $text = [
         'smart_autofill_formats' => 'Supported formats: PDF, DOCX, JPG, JPEG, PNG, WEBP',
         'smart_autofill_hint' => 'Best results: upload passport, CV, and your latest academic documents together.',
         'smart_autofill_gate' => 'Choose at least one study program first. Then add the documents you want to analyze.',
-        'smart_autofill_ready' => 'Study choice selected. Add one document now, then add more later before starting the analysis manually.',
+        'smart_autofill_gate_study' => 'Choose at least one study program on step 1 before you can start analysis.',
+        'smart_autofill_gate_docs' => 'Add or wait for pre-screening documents in the queue before starting analysis.',
+        'smart_autofill_gate_both' => 'Select a study program and load documents before starting analysis.',
+        'smart_autofill_prescreen_loading' => 'Loading pre-screening documents…',
+        'smart_autofill_prescreen_no_docs' => 'No pre-screening files were stored. Use Add documents to upload them manually.',
+        'smart_autofill_prescreen_load_fail' => 'Could not load pre-screening files. Use Add documents to upload them manually.',
+        'smart_autofill_ready' => 'Study choice and documents are ready. Click Start analysis when you are ready.',
         'smart_autofill_processing' => 'Analyzing your documents and extracting student details…',
         'smart_autofill_uploading' => 'Applying extracted details and attaching the recognized documents…',
         'smart_autofill_success' => 'Autofill complete. Please review the fields before continuing.',
@@ -338,7 +347,13 @@ $text = [
         'smart_autofill_formats' => 'Formats supportés : PDF, DOCX, JPG, JPEG, PNG, WEBP',
         'smart_autofill_hint' => 'Meilleurs résultats : téléchargez ensemble le passeport, le CV et les derniers documents académiques.',
         'smart_autofill_gate' => 'Choisissez d abord au moins un programme d etudes. Ensuite, ajoutez les documents a analyser.',
-        'smart_autofill_ready' => 'Choix d etudes selectionne. Ajoutez un document maintenant puis d autres plus tard avant de lancer l analyse manuellement.',
+        'smart_autofill_gate_study' => 'Choisissez au moins un programme a l etape 1 avant de lancer l analyse.',
+        'smart_autofill_gate_docs' => 'Ajoutez ou attendez les documents de pre-depistage dans la file avant de lancer l analyse.',
+        'smart_autofill_gate_both' => 'Selectionnez un programme et chargez les documents avant de lancer l analyse.',
+        'smart_autofill_prescreen_loading' => 'Chargement des documents de pre-depistage…',
+        'smart_autofill_prescreen_no_docs' => 'Aucun fichier de pre-depistage. Utilisez Ajouter des documents.',
+        'smart_autofill_prescreen_load_fail' => 'Impossible de charger les fichiers. Utilisez Ajouter des documents.',
+        'smart_autofill_ready' => 'Programme et documents prets. Cliquez sur Lancer l analyse.',
         'smart_autofill_processing' => 'Analyse des documents et extraction des informations de l\'étudiant…',
         'smart_autofill_uploading' => 'Application des données extraites et rattachement des documents reconnus…',
         'smart_autofill_success' => 'Remplissage terminé. Vérifiez les champs avant de continuer.',
@@ -4092,6 +4107,12 @@ function startValidationSimulation(progress) {
     error: <?php echo json_encode($t['smart_autofill_error'], JSON_UNESCAPED_UNICODE); ?>,
     needDraft: <?php echo json_encode($t['smart_autofill_need_draft'], JSON_UNESCAPED_UNICODE); ?>,
     gate: <?php echo json_encode($t['smart_autofill_gate'], JSON_UNESCAPED_UNICODE); ?>,
+    gateStudy: <?php echo json_encode($t['smart_autofill_gate_study'], JSON_UNESCAPED_UNICODE); ?>,
+    gateDocs: <?php echo json_encode($t['smart_autofill_gate_docs'], JSON_UNESCAPED_UNICODE); ?>,
+    gateBoth: <?php echo json_encode($t['smart_autofill_gate_both'], JSON_UNESCAPED_UNICODE); ?>,
+    prescreenLoading: <?php echo json_encode($t['smart_autofill_prescreen_loading'], JSON_UNESCAPED_UNICODE); ?>,
+    prescreenNoDocs: <?php echo json_encode($t['smart_autofill_prescreen_no_docs'], JSON_UNESCAPED_UNICODE); ?>,
+    prescreenLoadFail: <?php echo json_encode($t['smart_autofill_prescreen_load_fail'], JSON_UNESCAPED_UNICODE); ?>,
     ready: <?php echo json_encode($t['smart_autofill_ready'], JSON_UNESCAPED_UNICODE); ?>,
     queueEmpty: <?php echo json_encode($t['smart_autofill_queue_empty'], JSON_UNESCAPED_UNICODE); ?>,
     queueReady: <?php echo json_encode($t['smart_autofill_queue_ready'], JSON_UNESCAPED_UNICODE); ?>,
@@ -4112,6 +4133,7 @@ function startValidationSimulation(progress) {
 
   const pendingFiles = [];
   let isProcessing = false;
+  let prescreenDocsLoading = false;
 
   function fileKey(file) {
     return [file.name, file.size, file.lastModified].join("::");
@@ -4288,11 +4310,28 @@ function startValidationSimulation(progress) {
   }
 
   function updateSmartAutofillAvailability() {
-    const ready = hasSelectedPrograms();
-    trigger.disabled = !ready || isProcessing;
-    startButton.disabled = !ready || isProcessing || !pendingFiles.length;
+    const hasStudy = hasSelectedPrograms();
+    const hasDocs = pendingFiles.length > 0;
+    const formatsHint = <?php echo json_encode($t['smart_autofill_formats'], JSON_UNESCAPED_UNICODE); ?>;
+    const tipHint = <?php echo json_encode($t['smart_autofill_hint'], JSON_UNESCAPED_UNICODE); ?>;
+
+    trigger.disabled = !hasStudy || isProcessing || prescreenDocsLoading;
+    startButton.disabled = !hasStudy || !hasDocs || isProcessing || prescreenDocsLoading;
+
     if (helpEl) {
-      helpEl.innerHTML = `${ready ? texts.ready : texts.gate}<br><?php echo htmlspecialchars($t['smart_autofill_formats'], ENT_QUOTES, 'UTF-8'); ?><br><?php echo htmlspecialchars($t['smart_autofill_hint'], ENT_QUOTES, 'UTF-8'); ?>`;
+      let gateMsg = texts.gate;
+      if (prescreenDocsLoading) {
+        gateMsg = texts.prescreenLoading;
+      } else if (!hasStudy && !hasDocs) {
+        gateMsg = texts.gateBoth;
+      } else if (!hasStudy) {
+        gateMsg = texts.gateStudy;
+      } else if (!hasDocs) {
+        gateMsg = texts.gateDocs;
+      } else {
+        gateMsg = texts.ready;
+      }
+      helpEl.innerHTML = `${gateMsg}<br>${formatsHint}<br>${tipHint}`;
     }
     renderQueue();
   }
@@ -4403,7 +4442,7 @@ function startValidationSimulation(progress) {
   });
 
   startButton.addEventListener("click", async () => {
-    if (!pendingFiles.length || isProcessing) return;
+    if (isProcessing || !hasSelectedPrograms() || !pendingFiles.length) return;
 
     isProcessing = true;
     clearPanels();
@@ -4555,40 +4594,62 @@ function startValidationSimulation(progress) {
   const prescreenHandoff = <?= json_encode($prescreenHandoffForJs, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
 
   async function loadPrescreenHandoff() {
-    if (!prescreenHandoff || !Array.isArray(prescreenHandoff.docs) || !prescreenHandoff.docs.length) {
-      if (prescreenHandoff && prescreenHandoff.prefill) {
-        applyPrescreenPrefill(prescreenHandoff.prefill);
-      }
-      return;
-    }
-
-    setStatus("info", "Loading pre-screening documents…");
-    const files = [];
-    for (const doc of prescreenHandoff.docs) {
-      if (!doc || !doc.url) continue;
-      try {
-        const res = await fetch(doc.url, { credentials: "same-origin" });
-        if (!res.ok) continue;
-        const blob = await res.blob();
-        const name = doc.filename || (doc.key ? doc.key + ".pdf" : "document");
-        files.push(new File([blob], name, { type: blob.type || "application/octet-stream" }));
-      } catch (e) {
-        console.warn("Prescreen doc load failed", doc.key, e);
-      }
-    }
-
-    if (files.length) {
-      addPendingFiles(files);
-      setStage(
-        "queue",
-        `${files.length} document(s) from pre-screening queued.`,
-        "info",
-        "Select study choice on step 1, then click Start analysis."
-      );
-    }
+    if (!prescreenHandoff) return;
 
     if (prescreenHandoff.prefill) {
       applyPrescreenPrefill(prescreenHandoff.prefill);
+    }
+
+    const docList = Array.isArray(prescreenHandoff.docs) ? prescreenHandoff.docs : [];
+    const expectsDocs = prescreenHandoff.from_prescreen && Number(prescreenHandoff.doc_count || docList.length) > 0;
+
+    if (!docList.length) {
+      if (prescreenHandoff.from_prescreen) {
+        setStatus("warning", texts.prescreenNoDocs);
+      }
+      updateSmartAutofillAvailability();
+      return;
+    }
+
+    prescreenDocsLoading = true;
+    updateSmartAutofillAvailability();
+    setStatus("info", texts.prescreenLoading);
+    queueWrap.classList.add("is-visible");
+
+    let loaded = 0;
+    await Promise.all(
+      docList.map(async (doc) => {
+        if (!doc || !doc.url) return;
+        try {
+          const res = await fetch(doc.url, { credentials: "same-origin", cache: "no-store" });
+          if (!res.ok) {
+            console.warn("Prescreen doc HTTP", doc.key, res.status);
+            return;
+          }
+          const blob = await res.blob();
+          const name = doc.filename || (doc.key ? doc.key + ".pdf" : "document");
+          const type = blob.type && blob.type !== "application/octet-stream"
+            ? blob.type
+            : (name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/octet-stream");
+          addPendingFiles([new File([blob], name, { type })]);
+          loaded++;
+        } catch (e) {
+          console.warn("Prescreen doc load failed", doc.key, e);
+        }
+      })
+    );
+
+    prescreenDocsLoading = false;
+
+    if (loaded) {
+      setStage(
+        "queue",
+        `${loaded} document(s) from pre-screening queued.`,
+        "info",
+        "Select study choice on step 1, then click Start analysis."
+      );
+    } else if (expectsDocs) {
+      setStatus("warning", texts.prescreenLoadFail);
     }
 
     if (prescreenHandoff.hints && prescreenHandoff.hints.country_interest) {
@@ -4621,7 +4682,14 @@ function startValidationSimulation(progress) {
   }
 
   if (prescreenHandoff) {
-    setTimeout(loadPrescreenHandoff, 900);
+    function schedulePrescreenHandoff() {
+      loadPrescreenHandoff();
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", schedulePrescreenHandoff);
+    } else {
+      schedulePrescreenHandoff();
+    }
   }
 })();
 </script>

@@ -5,6 +5,16 @@
 // ============================================
 require_once __DIR__ . '/header.php';
 
+if (!empty($_GET['card'])) {
+    $card = preg_replace('/[^a-z0-9_-]/', '', (string) $_GET['card']);
+    $qs = 'card=' . rawurlencode($card);
+    if (!empty($current_lang)) {
+        $qs .= '&lang=' . rawurlencode((string) $current_lang);
+    }
+    header('Location: services.php?' . $qs);
+    exit;
+}
+
 // ============================================
 // TRANSLATIONS FOR INDEX PAGE
 // ============================================
@@ -437,80 +447,6 @@ if (!function_exists('it')) {
     }
 }
 
-// Define cards with translation keys
-$cards = [
-    [
-        'id' => 'admissions',
-        'icon' => '🎓',
-        'title_key' => 'card1_title',
-        'subtitle_key' => 'card1_subtitle',
-        'description_key' => 'card1_description',
-        'points_keys' => ['card1_point1', 'card1_point2', 'card1_point3'],
-        'form' => 'student-application.php',
-        'color' => '#012F6B'
-    ],
-    [
-        'id' => 'scholarships',
-        'icon' => '💰',
-        'title_key' => 'card2_title',
-        'subtitle_key' => 'card2_subtitle',
-        'description_key' => 'card2_description',
-        'points_keys' => ['card2_point1', 'card2_point2', 'card2_point3'],
-        'form' => '#scholarships',
-        'color' => '#254D81'
-    ],
-    [
-        'id' => 'i20',
-        'icon' => '📄',
-        'title_key' => 'card3_title',
-        'subtitle_key' => 'card3_subtitle',
-        'description_key' => 'card3_description',
-        'points_keys' => ['card3_point1', 'card3_point2', 'card3_point3'],
-        'form' => 'form-20.php',
-        'color' => '#002765'
-    ],
-    [
-        'id' => 'credit',
-        'icon' => '🔁',
-        'title_key' => 'card4_title',
-        'subtitle_key' => 'card4_subtitle',
-        'description_key' => 'card4_description',
-        'points_keys' => ['card4_point1', 'card4_point2', 'card4_point3'],
-        'form' => 'credit_transfer.php',
-        'color' => '#012F6B'
-    ],
-    [
-        'id' => 'visa',
-        'icon' => '✈️',
-        'title_key' => 'card5_title',
-        'subtitle_key' => 'card5_subtitle',
-        'description_key' => 'card5_description',
-        'points_keys' => ['card5_point1', 'card5_point2', 'card5_point3'],
-        'form' => 'visa.php',
-        'color' => '#254D81'
-    ],
-    [
-        'id' => 'jobs',
-        'icon' => '💼',
-        'title_key' => 'card6_title',
-        'subtitle_key' => 'card6_subtitle',
-        'description_key' => 'card6_description',
-        'points_keys' => ['card6_point1', 'card6_point2', 'card6_point3'],
-        'form' => 'job-application.php',
-        'color' => '#002765'
-    ],
-    [
-        'id' => 'airticket',
-        'icon' => '🛫',
-        'title_key' => 'card7_title',
-        'subtitle_key' => 'card7_subtitle',
-        'description_key' => 'card7_description',
-        'points_keys' => ['card7_point1', 'card7_point2', 'card7_point3'],
-        'form' => 'air-ticket-reservation.php',
-        'color' => '#012F6B'
-    ]
-];
-
 // Define testimonials
 $testimonials = [
     ['key' => 'testimonial1', 'initial' => 'SM'],
@@ -546,9 +482,6 @@ $destinations = [
     ['country' => 'Germany', 'flag' => '🇩🇪', 'students' => '700+', 'description' => 'Tuition-free education & engineering hub'],
     ['country' => 'Netherlands', 'flag' => '🇳🇱', 'students' => '500+', 'description' => 'English-taught programs & innovation center']
 ];
-
-// Get card parameter from URL for direct access
-$direct_card = isset($_GET['card']) ? $_GET['card'] : null;
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo $current_lang; ?>">
@@ -893,222 +826,6 @@ body {
   color: var(--text-light);
   font-size: 1rem;
   line-height: 1.6;
-}
-
-/* ===== SERVICES SECTION ===== */
-.services-section {
-  padding: 80px 20px;
-  background: linear-gradient(135deg, #F8FAFC 0%, #F0F4F8 100%);
-}
-
-.services-grid {
-  max-width: 1400px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  gap: 30px;
-  padding: 30px 0;
-}
-
-.service-card {
-  background: white;
-  border-radius: 20px;
-  padding: 35px 30px;
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--border-light);
-  transition: var(--transition);
-  position: relative;
-  overflow: hidden;
-  display: none; /* Initially hidden for direct card access */
-}
-
-.service-card.show-card {
-  display: block;
-  animation: fadeInUp 0.6s ease forwards;
-}
-
-.service-card.highlight-card {
-  box-shadow: 0 0 0 3px var(--accent-gold), var(--shadow-lg);
-  transform: translateY(-5px);
-}
-
-.service-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 6px;
-  height: 100%;
-  background: linear-gradient(to bottom, var(--primary-navy), var(--secondary-blue));
-}
-
-.service-card:hover {
-  transform: translateY(-10px);
-  box-shadow: var(--shadow-lg);
-}
-
-.card-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 20px;
-  margin-bottom: 25px;
-}
-
-.card-icon {
-  width: 70px;
-  height: 70px;
-  background: linear-gradient(135deg, var(--primary-light), rgba(37, 77, 129, 0.1));
-  border-radius: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
-  color: var(--primary-navy);
-  flex-shrink: 0;
-  transition: var(--transition);
-}
-
-.service-card:hover .card-icon {
-  transform: rotate(10deg) scale(1.1);
-}
-
-.card-title-group h3 {
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: var(--primary-navy);
-  margin-bottom: 8px;
-}
-
-.card-subtitle {
-  font-size: 1rem;
-  color: var(--accent-gold);
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-.card-description {
-  color: var(--text-light);
-  line-height: 1.6;
-  margin-bottom: 25px;
-  font-size: 1rem;
-}
-
-.card-features {
-  list-style: none;
-  margin-bottom: 30px;
-}
-
-.card-features li {
-  padding: 10px 0;
-  padding-left: 32px;
-  position: relative;
-  color: var(--text);
-  font-size: 0.95rem;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.card-features li:last-child {
-  border-bottom: none;
-}
-
-.card-features li::before {
-  content: '✓';
-  position: absolute;
-  left: 0;
-  color: var(--accent-gold);
-  font-weight: 800;
-  font-size: 1.2rem;
-}
-
-.card-actions {
-  display: flex;
-  gap: 15px;
-}
-
-.card-button {
-  flex: 1;
-  padding: 14px 20px;
-  border-radius: 10px;
-  border: none;
-  font-weight: 600;
-  cursor: pointer;
-  transition: var(--transition);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 1rem;
-  position: relative;
-  overflow: hidden;
-}
-
-.apply-button {
-  background: linear-gradient(135deg, var(--primary-navy), var(--secondary-blue));
-  color: white;
-  box-shadow: 0 6px 15px rgba(1, 47, 107, 0.2);
-}
-
-.apply-button:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(1, 47, 107, 0.3);
-}
-
-.copy-button {
-  background: white;
-  color: var(--primary-navy);
-  border: 2px solid var(--border);
-}
-
-.copy-button:hover {
-  background: var(--primary-light);
-  border-color: var(--primary-navy);
-  transform: translateY(-3px);
-}
-
-/* Direct card access header */
-.direct-card-header {
-  background: linear-gradient(135deg, var(--primary-navy) 0%, var(--dark-blue) 100%);
-  color: white;
-  padding: 30px 20px;
-  text-align: center;
-  margin-bottom: 40px;
-  border-radius: 0 0 20px 20px;
-  display: none;
-}
-
-.direct-card-header.show-header {
-  display: block;
-  animation: slideInDown 0.5s ease;
-}
-
-.direct-card-header h2 {
-  font-size: 2rem;
-  margin-bottom: 10px;
-  color: white;
-}
-
-.direct-card-header p {
-  opacity: 0.9;
-  margin-bottom: 20px;
-}
-
-.back-to-all {
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 10px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: var(--transition);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.back-to-all:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: translateY(-2px);
 }
 
 /* ===== INSTITUTION SCHOLARSHIPS (homepage) ===== */
@@ -1939,10 +1656,6 @@ body {
     font-size: 2.8rem;
   }
   
-  .services-grid {
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  }
-  
   .partners-grid {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
@@ -1996,10 +1709,6 @@ body {
     max-width: 300px;
   }
   
-  .services-grid {
-    grid-template-columns: 1fr;
-  }
-  
   .section-title {
     font-size: 2rem;
   }
@@ -2007,10 +1716,6 @@ body {
   .cta-buttons {
     flex-direction: column;
     align-items: center;
-  }
-  
-  .card-actions {
-    flex-direction: column;
   }
   
   .stats-grid {
@@ -2115,10 +1820,10 @@ body {
     <h1 class="hero-title fade-in"><?php echo it('hero_title'); ?></h1>
     <p class="hero-description fade-in"><?php echo it('hero_description'); ?></p>
     <div class="hero-cta">
-      <button class="cta-button cta-primary fade-in" id="scrollToServices" type="button">
+      <a class="cta-button cta-primary fade-in" href="services.php<?php echo !empty($current_lang) ? '?lang=' . rawurlencode((string) $current_lang) : ''; ?>">
         <i class="fas fa-rocket"></i>
         <?php echo it('start_application'); ?>
-      </button>
+      </a>
       <button class="cta-button cta-secondary fade-in" id="scrollToFeatures">
         <i class="fas fa-play-circle"></i>
         <?php echo it('learn_more'); ?>
@@ -2126,16 +1831,6 @@ body {
     </div>
   </div>
 </section>
-
-<!-- Direct Card Access Header -->
-<div class="direct-card-header" id="directCardHeader">
-  <h2>Direct Service Access</h2>
-  <p>You are viewing a specific service. Click below to see all available services.</p>
-  <button class="back-to-all" id="backToAll">
-    <i class="fas fa-arrow-left"></i>
-    Back to All Services
-  </button>
-</div>
 
 <!-- Stats Section -->
 <section class="stats-section">
@@ -2200,48 +1895,6 @@ body {
   </div>
 </section>
 
-<!-- Services Section -->
-<section class="services-section section-padding" id="services">
-  <div class="section-header">
-    <h2 class="section-title"><?php echo it('services_title'); ?></h2>
-    <p class="section-description"><?php echo it('services_description'); ?></p>
-  </div>
-  
-  <div class="services-grid">
-    <?php foreach($cards as $c): ?>
-    <div id="<?= $c['id'] ?>" class="service-card <?= ($direct_card === $c['id']) ? 'show-card highlight-card' : (empty($direct_card) ? 'show-card' : '') ?>" data-card="<?= $c['id'] ?>" data-form="<?= $c['form'] ?>">
-      <div class="card-header">
-        <div class="card-icon">
-          <?= $c['icon'] ?>
-        </div>
-        <div class="card-title-group">
-          <h3><?= it($c['title_key']) ?></h3>
-          <p class="card-subtitle"><?= it($c['subtitle_key']) ?></p>
-        </div>
-      </div>
-      
-      <p class="card-description"><?= htmlspecialchars(it($c['description_key'])) ?></p>
-      
-      <ul class="card-features">
-        <?php foreach($c['points_keys'] as $pt_key): ?>
-        <li><?= htmlspecialchars(it($pt_key)) ?></li>
-        <?php endforeach; ?>
-      </ul>
-      
-      <div class="card-actions">
-        <button class="card-button apply-button">
-          <i class="fas fa-paper-plane"></i>
-          <?php echo it('card_apply'); ?>
-        </button>
-        <button class="card-button copy-button" data-card-id="<?= $c['id'] ?>">
-          <i class="fas fa-link"></i>
-          <?php echo it('card_copy'); ?>
-        </button>
-      </div>
-    </div>
-    <?php endforeach; ?>
-  </div>
-</section>
 
 <?php
 require_once __DIR__ . '/db.php';
@@ -2671,68 +2324,6 @@ require_once __DIR__ . '/includes/homepage_scholarships.php';
 (function() {
   'use strict';
 
-  // Get URL parameters
-  const urlParams = new URLSearchParams(window.location.search);
-  const directCardId = urlParams.get('card');
-
-  // Direct Card Access Logic
-  if (directCardId) {
-    // Show direct card header
-    document.getElementById('directCardHeader').classList.add('show-header');
-    
-    // Show only the specific card
-    const allCards = document.querySelectorAll('.service-card');
-    allCards.forEach(card => {
-      if (card.dataset.card === directCardId) {
-        card.classList.add('show-card', 'highlight-card');
-      } else {
-        card.classList.remove('show-card');
-      }
-    });
-    
-    // Scroll to the specific card
-    setTimeout(() => {
-      const cardElement = document.getElementById(directCardId);
-      if (cardElement) {
-        cardElement.scrollIntoView({ 
-          behavior: 'smooth',
-          block: 'center'
-        });
-      }
-    }, 300);
-  }
-
-  // Back to All Services button
-  document.getElementById('backToAll').addEventListener('click', function() {
-    // Remove card parameter from URL without reloading page
-    const newUrl = window.location.pathname;
-    window.history.replaceState({}, document.title, newUrl);
-    
-    // Hide direct card header
-    document.getElementById('directCardHeader').classList.remove('show-header');
-    
-    // Show all cards
-    const allCards = document.querySelectorAll('.service-card');
-    allCards.forEach(card => {
-      card.classList.add('show-card');
-      card.classList.remove('highlight-card');
-    });
-    
-    // Scroll to services section
-    document.getElementById('services').scrollIntoView({ 
-      behavior: 'smooth',
-      block: 'start'
-    });
-  });
-
-  // Scroll to Services
-  document.getElementById('scrollToServices').addEventListener('click', function() {
-    document.getElementById('services').scrollIntoView({ 
-      behavior: 'smooth',
-      block: 'start'
-    });
-  });
-
   // Scroll to Features
   document.getElementById('scrollToFeatures').addEventListener('click', function() {
     document.getElementById('features').scrollIntoView({ 
@@ -2796,100 +2387,6 @@ require_once __DIR__ . '/includes/homepage_scholarships.php';
     updateTestimonials();
   }, 5000);
 
-  // User ID Management
-  function getUserId() {
-    let id = sessionStorage.getItem('user_id');
-    if (!id) {
-      id = 'user-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
-      sessionStorage.setItem('user_id', id);
-    }
-    return id;
-  }
-
-  // Apply Now Buttons
-  document.querySelectorAll('.apply-button').forEach(button => {
-    button.addEventListener('click', function(e) {
-      e.preventDefault();
-      
-      const card = this.closest('.service-card');
-      if (!card) return;
-      
-      const form = card.dataset.form;
-      const type = card.dataset.card;
-      const userId = getUserId();
-      
-      let targetUrl = '';
-      switch (type) {
-        case 'scholarships':
-          if (form && form.startsWith('#')) {
-            const el = document.querySelector(form);
-            if (el) {
-              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              return;
-            }
-          }
-          targetUrl = form || '#scholarships';
-          if (targetUrl.startsWith('#')) {
-            const el = document.querySelector(targetUrl);
-            if (el) {
-              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              return;
-            }
-          }
-          break;
-  case 'visa':
-  // Don't pass any ID - let visa.php generate a new one
-  targetUrl = 'visa.php?country_id=&region_id=';
-  console.log('Opening visa form - will generate new ID');
-  break;
-        case 'i20':
-          targetUrl = `select-20.php?form=${encodeURIComponent(form)}&id=${encodeURIComponent(userId)}`;
-          break;
-        default:
-          targetUrl = `${form}?id=${encodeURIComponent(userId)}`;
-      }
-      
-      window.location.href = targetUrl;
-    });
-  });
-
-  // MODIFIED: Copy Link Buttons with card-specific URLs
-  document.querySelectorAll('.copy-button').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const cardId = this.dataset.cardId;
-      const card = document.getElementById(cardId);
-      const cardTitle = card.querySelector('.card-title-group h3').textContent;
-      
-      // Create card-specific URL
-      const url = `${window.location.origin}${window.location.pathname}?card=${cardId}`;
-      
-      // Modern clipboard API
-      navigator.clipboard.writeText(url).then(() => {
-        showNotification(`Link copied for: ${cardTitle}`);
-        this.innerHTML = '<i class="fas fa-check"></i> Copied';
-        this.style.background = '#10B981';
-        this.style.color = 'white';
-        this.style.borderColor = '#10B981';
-        
-        setTimeout(() => {
-          this.innerHTML = '<i class="fas fa-link"></i> <?php echo it('card_copy'); ?>';
-          this.style.background = '';
-          this.style.color = '';
-          this.style.borderColor = '';
-        }, 2000);
-      }).catch(() => {
-        // Fallback
-        const textarea = document.createElement('textarea');
-        textarea.value = url;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        showNotification(`Link copied for: ${cardTitle}`);
-      });
-    });
-  });
-
   // Additional CTA buttons
   document.getElementById('bookConsultation').addEventListener('click', () => {
     window.open('consultation.php', '_blank');
@@ -2899,40 +2396,6 @@ require_once __DIR__ . '/includes/homepage_scholarships.php';
     window.open('brochure.pdf', '_blank');
   });
 
-  // Notification function
-  function showNotification(message) {
-    const notification = document.createElement('div');
-    notification.className = 'notification';
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: linear-gradient(135deg, var(--primary-navy), var(--secondary-blue));
-      color: white;
-      padding: 16px 24px;
-      border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-      z-index: 10000;
-      animation: slideIn 0.3s ease;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 1rem;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.1);
-      max-width: 400px;
-      word-break: break-word;
-    `;
-    
-    notification.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-      notification.style.animation = 'slideOut 0.3s ease';
-      setTimeout(() => notification.remove(), 300);
-    }, 3000);
-  }
 
   // Add animation styles
   const style = document.createElement('style');

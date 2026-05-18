@@ -220,7 +220,7 @@ function xander_prescreening_build_apply_handoff(mysqli $conn, array $row): arra
         'hints' => $hints,
         'docs' => $docs,
         'paths' => array_column(xander_prescreening_collect_documents($row), 'path', 'key'),
-        'auto_run' => true,
+        'auto_run' => $work,
     ];
 }
 
@@ -308,15 +308,22 @@ function xander_prescreening_load_handoff_by_token(string $token): ?array
         return null;
     }
 
-    $sessionNames = ['XGS_JOB_FORM'];
+    $sessionNames = [];
     if (session_status() === PHP_SESSION_ACTIVE) {
         $current = session_name();
-        if ($current !== '' && !in_array($current, $sessionNames, true)) {
+        if ($current !== '') {
             $sessionNames[] = $current;
         }
         session_write_close();
-    } else {
-        $sessionNames[] = session_name() !== '' ? session_name() : 'PHPSESSID';
+    }
+    $defaultName = session_name();
+    if ($defaultName === '' || $defaultName === 'PHPSESSID') {
+        $sessionNames[] = 'PHPSESSID';
+    } elseif (!in_array($defaultName, $sessionNames, true)) {
+        $sessionNames[] = $defaultName;
+    }
+    if (!in_array('XGS_JOB_FORM', $sessionNames, true)) {
+        $sessionNames[] = 'XGS_JOB_FORM';
     }
 
     foreach (array_unique($sessionNames) as $name) {
