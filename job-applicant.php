@@ -9,8 +9,30 @@ session_start();
 require_once __DIR__ . '/helpers/role.php';
 require_once __DIR__ . '/helpers/job_application_status.php';
 require_once __DIR__ . '/helpers/job_application_delete.php';
+require_once __DIR__ . '/helpers/prescreening_options.php';
 
 xander_ensure_job_applications_process_status_column($conn);
+
+/**
+ * Work destination(s): pre-screening multi-country list, else job form work country.
+ */
+function xander_job_applicant_destination_label(array $applicant): string
+{
+    $prescreen = trim((string) ($applicant['prescreen_destinations'] ?? ''));
+    if ($prescreen !== '') {
+        $list = xander_prescreening_split_stored_countries($prescreen);
+        if ($list !== []) {
+            return implode(', ', $list);
+        }
+    }
+
+    $name = trim((string) ($applicant['work_country_name'] ?? ''));
+    if ($name !== '') {
+        return $name;
+    }
+
+    return '—';
+}
 
 $sessionRole = isset($_SESSION['role']) ? trim((string) $_SESSION['role']) : '';
 $dbRole = '';
@@ -38,9 +60,20 @@ $JOB_PROCESS_STATUSES = xander_job_application_process_statuses();
 $JOB_PROCESS_ORDER = xander_job_application_status_keys_in_order();
 
 // Fetch all applicants (live search filters in the browser)
-$sql = "SELECT ja.*, 
-               GROUP_CONCAT(CONCAT_WS(':', jd.document_type, jd.file_path, jd.uploaded_at, jd.id) SEPARATOR '|') as documents
+$sql = "SELECT ja.*,
+               wc.name AS work_country_name,
+               (
+                   SELECT ps.work_country_destination
+                   FROM prescreening_submissions ps
+                   WHERE ps.user_id = ja.user_id
+                     AND ps.service_type = 'work_abroad'
+                     AND ps.submitted_at IS NOT NULL
+                   ORDER BY ps.id DESC
+                   LIMIT 1
+               ) AS prescreen_destinations,
+               GROUP_CONCAT(CONCAT_WS(':', jd.document_type, jd.file_path, jd.uploaded_at, jd.id) SEPARATOR '|') AS documents
         FROM job_applications ja
+        LEFT JOIN countries wc ON ja.work_country_id = wc.id AND ja.work_country_id > 0
         LEFT JOIN job_documents jd ON ja.user_id = jd.user_id
         GROUP BY ja.id
         ORDER BY ja.created_at DESC";
@@ -1192,6 +1225,7 @@ $colors = [
                     // Full name
                     $fullName = $applicant['first_name'] . ' ' . $applicant['last_name'];
                     $phone = $applicant['phone_area_code'] . ' ' . $applicant['phone_number'];
+                    $destination = xander_job_applicant_destination_label($applicant);
 
                     $procKey = xander_normalize_job_process_status($applicant['process_status'] ?? null);
                     $procLabel = $JOB_PROCESS_STATUSES[$procKey];
@@ -1217,6 +1251,7 @@ $colors = [
                         (string) ($applicant['user_id'] ?? ''),
                         $address,
                         $detailedArea,
+                        $destination,
                         (string) ($applicant['first_name'] ?? ''),
                         (string) ($applicant['last_name'] ?? ''),
                         $emergencyContact,
@@ -1285,6 +1320,12 @@ $colors = [
                                 <div class="info-block-title"><i class="fas fa-address-card"></i> Contact</div>
                                 <div class="info-line"><i class="fas fa-envelope"></i><span><?= htmlspecialchars($applicant['email']) ?></span></div>
                                 <div class="info-line"><i class="fas fa-phone"></i><span><?= htmlspecialchars($phone) ?></span></div>
+                            </div>
+                        </div>
+                        <div class="card-section">
+                            <div class="info-block">
+                                <div class="info-block-title"><i class="fas fa-globe-americas"></i> Destination</div>
+                                <div class="info-line"><i class="fas fa-plane-departure"></i><span><?= htmlspecialchars($destination) ?></span></div>
                             </div>
                         </div>
                         <div class="card-section">
@@ -1365,7 +1406,9 @@ $colors = [
                                         'name' => $fullName,
                                         'email' => $applicant['email'],
                                         'phone' => $phone,
+                                        'destination' => $destination,
                                         'address' => $address,
+                                        'detailedArea' => $detailedArea,
                                         'emergency' => $emergencyContact,
                                         'emergencyPhone' => $emergencyPhone,
                                         'applied' => $appliedDate,
@@ -1622,9 +1665,17 @@ $colors = [
                         </div>
                         
                         <div style="background: #f8f9fa; padding: 12px; border-radius: 6px;">
+                            <strong style="color: <?= $colors['secondary_blue'] ?>;">Destination</strong>
+                            <div style="margin-top: 8px;">
+                                <div><i class="fas fa-plane-departure" style="color: <?= $colors['gold'] ?>;"></i> ${data.destination || '—'}</div>
+                            </div>
+                        </div>
+                        
+                        <div style="background: #f8f9fa; padding: 12px; border-radius: 6px;">
                             <strong style="color: <?= $colors['secondary_blue'] ?>;">Location</strong>
                             <div style="margin-top: 8px;">
                                 <div><i class="fas fa-map-marker-alt" style="color: <?= $colors['gold'] ?>;"></i> ${data.address}</div>
+                                ${data.detailedArea ? '<div style="margin-top:4px;color:#64748b;font-size:0.9rem;">' + data.detailedArea + '</div>' : ''}
                             </div>
                         </div>
                         
