@@ -698,7 +698,7 @@ if (!empty($_GET['from_prescreen']) && !empty($_SESSION['xander_prescreen_handof
                     <div class="col-12 col-md-6">
                         <label for="phone" class="form-label">Phone Number</label>
                         <div class="form-text mb-2" style="font-size: 0.85rem;">Use the country flag dropdown, then your number. We store <strong>digits only</strong> (country code + number, no +) so WhatsApp can message you.</div>
-                        <input type="tel" class="form-control" id="phone">
+                        <input type="tel" class="form-control" id="phone" autocomplete="off" inputmode="tel">
                         <input type="hidden" name="phone_area_code" id="phone_area_code">
                         <input type="hidden" name="phone_number" id="phone_number">
                         <div class="invalid-feedback">Please enter a valid phone number</div>
@@ -813,7 +813,7 @@ if (!empty($_GET['from_prescreen']) && !empty($_SESSION['xander_prescreen_handof
                     <div class="col-12 col-md-6">
                         <label for="emergency_phone" class="form-label">Phone Number</label>
                         <div class="form-text mb-2" style="font-size: 0.85rem;">Same as above: country code + number, saved as digits only (no +) for WhatsApp.</div>
-                        <input type="tel" class="form-control" id="emergency_phone">
+                        <input type="tel" class="form-control" id="emergency_phone" autocomplete="off" inputmode="tel">
                         <input type="hidden" name="emergency_area_code" id="emergency_area_code">
                         <input type="hidden" name="emergency_phone_number" id="emergency_phone_number">
                         <div class="invalid-feedback">Please enter a valid emergency phone number</div>

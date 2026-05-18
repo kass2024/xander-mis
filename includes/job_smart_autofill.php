@@ -214,6 +214,40 @@ $prescreenHandoffForJs = $prescreenHandoffForJs ?? null;
     startButton.disabled = isProcessing;
   }
 
+  function phoneDigitsOnly(value) {
+    return String(value || "").replace(/\D/g, "");
+  }
+
+  /** Build E.164 (+…) from dial + national; strips duplicate country code from national part. */
+  function phoneToE164(areaCode, nationalOrFull) {
+    const dial = phoneDigitsOnly(areaCode);
+    let num = phoneDigitsOnly(nationalOrFull);
+    if (!num && !dial) return "";
+    if (dial && num.startsWith(dial)) {
+      num = num.slice(dial.length).replace(/^0+/, "");
+    } else if (!dial && num.length >= 10) {
+      return "+" + num;
+    }
+    if (!dial) return "";
+    num = num.replace(/^0+/, "");
+    return "+" + dial + num;
+  }
+
+  function setItiPhone(iti, areaCode, nationalOrFull) {
+    if (!iti) return;
+    const e164 = phoneToE164(areaCode, nationalOrFull);
+    if (!e164) return;
+    try {
+      iti.setNumber(e164);
+    } catch (e) { /* ignore */ }
+  }
+
+  function getPhoneIti(selector) {
+    const el = document.querySelector(selector);
+    if (!el || !window.intlTelInputGlobals) return null;
+    return window.intlTelInputGlobals.getInstance(el) || null;
+  }
+
   window.applyAutofillFields = function (fields) {
     if (!fields) return;
     const setVal = (id, val) => {
@@ -241,15 +275,17 @@ $prescreenHandoffForJs = $prescreenHandoffForJs ?? null;
     setVal("emergency_relationship", fields.emergency_relationship);
     setVal("emergency_email", fields.emergency_email);
 
-    if (fields.phone_area_code && fields.phone_number && state.phoneInput) {
-      try {
-        state.phoneInput.setNumber("+" + String(fields.phone_area_code).replace(/\D/g, "") + String(fields.phone_number));
-      } catch (e) { /* ignore */ }
+    const mainIti = getPhoneIti("#phone");
+    if (mainIti) {
+      if (fields.phone_area_code || fields.phone_number) {
+        setItiPhone(mainIti, fields.phone_area_code, fields.phone_number);
+      } else if (fields.phone_e164) {
+        setItiPhone(mainIti, "", fields.phone_e164);
+      }
     }
-    if (fields.emergency_area_code && fields.emergency_phone_number && state.emergencyPhoneInput) {
-      try {
-        state.emergencyPhoneInput.setNumber("+" + String(fields.emergency_area_code).replace(/\D/g, "") + String(fields.emergency_phone_number));
-      } catch (e) { /* ignore */ }
+    const emIti = getPhoneIti("#emergency_phone");
+    if (emIti && (fields.emergency_area_code || fields.emergency_phone_number)) {
+      setItiPhone(emIti, fields.emergency_area_code, fields.emergency_phone_number);
     }
   };
 
@@ -455,10 +491,13 @@ $prescreenHandoffForJs = $prescreenHandoffForJs ?? null;
 
   renderQueue();
   if (prescreenHandoff) {
+    function scheduleHandoff() {
+      setTimeout(loadPrescreenHandoff, 600);
+    }
     if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", () => setTimeout(loadPrescreenHandoff, 400));
+      document.addEventListener("DOMContentLoaded", scheduleHandoff);
     } else {
-      setTimeout(loadPrescreenHandoff, 400);
+      scheduleHandoff();
     }
   }
 })();

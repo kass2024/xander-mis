@@ -77,10 +77,37 @@ declare(strict_types=1);
     return true;
   }
 
+  /** Strip to digits; remove duplicated country code if user pasted full number twice. */
+  function normalizeWhatsappInput(el) {
+    if (!el) return;
+    let d = String(el.value || '').replace(/\D/g, '');
+    if (d.length < 10) return;
+    const codes = ['880','234','254','256','255','250','971','966','44','49','33','39','34','91','86','61','27','1'];
+    codes.sort(function (a, b) { return b.length - a.length; });
+    for (let i = 0; i < codes.length; i++) {
+      const cc = codes[i];
+      if (!d.startsWith(cc) || d.length < cc.length + 8) continue;
+      const nat = d.slice(cc.length).replace(/^0+/, '');
+      const doubled = cc + nat;
+      if (nat.startsWith(cc) || nat.startsWith(doubled)) {
+        d = cc + nat.replace(new RegExp('^' + cc), '').replace(new RegExp('^' + doubled), '');
+      }
+      if (d.startsWith(cc + cc)) {
+        d = cc + d.slice(cc.length * 2);
+      }
+      el.value = d;
+      return;
+    }
+    el.value = d;
+  }
+
   document.addEventListener('submit', function (e) {
     const form = e.target;
     if (!form || !form.querySelector('select[name="service_type"]')) return;
     applyService(currentType());
+    if (currentType() === 'work_abroad') {
+      normalizeWhatsappInput(form.querySelector('input[name="whatsapp_number"]'));
+    }
     if (!validateCountryMulti(form)) {
       e.preventDefault();
       e.stopPropagation();

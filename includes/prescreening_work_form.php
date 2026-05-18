@@ -58,7 +58,10 @@ if ($checkedKeys === [] && isset($_POST['work_checklist']) && is_array($_POST['w
       <label class="form-label">Phone number</label>
       <input type="tel" name="whatsapp_number" class="form-control prescreen-work-contact"
              <?= ($readonly && !$editableContact) ? 'readonly' : '' ?>
+             inputmode="tel" autocomplete="off"
+             placeholder="+250788123456"
              value="<?= htmlspecialchars((string) ($prefill['whatsapp_number'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+      <div class="form-text">Use international format with country code once (e.g. +250788123456).</div>
     </div>
     <div class="col-12">
       <label class="form-label">Countries of interest (work destinations) *</label>

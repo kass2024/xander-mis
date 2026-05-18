@@ -263,8 +263,15 @@ function ai_autofill_normalize_job_fields(array $fields, mysqli $conn): array
         [$fields['work_country'] ?? '', $fields['address_country'] ?? '', $fields['village'] ?? '']
     );
     if ($phone['area_code'] !== '' && $phone['phone_number'] !== '') {
-        $normalized['phone_area_code'] = ltrim($phone['area_code'], '+');
-        $normalized['phone_number'] = $phone['phone_number'];
+        require_once __DIR__ . '/phone_whatsapp_normalize.php';
+        [$dial, $nat] = xander_normalize_job_phone_pair(
+            ltrim($phone['area_code'], '+'),
+            $phone['phone_number']
+        );
+        if ($dial !== '' && $nat !== '') {
+            $normalized['phone_area_code'] = $dial;
+            $normalized['phone_number'] = $nat;
+        }
     }
 
     $emergencyPhone = ai_normalize_phone_pair(
@@ -272,8 +279,15 @@ function ai_autofill_normalize_job_fields(array $fields, mysqli $conn): array
         [$fields['address_country'] ?? '', $fields['work_country'] ?? '']
     );
     if ($emergencyPhone['area_code'] !== '' && $emergencyPhone['phone_number'] !== '') {
-        $normalized['emergency_area_code'] = ltrim($emergencyPhone['area_code'], '+');
-        $normalized['emergency_phone_number'] = $emergencyPhone['phone_number'];
+        require_once __DIR__ . '/phone_whatsapp_normalize.php';
+        [$dial, $nat] = xander_normalize_job_phone_pair(
+            ltrim($emergencyPhone['area_code'], '+'),
+            $emergencyPhone['phone_number']
+        );
+        if ($dial !== '' && $nat !== '') {
+            $normalized['emergency_area_code'] = $dial;
+            $normalized['emergency_phone_number'] = $nat;
+        }
     }
 
     return $normalized;

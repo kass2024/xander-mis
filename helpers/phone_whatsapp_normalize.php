@@ -141,6 +141,56 @@ function xander_normalize_job_phone_pair(string $areaRaw, string $numberRaw): ar
 }
 
 /**
+ * Split digits-only E.164 into [dial_code, national] for job / intl-tel-input.
+ *
+ * @return array{0:string,1:string}
+ */
+function xander_split_phone_digits_for_job(string $digits): array
+{
+    $digits = xander_phone_digits_only($digits);
+    if ($digits === '') {
+        return ['', ''];
+    }
+
+    $known = [
+        '880', '234', '254', '256', '255', '250', '971', '966', '351', '358', '48',
+        '44', '49', '33', '39', '34', '91', '86', '61', '27', '1',
+    ];
+    usort($known, static fn (string $a, string $b): int => strlen($b) <=> strlen($a));
+
+    foreach ($known as $cc) {
+        if (str_starts_with($digits, $cc) && strlen($digits) >= strlen($cc) + 6) {
+            return xander_normalize_job_phone_pair($cc, substr($digits, strlen($cc)));
+        }
+    }
+
+    return ['', $digits];
+}
+
+/**
+ * Store pre-screening / WhatsApp numbers as digits-only E.164 (no +).
+ */
+function xander_prescreening_normalize_whatsapp(string $raw, ?string $defaultCountryDigits = null): string
+{
+    $cc = $defaultCountryDigits !== null && $defaultCountryDigits !== ''
+        ? preg_replace('/\D+/', '', $defaultCountryDigits)
+        : null;
+    $cc = ($cc === null || $cc === '') ? null : $cc;
+
+    $e164 = xander_format_phone_for_whatsapp_e164($raw, $cc);
+    if ($e164 === null) {
+        $e164 = xander_phone_digits_only($raw);
+    }
+    if ($e164 === '') {
+        return '';
+    }
+
+    [$dial, $nat] = xander_split_phone_digits_for_job($e164);
+
+    return $dial !== '' && $nat !== '' ? $dial . $nat : $e164;
+}
+
+/**
  * Single-field mobile (visa): digits only, full international where possible.
  */
 function xander_normalize_visa_mobile_storage(string $raw): string

@@ -23,6 +23,14 @@ function xander_prescreening_save_submission(
     ?int $adminId = null,
     bool $notify = true
 ): array {
+    require_once __DIR__ . '/phone_whatsapp_normalize.php';
+    require_once __DIR__ . '/env_load.php';
+    xander_load_env_file();
+    $whatsapp = xander_prescreening_normalize_whatsapp(
+        $whatsapp,
+        xander_env_get('WHATSAPP_DEFAULT_COUNTRY_CODE') ?: null
+    );
+
     xander_prescreening_ensure_submissions_columns($conn);
     $submittedAt = date('Y-m-d H:i:s');
     $adminId = $adminId !== null && $adminId > 0 ? $adminId : null;
