@@ -24,6 +24,11 @@ $index_translations = [
         // Hero Section
         'hero_title' => 'Global Education & Career Journey — Simplified',
         'hero_description' => 'Xander Global Scholars supports students and professionals with admissions, visas, scholarships, jobs, and travel — all in one trusted platform.',
+        'hero_badge' => 'Trusted by students worldwide',
+        'hero_trust_1' => 'Admissions',
+        'hero_trust_2' => 'Scholarships',
+        'hero_trust_3' => 'Visas & jobs',
+        'hero_scroll' => 'Explore below',
         'start_application' => 'Start Your Application',
         'learn_more' => 'Learn More',
         
@@ -47,6 +52,22 @@ $index_translations = [
         // Services Header
         'services_title' => 'Our Services',
         'services_description' => 'Everything you need to study, work, study loan, credit and move abroad — guided by experts.',
+
+        // Homepage services insights hub
+        'insights_eyebrow' => 'Student success hub',
+        'insights_title' => 'Your Complete Path Abroad — One Institution',
+        'insights_description' => 'From first consultation to landing abroad: admissions, funding, visas, jobs, and travel — guided step by step.',
+        'insights_journey_title' => 'Your journey at a glance',
+        'insights_at_glance' => 'At a glance',
+        'insights_services_count' => 'End-to-end services',
+        'insights_cta_all' => 'Explore all services',
+        'insight_tip_admissions' => 'AI-assisted applications with advisor review — study or work abroad in one flow.',
+        'insight_tip_scholarships' => 'Match with institution scholarships and education loan partners up to 90% funding.',
+        'insight_tip_i20' => 'SEVIS-ready I-20 support with university coordination for US study.',
+        'insight_tip_credit' => 'Transfer credits to partner universities and shorten your degree timeline.',
+        'insight_tip_visa' => 'Document prep, mock interviews, and high-approval visa guidance.',
+        'insight_tip_jobs' => 'Work placements across Europe with relocation and accommodation support.',
+        'insight_tip_airticket' => 'Student fares, flexible changes, and full travel coordination.',
         
         // New: Global Universities Section
         'universities_title' => 'Top Global Universities We Work With',
@@ -183,6 +204,22 @@ $index_translations = [
         'card2_point3' => 'Financial planning support',
         'scholarships_home_title' => 'Institution Scholarships',
         'scholarships_home_desc' => 'Apply directly to scholarship programs from our partner universities and institutions.',
+        'loans_home_title' => 'Education Loan Opportunities',
+        'loans_home_desc' => 'Student loan programs published by partner institutions.',
+        'loan_apply_cta' => 'Explore loan',
+        'opp_mixed_title' => 'Scholarships & Education Loans',
+        'opp_mixed_desc' => 'Funding opportunities from partner institutions — apply directly.',
+        'promo_section_title' => 'Plan Your Journey with Xander',
+        'promo_section_desc' => 'Apply, fund your studies, or speak with an advisor — we guide you end to end.',
+        'promo_apply_title' => 'Start your study abroad application',
+        'promo_apply_desc' => 'AI-assisted admissions with expert review — universities, visas, and documents in one flow.',
+        'promo_apply_cta' => 'Apply now',
+        'promo_loan_title' => 'Education loans & scholarships',
+        'promo_loan_desc' => 'Explore funding up to 90% and loan partners for Canada, USA, UK, and more.',
+        'promo_loan_cta' => 'View funding options',
+        'promo_consult_title' => 'Free expert consultation',
+        'promo_consult_desc' => 'Book a no-cost session with our advisors to plan your international journey.',
+        'promo_consult_cta' => 'Book consultation',
         
         // Card 3: I-20 Application
         'card3_title' => 'I-20 Application',
@@ -233,6 +270,11 @@ $index_translations = [
         // Hero Section
         'hero_title' => 'Parcours d\'Éducation & Carrière Mondial — Simplifié',
         'hero_description' => 'Xander Global Scholars accompagne les étudiants et professionnels avec admissions, visas, bourses, emplois et voyages.',
+        'hero_badge' => 'La confiance des étudiants du monde entier',
+        'hero_trust_1' => 'Admissions',
+        'hero_trust_2' => 'Bourses',
+        'hero_trust_3' => 'Visas & emplois',
+        'hero_scroll' => 'Découvrir',
         'start_application' => 'Commencer votre candidature',
         'learn_more' => 'En Savoir Plus',
         
@@ -256,6 +298,22 @@ $index_translations = [
         // Services Header
         'services_title' => 'Nos Services',
         'services_description' => 'Tout ce dont vous avez besoin pour étudier, travailler et déménager à l\'étranger.',
+
+        // Homepage services insights hub
+        'insights_eyebrow' => 'Hub réussite étudiante',
+        'insights_title' => 'Votre parcours international — une seule institution',
+        'insights_description' => 'De la première consultation à l\'arrivée : admissions, financement, visas, emplois et voyage — accompagnement pas à pas.',
+        'insights_journey_title' => 'Votre parcours en bref',
+        'insights_at_glance' => 'En un coup d\'œil',
+        'insights_services_count' => 'Services complets',
+        'insights_cta_all' => 'Voir tous les services',
+        'insight_tip_admissions' => 'Candidatures assistées par IA avec relecture conseiller — études ou travail à l\'étranger.',
+        'insight_tip_scholarships' => 'Bourses institutionnelles et prêts éducation jusqu\'à 90 % de financement.',
+        'insight_tip_i20' => 'Support I-20 conforme SEVIS avec coordination universitaire pour les USA.',
+        'insight_tip_credit' => 'Transfert de crédits vers universités partenaires pour raccourcir votre parcours.',
+        'insight_tip_visa' => 'Préparation documents, entretiens blancs et accompagnement visa.',
+        'insight_tip_jobs' => 'Placements en Europe avec relocalisation et logement.',
+        'insight_tip_airticket' => 'Tarifs étudiants, modifications flexibles et coordination voyage.',
         
         // New: Global Universities Section
         'universities_title' => 'Top Universités Mondiales',
@@ -392,6 +450,22 @@ $index_translations = [
         'card2_point3' => 'Support financier',
         'scholarships_home_title' => 'Bourses des institutions',
         'scholarships_home_desc' => 'Postulez directement aux programmes de bourses de nos universités et institutions partenaires.',
+        'loans_home_title' => 'Prêts étudiants des institutions',
+        'loans_home_desc' => 'Programmes de prêts publiés par nos institutions partenaires.',
+        'loan_apply_cta' => 'Voir le prêt',
+        'opp_mixed_title' => 'Bourses et prêts étudiants',
+        'opp_mixed_desc' => 'Opportunités de financement des institutions partenaires.',
+        'promo_section_title' => 'Planifiez votre parcours avec Xander',
+        'promo_section_desc' => 'Postulez, financez vos études ou parlez à un conseiller.',
+        'promo_apply_title' => 'Commencer votre candidature',
+        'promo_apply_desc' => 'Admissions assistées par IA avec relecture conseiller.',
+        'promo_apply_cta' => 'Postuler',
+        'promo_loan_title' => 'Prêts et bourses',
+        'promo_loan_desc' => 'Financement jusqu\'à 90 % et partenaires prêts.',
+        'promo_loan_cta' => 'Voir le financement',
+        'promo_consult_title' => 'Consultation gratuite',
+        'promo_consult_desc' => 'Session gratuite avec nos conseillers.',
+        'promo_consult_cta' => 'Réserver',
         
         // Card 3: I-20 Application
         'card3_title' => 'Demande I-20',
@@ -600,59 +674,249 @@ body {
 
 /* ===== HERO SECTION ===== */
 .hero-section {
-  min-height: 90vh;
-  background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
   position: relative;
-  padding: 60px 20px 40px;
+  min-height: min(88vh, 780px);
+  padding: clamp(2.5rem, 6vh, 4.5rem) 20px clamp(3rem, 8vh, 5rem);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  background: linear-gradient(165deg, #f8fafc 0%, #ffffff 42%, #fff8f0 100%);
 }
 
-.hero-bg-pattern {
+.hero-bg {
   position: absolute;
-  width: 100%;
-  height: 100%;
-  background-image: 
-    radial-gradient(circle at 20% 80%, rgba(1, 47, 107, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(242, 166, 90, 0.03) 0%, transparent 50%);
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(1, 47, 107, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(1, 47, 107, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 20%, transparent 75%);
+  opacity: 0.5;
+}
+
+.hero-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.55;
+  animation: heroOrbFloat 14s ease-in-out infinite;
+}
+
+.hero-orb--1 {
+  width: min(420px, 55vw);
+  height: min(420px, 55vw);
+  background: rgba(30, 74, 140, 0.35);
+  top: -8%;
+  left: -6%;
+  animation-delay: 0s;
+}
+
+.hero-orb--2 {
+  width: min(360px, 45vw);
+  height: min(360px, 45vw);
+  background: rgba(232, 119, 34, 0.28);
+  top: 10%;
+  right: -8%;
+  animation-delay: -4s;
+}
+
+.hero-orb--3 {
+  width: min(280px, 38vw);
+  height: min(280px, 38vw);
+  background: rgba(13, 148, 136, 0.22);
+  bottom: 5%;
+  left: 35%;
+  animation-delay: -7s;
+}
+
+@keyframes heroOrbFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(24px, -18px) scale(1.06); }
+  66% { transform: translate(-16px, 12px) scale(0.96); }
 }
 
 .hero-content {
-  max-width: 1000px;
+  max-width: 920px;
   margin: 0 auto;
   text-align: center;
   position: relative;
   z-index: 2;
+  will-change: transform, opacity;
+}
+
+.hero-animate {
+  opacity: 0;
+  animation: heroFadeUp 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 1rem 0.45rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(1, 47, 107, 0.1);
+  box-shadow: 0 4px 20px rgba(1, 47, 107, 0.08);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--primary-navy);
+  margin-bottom: 1.25rem;
+  animation-delay: 0.05s;
+}
+
+.hero-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.25);
+  animation: heroPulse 2s ease-in-out infinite;
+}
+
+@keyframes heroPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.85; }
+}
+
+@keyframes heroFadeUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .hero-title {
-  font-size: 3.2rem;
+  font-size: clamp(2.1rem, 5.5vw, 3.45rem);
   font-weight: 900;
-  line-height: 1.1;
-  margin-bottom: 25px;
-  background: linear-gradient(135deg, var(--primary-navy) 0%, var(--dark-blue) 50%, var(--accent-gold) 100%);
+  line-height: 1.12;
+  margin: 0 0 1.25rem;
+  letter-spacing: -0.03em;
+  background: linear-gradient(
+    120deg,
+    var(--primary-navy) 0%,
+    var(--dark-blue) 35%,
+    #1e4a8c 55%,
+    var(--accent-gold) 85%,
+    var(--primary-navy) 100%
+  );
+  background-size: 220% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  letter-spacing: -0.02em;
+  animation: heroFadeUp 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards, heroTitleShine 8s linear infinite;
+  animation-delay: 0.15s, 0s;
+  opacity: 0;
+}
+
+@keyframes heroTitleShine {
+  0% { background-position: 0% center; }
+  100% { background-position: 220% center; }
 }
 
 .hero-description {
-  font-size: 1.2rem;
+  font-size: clamp(1rem, 2.2vw, 1.2rem);
   color: var(--text-light);
-  max-width: 750px;
-  margin: 0 auto 35px;
-  line-height: 1.7;
+  max-width: 680px;
+  margin: 0 auto 1.75rem;
+  line-height: 1.75;
+  animation-delay: 0.28s;
+}
+
+.hero-trust {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 1.75rem;
+  animation-delay: 0.38s;
+}
+
+.hero-trust span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #334155;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(1, 47, 107, 0.08);
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+
+.hero-trust span:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(1, 47, 107, 0.1);
+}
+
+.hero-trust i {
+  color: var(--accent-gold);
+  font-size: 0.75rem;
 }
 
 .hero-cta {
   display: flex;
-  gap: 20px;
+  gap: 1rem;
   justify-content: center;
-  margin-top: 40px;
   flex-wrap: wrap;
+  animation-delay: 0.48s;
+}
+
+.hero-cta .cta-button {
+  animation: heroFadeUp 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.hero-cta .cta-primary { animation-delay: 0.52s; opacity: 0; }
+.hero-cta .cta-secondary { animation-delay: 0.62s; opacity: 0; }
+
+.hero-scroll-hint {
+  margin-top: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  animation: heroFadeUp 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards, heroBounce 2.2s ease-in-out infinite;
+  animation-delay: 0.75s, 1.2s;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+.hero-scroll-hint i {
+  font-size: 1.1rem;
+  color: var(--accent-gold);
+}
+
+@keyframes heroBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+.hero-section .cta-primary {
+  box-shadow: 0 10px 32px rgba(1, 47, 107, 0.3);
+}
+
+.hero-section .cta-primary:hover {
+  box-shadow: 0 16px 40px rgba(1, 47, 107, 0.4), 0 0 24px rgba(242, 166, 90, 0.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-orb, .hero-title, .hero-scroll-hint, .hero-badge-dot { animation: none !important; }
+  .hero-animate, .hero-title, .hero-cta .cta-button, .hero-scroll-hint { opacity: 1; transform: none; animation: none !important; }
 }
 
 .cta-button {
@@ -1687,17 +1951,11 @@ body {
 
 @media (max-width: 768px) {
   .hero-section {
-    min-height: 80vh;
-    padding: 40px 20px 30px;
+    min-height: auto;
+    padding: 2rem 16px 2.75rem;
   }
   
-  .hero-title {
-    font-size: 2.2rem;
-  }
-  
-  .hero-description {
-    font-size: 1.1rem;
-  }
+  .hero-trust span { font-size: 0.75rem; padding: 0.3rem 0.6rem; }
   
   .hero-cta {
     flex-direction: column;
@@ -1814,21 +2072,39 @@ body {
 <body>
 
 <!-- Hero Section -->
-<section class="hero-section">
-  <div class="hero-bg-pattern"></div>
-  <div class="hero-content">
-    <h1 class="hero-title fade-in"><?php echo it('hero_title'); ?></h1>
-    <p class="hero-description fade-in"><?php echo it('hero_description'); ?></p>
-    <div class="hero-cta">
-      <a class="cta-button cta-primary fade-in" href="services.php<?php echo !empty($current_lang) ? '?lang=' . rawurlencode((string) $current_lang) : ''; ?>">
+<section class="hero-section" id="homeHero">
+  <div class="hero-bg" aria-hidden="true">
+    <span class="hero-orb hero-orb--1"></span>
+    <span class="hero-orb hero-orb--2"></span>
+    <span class="hero-orb hero-orb--3"></span>
+    <div class="hero-grid"></div>
+  </div>
+  <div class="hero-content" id="heroContent">
+    <div class="hero-badge hero-animate">
+      <span class="hero-badge-dot" aria-hidden="true"></span>
+      <?php echo it('hero_badge'); ?>
+    </div>
+    <h1 class="hero-title"><?php echo it('hero_title'); ?></h1>
+    <p class="hero-description hero-animate"><?php echo it('hero_description'); ?></p>
+    <div class="hero-trust hero-animate">
+      <span><i class="fas fa-check-circle"></i> <?php echo it('hero_trust_1'); ?></span>
+      <span><i class="fas fa-check-circle"></i> <?php echo it('hero_trust_2'); ?></span>
+      <span><i class="fas fa-check-circle"></i> <?php echo it('hero_trust_3'); ?></span>
+    </div>
+    <div class="hero-cta hero-animate">
+      <a class="cta-button cta-primary" href="services.php<?php echo !empty($current_lang) ? '?lang=' . rawurlencode((string) $current_lang) : ''; ?>">
         <i class="fas fa-rocket"></i>
         <?php echo it('start_application'); ?>
       </a>
-      <button class="cta-button cta-secondary fade-in" id="scrollToFeatures">
+      <button type="button" class="cta-button cta-secondary" id="scrollToFeatures">
         <i class="fas fa-play-circle"></i>
         <?php echo it('learn_more'); ?>
       </button>
     </div>
+    <button type="button" class="hero-scroll-hint" id="heroScrollHint" aria-label="<?php echo htmlspecialchars(it('hero_scroll'), ENT_QUOTES, 'UTF-8'); ?>">
+      <span><?php echo it('hero_scroll'); ?></span>
+      <i class="fas fa-chevron-down"></i>
+    </button>
   </div>
 </section>
 
@@ -1854,51 +2130,10 @@ body {
   </div>
 </section>
 
-<!-- Features Section -->
-<section class="features-section section-padding" id="features">
-  <div class="section-header">
-    <h2 class="section-title"><?php echo it('features_title'); ?></h2>
-  </div>
-  
-  <div class="features-grid">
-    <div class="feature-card fade-in">
-      <div class="feature-icon">
-        <i class="fas fa-road"></i>
-      </div>
-      <h4><?php echo it('feature1_title'); ?></h4>
-      <p><?php echo it('feature1_desc'); ?></p>
-    </div>
-    
-    <div class="feature-card fade-in">
-      <div class="feature-icon">
-        <i class="fas fa-user-tie"></i>
-      </div>
-      <h4><?php echo it('feature2_title'); ?></h4>
-      <p><?php echo it('feature2_desc'); ?></p>
-    </div>
-    
-    <div class="feature-card fade-in">
-      <div class="feature-icon">
-        <i class="fas fa-globe-americas"></i>
-      </div>
-      <h4><?php echo it('feature3_title'); ?></h4>
-      <p><?php echo it('feature3_desc'); ?></p>
-    </div>
-    
-    <div class="feature-card fade-in">
-      <div class="feature-icon">
-        <i class="fas fa-hand-holding-usd"></i>
-      </div>
-      <h4><?php echo it('feature4_title'); ?></h4>
-      <p><?php echo it('feature4_desc'); ?></p>
-    </div>
-  </div>
-</section>
-
-
 <?php
 require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/includes/homepage_scholarships.php';
+require_once __DIR__ . '/includes/homepage_services_insights.php';
+require_once __DIR__ . '/includes/homepage_opportunities.php';
 ?>
 
 <!-- Global Universities Section -->
@@ -1932,27 +2167,6 @@ require_once __DIR__ . '/includes/homepage_scholarships.php';
         <?= $uni['country'] ?>
       </p>
       <span class="university-rank"><?= $uni['rank'] ?></span>
-    </div>
-    <?php endforeach; ?>
-  </div>
-</section>
-
-<!-- Destinations Section -->
-<section class="destinations-section section-padding">
-  <div class="section-header">
-    <h2 class="section-title"><?php echo it('destinations_title'); ?></h2>
-    <p class="section-description"><?php echo it('destinations_description'); ?></p>
-  </div>
-  
-  <div class="destinations-grid">
-    <?php foreach($destinations as $dest): ?>
-    <div class="destination-card fade-in">
-      <div class="destination-flag"><?= $dest['flag'] ?></div>
-      <div class="destination-info">
-        <h4><?= $dest['country'] ?></h4>
-        <p class="destination-stats"><?= $dest['students'] ?> Students Placed</p>
-        <p class="destination-desc"><?= $dest['description'] ?></p>
-      </div>
     </div>
     <?php endforeach; ?>
   </div>
@@ -2051,253 +2265,6 @@ require_once __DIR__ . '/includes/homepage_scholarships.php';
   </div>
 </section>
 
-<!-- Enhanced Partners Section -->
-<section class="partners-section section-padding">
-  <div class="section-header">
-    <h2 class="section-title"><?php echo it('partners_title'); ?></h2>
-    <p class="section-description"><?php echo it('partners_description'); ?></p>
-  </div>
-  
-  <div class="partners-container">
-    <!-- Banking & Financial Partners -->
-    <div class="partners-category banking-partners">
-      <div class="category-header">
-        <h3 class="category-title">
-          <i class="fas fa-university"></i>
-          <?php echo it('banking_partners_title'); ?>
-        </h3>
-        <p class="category-description"><?php echo it('banking_partners_desc'); ?></p>
-      </div>
-      <div class="partners-grid">
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/CIBC_Logo.svg/320px-CIBC_Logo.svg.png" alt="CIBC Bank" class="partner-logo">
-          <div class="partner-name">CIBC Bank</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Partenaire Prêts Éducation' : 'Education Loan Partner'; ?>
-          </div>
-        </div>
-        
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Royal_Bank_of_Canada_Logo.svg/320px-Royal_Bank_of_Canada_Logo.svg.png" alt="RBC Royal Bank" class="partner-logo">
-          <div class="partner-name">RBC Royal Bank</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Partenaire Bancaire Étudiant' : 'Student Banking Partner'; ?>
-          </div>
-        </div>
-        
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Scotiabank_Logo.svg/320px-Scotiabank_Logo.svg.png" alt="Scotiabank" class="partner-logo">
-          <div class="partner-name">Scotiabank</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Partenaire Services Financiers' : 'Financial Services Partner'; ?>
-          </div>
-        </div>
-        
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/BMO_Financial_Group_logo.svg/320px-BMO_Financial_Group_logo.svg.png" alt="BMO Bank of Montreal" class="partner-logo">
-          <div class="partner-name">BMO Bank of Montreal</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Partenaire Bancaire International' : 'International Banking Partner'; ?>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Testing & Certification Partners -->
-    <div class="partners-category testing-partners">
-      <div class="category-header">
-        <h3 class="category-title">
-          <i class="fas fa-graduation-cap"></i>
-          <?php echo it('testing_partners_title'); ?>
-        </h3>
-        <p class="category-description"><?php echo it('testing_partners_desc'); ?></p>
-      </div>
-      <div class="partners-grid">
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/ETS_logo.svg/320px-ETS_logo.svg.png" alt="ETS" class="partner-logo">
-          <div class="partner-name">ETS</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Tests TOEFL & GRE' : 'TOEFL & GRE Testing'; ?>
-          </div>
-        </div>
-        
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/en/thumb/3/3d/IELTS_logo.svg/320px-IELTS_logo.svg.png" alt="IELTS" class="partner-logo">
-          <div class="partner-name">British Council IELTS</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Centre de Test Officiel' : 'Official Test Center'; ?>
-          </div>
-        </div>
-        
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/GMAT_logo.svg/320px-GMAT_logo.svg.png" alt="GMAC" class="partner-logo">
-          <div class="partner-name">GMAC</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Partenaire Test GMAT' : 'GMAT Testing Partner'; ?>
-          </div>
-        </div>
-        
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Duolingo_logo.svg/320px-Duolingo_logo.svg.png" alt="Duolingo" class="partner-logo">
-          <div class="partner-name">Duolingo English Test</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Test d\'Anglais en Ligne' : 'Online English Testing'; ?>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Travel & Insurance Partners -->
-    <div class="partners-category travel-partners">
-      <div class="category-header">
-        <h3 class="category-title">
-          <i class="fas fa-plane"></i>
-          <?php echo it('travel_partners_title'); ?>
-        </h3>
-        <p class="category-description"><?php echo it('travel_partners_desc'); ?></p>
-      </div>
-      <div class="partners-grid">
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Air_Canada_Logo.svg/320px-Air_Canada_Logo.svg.png" alt="Air Canada" class="partner-logo">
-          <div class="partner-name">Air Canada</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Compagnie Aérienne Préférée' : 'Preferred Airline'; ?>
-          </div>
-        </div>
-        
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Emirates_logo.svg/320px-Emirates_logo.svg.png" alt="Emirates" class="partner-logo">
-          <div class="partner-name">Emirates</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Partenaire Voyage Mondial' : 'Global Travel Partner'; ?>
-          </div>
-        </div>
-        
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Tata_AIG_logo.svg/320px-Tata_AIG_logo.svg.png" alt="Tata AIG" class="partner-logo">
-          <div class="partner-name">Tata AIG</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Assurance Étudiants' : 'Student Insurance'; ?>
-          </div>
-        </div>
-        
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Airbnb_Logo_B%C3%A9lo.svg/320px-Airbnb_Logo_B%C3%A9lo.svg.png" alt="Airbnb" class="partner-logo">
-          <div class="partner-name">Airbnb</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Hébergement Étudiants' : 'Student Accommodation'; ?>
-          </div>
-        </div>
-        
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/en/thumb/7/7e/Amberstudent_logo.svg/320px-Amberstudent_logo.svg.png" alt="AmberStudent" class="partner-logo">
-          <div class="partner-name">AmberStudent</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Logement Étudiants' : 'Student Housing'; ?>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Technology & Education Partners -->
-    <div class="partners-category tech-partners">
-      <div class="category-header">
-        <h3 class="category-title">
-          <i class="fas fa-laptop-code"></i>
-          <?php echo it('tech_partners_title'); ?>
-        </h3>
-        <p class="category-description"><?php echo it('tech_partners_desc'); ?></p>
-      </div>
-      <div class="partners-grid">
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Microsoft_logo.svg/320px-Microsoft_logo.svg.png" alt="Microsoft" class="partner-logo">
-          <div class="partner-name">Microsoft Education</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Partenaire Technologie' : 'Technology Partner'; ?>
-          </div>
-        </div>
-        
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Google_Chrome_Logo_%282015-2019%29.svg/320px-Google_Chrome_Logo_%282015-2019%29.svg.png" alt="Google" class="partner-logo">
-          <div class="partner-name">Google for Education</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Apprentissage Numérique' : 'Digital Learning'; ?>
-          </div>
-        </div>
-        
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Coursera_logo.svg/320px-Coursera_logo.svg.png" alt="Coursera" class="partner-logo">
-          <div class="partner-name">Coursera</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Apprentissage en Ligne' : 'Online Learning'; ?>
-          </div>
-        </div>
-        
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/LinkedIn_Logo.svg/320px-LinkedIn_Logo.svg.png" alt="LinkedIn" class="partner-logo">
-          <div class="partner-name">LinkedIn Learning</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Développement de Carrière' : 'Career Development'; ?>
-          </div>
-        </div>
-        
-        <div class="partner-card fade-in">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/EdX_logo.svg/320px-EdX_logo.svg.png" alt="edX" class="partner-logo">
-          <div class="partner-name">edX</div>
-          <div class="partner-role">
-            <?php echo $current_lang === 'fr' ? 'Cours en Ligne' : 'Online Courses'; ?>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Resources Section -->
-<section class="resources-section section-padding">
-  <div class="section-header">
-    <h2 class="section-title"><?php echo it('resources_title'); ?></h2>
-    <p class="section-description"><?php echo it('resources_description'); ?></p>
-  </div>
-  
-  <div class="resources-grid">
-    <div class="resource-card fade-in">
-      <div class="resource-icon">
-        <i class="fas fa-award"></i>
-      </div>
-      <h4><?php echo it('resource1_title'); ?></h4>
-      <p><?php echo it('resource1_desc'); ?></p>
-      <a href="#" class="resource-link">
-        <?php echo it('read_more'); ?>
-        <i class="fas fa-arrow-right"></i>
-      </a>
-    </div>
-    
-    <div class="resource-card fade-in">
-      <div class="resource-icon">
-        <i class="fas fa-passport"></i>
-      </div>
-      <h4><?php echo it('resource2_title'); ?></h4>
-      <p><?php echo it('resource2_desc'); ?></p>
-      <a href="#" class="resource-link">
-        <?php echo it('read_more'); ?>
-        <i class="fas fa-arrow-right"></i>
-      </a>
-    </div>
-    
-    <div class="resource-card fade-in">
-      <div class="resource-icon">
-        <i class="fas fa-briefcase"></i>
-      </div>
-      <h4><?php echo it('resource3_title'); ?></h4>
-      <p><?php echo it('resource3_desc'); ?></p>
-      <a href="#" class="resource-link">
-        <?php echo it('read_more'); ?>
-        <i class="fas fa-arrow-right"></i>
-      </a>
-    </div>
-  </div>
-</section>
 
 <!-- Final CTA Section -->
 <section class="cta-section">
@@ -2323,14 +2290,6 @@ require_once __DIR__ . '/includes/homepage_scholarships.php';
 <script>
 (function() {
   'use strict';
-
-  // Scroll to Features
-  document.getElementById('scrollToFeatures').addEventListener('click', function() {
-    document.getElementById('features').scrollIntoView({ 
-      behavior: 'smooth',
-      block: 'start'
-    });
-  });
 
   // Animation on scroll
   function animateOnScroll() {
@@ -2448,11 +2407,6 @@ require_once __DIR__ . '/includes/homepage_scholarships.php';
       animation: slideInRight 0.6s ease forwards;
     }
     
-    /* Parallax effect for hero */
-    .hero-section {
-      transform: translateZ(0);
-    }
-    
     /* Partner logo hover effect */
     .partner-card:hover .partner-logo {
       animation: pulse 0.6s ease;
@@ -2466,13 +2420,42 @@ require_once __DIR__ . '/includes/homepage_scholarships.php';
   `;
   document.head.appendChild(style);
 
-  // Add parallax effect to hero section
-  window.addEventListener('scroll', function() {
-    const scrolled = window.pageYOffset;
-    const hero = document.querySelector('.hero-section');
-    const rate = scrolled * 0.5;
-    hero.style.transform = `translate3d(0, ${rate}px, 0)`;
-  });
+  function scrollToInsights() {
+    const el = document.getElementById('services-insights');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  const scrollBtn = document.getElementById('scrollToFeatures');
+  const heroScrollHint = document.getElementById('heroScrollHint');
+  if (scrollBtn) scrollBtn.addEventListener('click', scrollToInsights);
+  if (heroScrollHint) heroScrollHint.addEventListener('click', scrollToInsights);
+
+  // Subtle hero parallax while scrolling
+  const heroSection = document.getElementById('homeHero');
+  const heroContent = document.getElementById('heroContent');
+  const heroOrbs = heroSection ? heroSection.querySelectorAll('.hero-orb') : [];
+  let heroTicking = false;
+  function updateHeroParallax() {
+    if (!heroSection || !heroContent) return;
+    const rect = heroSection.getBoundingClientRect();
+    const h = heroSection.offsetHeight || 1;
+    const progress = Math.min(Math.max(-rect.top / h, 0), 1);
+    heroContent.style.transform = `translateY(${progress * 36}px)`;
+    heroContent.style.opacity = String(1 - progress * 0.35);
+    heroOrbs.forEach((orb, i) => {
+      orb.style.transform = `translateY(${progress * (18 + i * 10)}px)`;
+    });
+    heroTicking = false;
+  }
+  window.addEventListener('scroll', () => {
+    if (!heroTicking) {
+      heroTicking = true;
+      requestAnimationFrame(updateHeroParallax);
+    }
+  }, { passive: true });
+  updateHeroParallax();
 
   // Initialize floating animations
   document.querySelectorAll('.float-animation').forEach(el => {

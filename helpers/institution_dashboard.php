@@ -715,10 +715,112 @@ function xander_public_load_scholarship(mysqli $conn, int $scholarshipId): ?arra
 }
 
 /**
- * @param array<string, mixed> $post
- * @return array{ok: bool, message: string}
+ * Scholarship application attachment fields (form name => stored type).
+ *
+ * @return array<string, array{label: string, required: bool}>
  */
-function xander_submit_scholarship_application(mysqli $conn, int $scholarshipId, array $post): array
+function xander_scholarship_application_document_fields(): array
+{
+    return [
+        'file_transcript' => ['label' => 'Academic transcript / marksheet', 'required' => true],
+        'file_cv' => ['label' => 'CV / Resume', 'required' => true],
+        'file_passport' => ['label' => 'Passport or national ID', 'required' => true],
+        'file_english_test' => ['label' => 'English proficiency (IELTS, TOEFL, Duolingo, etc.)', 'required' => false],
+        'file_recommendation_1' => ['label' => 'Letter of recommendation #1', 'required' => false],
+        'file_recommendation_2' => ['label' => 'Letter of recommendation #2', 'required' => false],
+        'file_enrollment_proof' => ['label' => 'Proof of enrollment / admission letter', 'required' => false],
+        'file_financial' => ['label' => 'Financial statements / sponsor letter', 'required' => false],
+        'file_portfolio' => ['label' => 'Portfolio / research work', 'required' => false],
+        'file_statement_pdf' => ['label' => 'Personal statement (PDF upload)', 'required' => false],
+        'file_other' => ['label' => 'Other supporting document', 'required' => false],
+    ];
+}
+
+/**
+ * @return array{ok: bool, message: string, path?: string}
+ */
+function xander_store_scholarship_application_document(
+    int $universityId,
+    int $applicationId,
+    string $documentType,
+    string $label,
+    array $file
+): array {
+    if ($universityId <= 0 || $applicationId <= 0) {
+        return ['ok' => false, 'message' => 'Invalid upload context.'];
+    }
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return ['ok' => false, 'message' => 'No file uploaded.'];
+    }
+    if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+        return ['ok' => false, 'message' => 'Upload failed.'];
+    }
+    if (($file['size'] ?? 0) > 12 * 1024 * 1024) {
+        return ['ok' => false, 'message' => 'File too large (max 12 MB).'];
+    }
+
+    $orig = basename((string) ($file['name'] ?? 'document'));
+    $ext = strtolower(pathinfo($orig, PATHINFO_EXTENSION));
+    $safeExt = preg_replace('/[^a-z0-9]/', '', $ext) ?: 'pdf';
+    $allowed = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'webp'];
+    if (!in_array($safeExt, $allowed, true)) {
+        return ['ok' => false, 'message' => 'Allowed: PDF, Word, JPG, PNG.'];
+    }
+
+    $dir = dirname(__DIR__) . '/uploads/institution/' . $universityId . '/applications/' . $applicationId;
+    if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
+        return ['ok' => false, 'message' => 'Could not create upload folder.'];
+    }
+
+    $stored = preg_replace('/[^a-z0-9_]/', '_', $documentType) . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $safeExt;
+    $dest = $dir . '/' . $stored;
+    if (!move_uploaded_file((string) $file['tmp_name'], $dest)) {
+        return ['ok' => false, 'message' => 'Could not save file.'];
+    }
+
+    $relative = 'uploads/institution/' . $universityId . '/applications/' . $applicationId . '/' . $stored;
+
+    return [
+        'ok' => true,
+        'message' => 'Uploaded.',
+        'path' => $relative,
+        'original_name' => $orig,
+        'mime_type' => (string) ($file['type'] ?? 'application/octet-stream'),
+        'size_bytes' => (int) ($file['size'] ?? 0),
+    ];
+}
+
+/**
+ * @return array<int, array<string, mixed>>
+ */
+function xander_institution_list_application_documents(mysqli $conn, int $applicationId, int $universityId): array
+{
+    xander_institution_portal_ensure_schema($conn);
+    if ($applicationId <= 0 || $universityId <= 0) {
+        return [];
+    }
+    $st = $conn->prepare('
+        SELECT * FROM institution_scholarship_application_documents
+        WHERE application_id = ? AND university_id = ?
+        ORDER BY uploaded_at ASC
+    ');
+    if (!$st) {
+        return [];
+    }
+    $st->bind_param('ii', $applicationId, $universityId);
+    $st->execute();
+    $rows = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+    $st->close();
+
+    return $rows ?: [];
+}
+
+/**
+ * @param array<string, mixed> $post
+ * @param array<string, mixed> $files $_FILES
+ * @return array{ok: bool, message: string, application_id?: int}
+ */
+function xander_submit_scholarship_application(mysqli $conn, int $scholarshipId, array $post, array $files = []): array
 {
     xander_institution_portal_ensure_schema($conn);
     $sch = xander_public_load_scholarship($conn, $scholarshipId);
@@ -732,26 +834,42 @@ function xander_submit_scholarship_application(mysqli $conn, int $scholarshipId,
         return ['ok' => false, 'message' => 'Please provide a valid name and email.'];
     }
 
+    $docFields = xander_scholarship_application_document_fields();
+    foreach ($docFields as $fieldName => $meta) {
+        if (empty($meta['required'])) {
+            continue;
+        }
+        $f = $files[$fieldName] ?? null;
+        if (!is_array($f) || ($f['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            return ['ok' => false, 'message' => 'Required document missing: ' . ($meta['label'] ?? $fieldName) . '.'];
+        }
+    }
+
     $phone = trim((string) ($post['applicant_phone'] ?? ''));
     $nationality = trim((string) ($post['nationality'] ?? ''));
     $dob = trim((string) ($post['date_of_birth'] ?? ''));
     $dobVal = $dob !== '' ? $dob : null;
     $education = trim((string) ($post['education_level'] ?? ''));
     $currentInst = trim((string) ($post['current_institution'] ?? ''));
+    $intendedProgram = trim((string) ($post['intended_program'] ?? ''));
+    $fieldOfStudy = trim((string) ($post['field_of_study'] ?? ''));
+    $gpa = trim((string) ($post['gpa_or_grade'] ?? ''));
+    $address = trim((string) ($post['address'] ?? ''));
     $statement = trim((string) ($post['statement'] ?? ''));
     $universityId = (int) ($sch['university_id'] ?? 0);
 
     $st = $conn->prepare('
         INSERT INTO institution_scholarship_applications (
             scholarship_id, university_id, applicant_name, applicant_email, applicant_phone,
-            nationality, date_of_birth, education_level, current_institution, statement, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, \'new\')
+            nationality, date_of_birth, education_level, current_institution,
+            intended_program, field_of_study, gpa_or_grade, address, statement, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, \'new\')
     ');
     if (!$st) {
         return ['ok' => false, 'message' => 'Could not submit application.'];
     }
     $st->bind_param(
-        'iissssssss',
+        'iissssssssssss',
         $scholarshipId,
         $universityId,
         $name,
@@ -761,14 +879,111 @@ function xander_submit_scholarship_application(mysqli $conn, int $scholarshipId,
         $dobVal,
         $education,
         $currentInst,
+        $intendedProgram,
+        $fieldOfStudy,
+        $gpa,
+        $address,
         $statement
     );
-    $ok = $st->execute();
+    if (!$st->execute()) {
+        $st->close();
+
+        return ['ok' => false, 'message' => 'Submission failed. Please try again.'];
+    }
+    $applicationId = (int) $conn->insert_id;
     $st->close();
 
-    return $ok
-        ? ['ok' => true, 'message' => 'Your application has been submitted successfully.']
-        : ['ok' => false, 'message' => 'Submission failed. Please try again.'];
+    foreach ($docFields as $fieldName => $meta) {
+        $f = $files[$fieldName] ?? null;
+        if (!is_array($f) || ($f['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            continue;
+        }
+        $upload = xander_store_scholarship_application_document(
+            $universityId,
+            $applicationId,
+            $fieldName,
+            (string) ($meta['label'] ?? $fieldName),
+            $f
+        );
+        if (!$upload['ok']) {
+            continue;
+        }
+        $docType = $fieldName;
+        $label = (string) ($meta['label'] ?? $fieldName);
+        $orig = (string) ($upload['original_name'] ?? 'file');
+        $path = (string) ($upload['path'] ?? '');
+        $mime = (string) ($upload['mime_type'] ?? '');
+        $size = (int) ($upload['size_bytes'] ?? 0);
+        $ins = $conn->prepare('
+            INSERT INTO institution_scholarship_application_documents
+                (application_id, university_id, document_type, label, original_name, stored_path, mime_type, size_bytes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ');
+        if ($ins) {
+            $ins->bind_param('iisssssi', $applicationId, $universityId, $docType, $label, $orig, $path, $mime, $size);
+            $ins->execute();
+            $ins->close();
+        }
+    }
+
+    return [
+        'ok' => true,
+        'message' => 'Your application and documents have been submitted successfully.',
+        'application_id' => $applicationId,
+    ];
+}
+
+/**
+ * Published education loan opportunities from institution profiles (homepage).
+ *
+ * @return array<int, array<string, mixed>>
+ */
+function xander_homepage_published_loans(mysqli $conn, int $limit = 12): array
+{
+    xander_institution_portal_ensure_schema($conn);
+    $limit = max(1, min(24, $limit));
+
+    $sql = "
+        SELECT p.loan_program_name AS title,
+               p.loan_institution_name AS loan_institution_name,
+               p.loan_summary AS summary,
+               p.loan_coverage AS loan_coverage,
+               p.loan_eligibility AS eligibility,
+               p.loan_rates_notes AS rates_notes,
+               p.loan_apply_url AS loan_apply_url,
+               p.loan_contact_email AS loan_contact_email,
+               p.university_id,
+               u.name AS university_name,
+               c.name AS country_name
+        FROM institution_university_profiles p
+        INNER JOIN universities u ON u.id = p.university_id
+        LEFT JOIN countries c ON c.id = u.country_id
+        WHERE p.homepage_published = 1
+          AND p.profile_complete_loan = 1
+          AND TRIM(COALESCE(p.loan_program_name, '')) <> ''
+        ORDER BY p.updated_at DESC
+        LIMIT ?
+    ";
+    $st = $conn->prepare($sql);
+    if (!$st) {
+        return [];
+    }
+    $st->bind_param('i', $limit);
+    $st->execute();
+    $rows = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+    $st->close();
+
+    return $rows ?: [];
+}
+
+function xander_institution_loan_apply_url(array $loan): string
+{
+    $url = trim((string) ($loan['loan_apply_url'] ?? ''));
+    if ($url !== '' && filter_var($url, FILTER_VALIDATE_URL)) {
+        return $url;
+    }
+
+    return pcvc_url('/loan-providers.php');
 }
 
 /**

@@ -82,14 +82,17 @@
     </div>
 
     <nav id="mobileNavPanel" class="mobile-nav-panel" aria-label="<?php echo htmlspecialchars($current_lang === 'fr' ? 'Menu mobile' : 'Mobile menu', ENT_QUOTES, 'UTF-8'); ?>">
-      <a href="index.php"><?php echo ht('nav_home'); ?></a>
-      <a href="about.php"><?php echo ht('nav_about'); ?></a>
-      <a href="services.php"><?php echo ht('nav_services'); ?></a>
-      <a href="partners.php"><?php echo ht('nav_partners'); ?></a>
-      <a href="testimonials.php"><?php echo ht('nav_testimonials'); ?></a>
-      <a href="contact.php"><?php echo ht('nav_contact'); ?></a>
-      <a href="programs.php"><?php echo ht('nav_programs'); ?></a>
-      <a href="universities.php"><?php echo ht('nav_universities'); ?></a>
+      <a href="index.php"><i class="fas fa-house"></i> <?php echo ht('nav_home'); ?></a>
+      <a href="about.php"><i class="fas fa-circle-info"></i> <?php echo ht('nav_about'); ?></a>
+      <a href="services.php"><i class="fas fa-briefcase"></i> <?php echo ht('nav_services'); ?></a>
+      <a href="programs.php"><i class="fas fa-book-open"></i> <?php echo ht('nav_programs'); ?></a>
+      <a href="universities.php"><i class="fas fa-school"></i> <?php echo ht('nav_universities'); ?></a>
+      <a href="partners.php"><i class="fas fa-handshake"></i> <?php echo ht('nav_partners'); ?></a>
+      <a href="testimonials.php"><i class="fas fa-star"></i> <?php echo ht('nav_testimonials'); ?></a>
+      <a href="contact.php"><i class="fas fa-envelope"></i> <?php echo ht('nav_contact'); ?></a>
+      <a href="payment.php"><i class="fas fa-credit-card"></i> <?php echo ht('nav_payment'); ?></a>
+      <a href="https://elearning.xanderglobalscholars.com/" target="_blank" rel="noopener"><i class="fas fa-laptop"></i> <?php echo ht('nav_elearning'); ?></a>
     </nav>
   </div>
 </header>
+<div id="mobileNavOverlay" class="mobile-nav-overlay" aria-hidden="true"></div>

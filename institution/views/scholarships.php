@@ -16,11 +16,17 @@ $schId = (int) ($sch['id'] ?? 0);
 
 <?php if ($isForm): ?>
 <div class="panel">
+  <div class="panel-head">
+    <div class="icon sch"><i class="fas fa-award"></i></div>
+    <div>
+      <h3 class="h5 fw-bold mb-1"><?= $schId ? 'Edit scholarship' : 'Create a new scholarship' ?></h3>
+      <p class="text-muted small mb-0">Define the opportunity, eligibility, and what students need to submit.</p>
+    </div>
+  </div>
   <form method="post" enctype="multipart/form-data" class="row g-3">
     <?= pcvc_csrf_input() ?>
     <input type="hidden" name="action" value="save_scholarship">
     <input type="hidden" name="scholarship_id" value="<?= $schId ?>">
-    <div class="col-12"><h3 class="h5 fw-bold mb-0"><?= $schId ? 'Edit scholarship' : 'Create scholarship' ?></h3></div>
     <div class="col-md-8">
       <label class="form-label">Scholarship title *</label>
       <input class="form-control" name="title" required value="<?= xander_institution_h((string) ($sch['title'] ?? '')) ?>">
@@ -82,9 +88,10 @@ $schId = (int) ($sch['id'] ?? 0);
       <small class="text-muted"><a href="../<?= xander_institution_h((string) $sch['brochure_path']) ?>" target="_blank">Current brochure</a></small>
       <?php endif; ?>
     </div>
-    <div class="col-12 d-flex gap-2">
-      <button type="submit" class="btn btn-save">Save scholarship</button>
-      <a href="index.php?tab=scholarships" class="btn btn-outline-secondary">Cancel</a>
+    <div class="col-12 d-flex gap-2 pt-2 align-items-center">
+      <button type="submit" class="btn btn-save"><i class="fas fa-save me-1"></i> Save scholarship</button>
+      <a href="index.php?tab=scholarships" class="btn btn-outline-secondary" style="border-radius:12px;padding:11px 22px;font-weight:600;">Cancel</a>
+      <span class="text-muted small ms-auto"><i class="fas fa-info-circle me-1"></i> Drafts won't be visible to students until published.</span>
     </div>
   </form>
 </div>
@@ -102,7 +109,14 @@ $schId = (int) ($sch['id'] ?? 0);
     </thead>
     <tbody>
       <?php if (empty($scholarships)): ?>
-      <tr><td colspan="5" class="text-center text-muted py-4">No scholarships yet. <a href="index.php?tab=scholarships&section=create">Create your first scholarship</a>.</td></tr>
+      <tr>
+        <td colspan="5" class="text-center py-5">
+          <div style="font-size:2.5rem; color:#cbd5e1;"><i class="fas fa-award"></i></div>
+          <h4 class="h6 fw-bold mt-2 mb-1">No scholarships yet</h4>
+          <p class="text-muted small mb-3">Get started by publishing your first scholarship opportunity.</p>
+          <a href="index.php?tab=scholarships&section=create" class="btn btn-save"><i class="fas fa-plus me-1"></i> Create your first scholarship</a>
+        </td>
+      </tr>
       <?php else: ?>
       <?php foreach ($scholarships as $s): ?>
       <tr>

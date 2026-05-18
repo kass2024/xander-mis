@@ -163,8 +163,12 @@ if ($activeTab === 'programs') {
 
 if ($activeTab === 'applications') {
     $viewId = (int) ($_GET['id'] ?? 0);
+    $viewAppDocs = [];
     if ($viewId > 0) {
         $viewApp = xander_institution_load_application($conn, $viewId, $universityId);
+        if ($viewApp) {
+            $viewAppDocs = xander_institution_list_application_documents($conn, $viewId, $universityId);
+        }
     }
     $statusFilter = in_array($activeSection, array_keys($statusLabels), true) ? $activeSection : null;
     if (!$viewApp) {

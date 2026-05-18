@@ -218,4 +218,38 @@ function xander_institution_portal_ensure_schema(mysqli $conn): void
     if (!$conn->query($sqlApplications)) {
         throw new RuntimeException('Failed creating institution_scholarship_applications: ' . $conn->error);
     }
+
+    if (!$hasColumn('institution_scholarship_applications', 'intended_program')) {
+        $addColumn('institution_scholarship_applications', 'ALTER TABLE institution_scholarship_applications ADD COLUMN intended_program VARCHAR(255) NULL DEFAULT NULL AFTER current_institution');
+    }
+    if (!$hasColumn('institution_scholarship_applications', 'field_of_study')) {
+        $addColumn('institution_scholarship_applications', 'ALTER TABLE institution_scholarship_applications ADD COLUMN field_of_study VARCHAR(191) NULL DEFAULT NULL AFTER intended_program');
+    }
+    if (!$hasColumn('institution_scholarship_applications', 'gpa_or_grade')) {
+        $addColumn('institution_scholarship_applications', 'ALTER TABLE institution_scholarship_applications ADD COLUMN gpa_or_grade VARCHAR(64) NULL DEFAULT NULL AFTER field_of_study');
+    }
+    if (!$hasColumn('institution_scholarship_applications', 'address')) {
+        $addColumn('institution_scholarship_applications', 'ALTER TABLE institution_scholarship_applications ADD COLUMN address VARCHAR(500) NULL DEFAULT NULL AFTER gpa_or_grade');
+    }
+
+    $sqlAppDocs = "
+        CREATE TABLE IF NOT EXISTS institution_scholarship_application_documents (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            application_id INT UNSIGNED NOT NULL,
+            university_id INT UNSIGNED NOT NULL,
+            document_type VARCHAR(64) NOT NULL,
+            label VARCHAR(191) NULL DEFAULT NULL,
+            original_name VARCHAR(255) NOT NULL,
+            stored_path VARCHAR(500) NOT NULL,
+            mime_type VARCHAR(120) NULL DEFAULT NULL,
+            size_bytes INT UNSIGNED NOT NULL DEFAULT 0,
+            uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_inst_sch_app_docs_app (application_id),
+            KEY idx_inst_sch_app_docs_uni (university_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ";
+    if (!$conn->query($sqlAppDocs)) {
+        throw new RuntimeException('Failed creating institution_scholarship_application_documents: ' . $conn->error);
+    }
 }

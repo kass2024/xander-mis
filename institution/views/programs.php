@@ -16,6 +16,13 @@ $pId = (int) ($p['id'] ?? 0);
 
 <?php if ($isForm): ?>
 <div class="panel">
+  <div class="panel-head">
+    <div class="icon loan"><i class="fas fa-graduation-cap"></i></div>
+    <div>
+      <h3 class="h5 fw-bold mb-1"><?= $pId ? 'Edit program' : 'Add a new program' ?></h3>
+      <p class="text-muted small mb-0">Programs help students discover what your institution offers.</p>
+    </div>
+  </div>
   <form method="post" class="row g-3">
     <?= pcvc_csrf_input() ?>
     <input type="hidden" name="action" value="save_program">
@@ -63,9 +70,9 @@ $pId = (int) ($p['id'] ?? 0);
         <option value="draft" <?= (($p['status'] ?? '') === 'draft') ? 'selected' : '' ?>>Draft</option>
       </select>
     </div>
-    <div class="col-12 d-flex gap-2">
-      <button type="submit" class="btn btn-save">Save program</button>
-      <a href="index.php?tab=programs" class="btn btn-outline-secondary">Cancel</a>
+    <div class="col-12 d-flex gap-2 pt-2">
+      <button type="submit" class="btn btn-save"><i class="fas fa-save me-1"></i> Save program</button>
+      <a href="index.php?tab=programs" class="btn btn-outline-secondary" style="border-radius:12px;padding:11px 22px;font-weight:600;">Cancel</a>
     </div>
   </form>
 </div>
@@ -75,7 +82,14 @@ $pId = (int) ($p['id'] ?? 0);
     <thead><tr><th>Program</th><th>Type</th><th>Duration</th><th>Status</th><th></th></tr></thead>
     <tbody>
       <?php if (empty($programs)): ?>
-      <tr><td colspan="5" class="text-center text-muted py-4">No programs yet.</td></tr>
+      <tr>
+        <td colspan="5" class="text-center py-5">
+          <div style="font-size:2.5rem; color:#cbd5e1;"><i class="fas fa-graduation-cap"></i></div>
+          <h4 class="h6 fw-bold mt-2 mb-1">No programs yet</h4>
+          <p class="text-muted small mb-3">Add your first academic program to start receiving applications.</p>
+          <a href="index.php?tab=programs&section=create" class="btn btn-save"><i class="fas fa-plus me-1"></i> Add your first program</a>
+        </td>
+      </tr>
       <?php else: ?>
       <?php foreach ($programs as $row): ?>
       <tr>
