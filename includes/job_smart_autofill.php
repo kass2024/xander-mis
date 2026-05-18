@@ -248,8 +248,33 @@ $prescreenHandoffForJs = $prescreenHandoffForJs ?? null;
     return window.intlTelInputGlobals.getInstance(el) || null;
   }
 
-  window.applyAutofillFields = function (fields) {
+  function itiHasUserPhone(iti) {
+    if (!iti) return false;
+    try {
+      const digits = phoneDigitsOnly(iti.getNumber());
+      if (digits.length >= 9) return true;
+      if (typeof iti.isValidNumber === "function" && iti.isValidNumber()) return true;
+    } catch (e) { /* ignore */ }
+    return false;
+  }
+
+  function stripPhoneFromFields(fields) {
+    const out = Object.assign({}, fields);
+    delete out.phone_area_code;
+    delete out.phone_number;
+    delete out.phone_e164;
+    delete out.emergency_area_code;
+    delete out.emergency_phone_number;
+    return out;
+  }
+
+  window.applyAutofillFields = function (fields, options) {
     if (!fields) return;
+    options = options || {};
+    const respectPhone = options.respectExistingPhone !== false;
+    if (respectPhone && itiHasUserPhone(getPhoneIti("#phone"))) {
+      fields = stripPhoneFromFields(fields);
+    }
     const setVal = (id, val) => {
       if (val == null || String(val).trim() === "") return;
       const el = document.getElementById(id);
@@ -284,7 +309,7 @@ $prescreenHandoffForJs = $prescreenHandoffForJs ?? null;
       }
     }
     const emIti = getPhoneIti("#emergency_phone");
-    if (emIti && (fields.emergency_area_code || fields.emergency_phone_number)) {
+    if (emIti && !itiHasUserPhone(emIti) && (fields.emergency_area_code || fields.emergency_phone_number)) {
       setItiPhone(emIti, fields.emergency_area_code, fields.emergency_phone_number);
     }
   };
@@ -378,7 +403,9 @@ $prescreenHandoffForJs = $prescreenHandoffForJs ?? null;
         throw new Error(analysisData?.message || "AI analysis failed");
       }
 
-      if (analysisData.fields) window.applyAutofillFields(analysisData.fields);
+      if (analysisData.fields) {
+        window.applyAutofillFields(analysisData.fields, { respectExistingPhone: true });
+      }
 
       const { queue, warnings } = buildUploadQueue(analysisData.documents, files);
       const allWarnings = [...(analysisData.warnings || []), ...warnings];
@@ -429,7 +456,7 @@ $prescreenHandoffForJs = $prescreenHandoffForJs ?? null;
     if (!prescreenHandoff) return;
 
     if (prescreenHandoff.prefill) {
-      window.applyAutofillFields(prescreenHandoff.prefill);
+      window.applyAutofillFields(prescreenHandoff.prefill, { respectExistingPhone: true });
     }
     const hintEl = document.getElementById("prescreenWorkCountriesHint");
     if (hintEl && prescreenHandoff.hints) {

@@ -54,9 +54,10 @@ Rules:
 1. Extract only applicant facts explicitly visible in the document.
 2. Never invent data.
 3. Return country names, not codes.
-4. For CV/resume documents, prioritize contact block: email, phone, address, nationality.
-5. For passport photos (headshot only), classify as photo.
-6. Return JSON only.
+4. Do NOT extract phone numbers from any document (especially CV/resume). The applicant enters their phone on the form.
+5. For CV/resume documents, prioritize contact block: email, address, nationality — never phone.
+6. For passport photos (headshot only), classify as photo.
+7. Return JSON only.
 
 JSON schema:
 {
@@ -67,7 +68,6 @@ JSON schema:
     "first_name": "",
     "last_name": "",
     "email": "",
-    "phone_international": "",
     "work_country": "",
     "address_country": "",
     "province_state": "",
@@ -77,8 +77,7 @@ JSON schema:
     "village": "",
     "emergency_full_name": "",
     "emergency_relationship": "",
-    "emergency_email": "",
-    "emergency_phone_international": ""
+    "emergency_email": ""
   }
 }
 PROMPT;
@@ -158,8 +157,6 @@ function ai_autofill_field_priority(string $field, string $source, string $mode)
             'first_name' => ['passport', 'national_id', 'cv', 'academic_certificates'],
             'last_name' => ['passport', 'national_id', 'cv', 'academic_certificates'],
             'email' => ['cv', 'passport'],
-            'phone_area_code' => ['cv', 'passport'],
-            'phone_number' => ['cv', 'passport'],
             'work_country_id' => ['cv', 'passport'],
             'address_country_id' => ['cv', 'passport', 'national_id'],
             'province_state' => ['cv', 'passport', 'national_id'],
@@ -170,8 +167,6 @@ function ai_autofill_field_priority(string $field, string $source, string $mode)
             'emergency_full_name' => ['cv'],
             'emergency_relationship' => ['cv'],
             'emergency_email' => ['cv'],
-            'emergency_area_code' => ['cv'],
-            'emergency_phone_number' => ['cv'],
         ];
         $list = $preferences[$field] ?? ['passport', 'cv', 'national_id', 'academic_certificates'];
         $index = array_search($source, $list, true);
@@ -258,37 +253,7 @@ function ai_autofill_normalize_job_fields(array $fields, mysqli $conn): array
         $normalized['address_country_id'] = $addressCountryId;
     }
 
-    $phone = ai_normalize_phone_pair(
-        $fields['phone_international'] ?? '',
-        [$fields['work_country'] ?? '', $fields['address_country'] ?? '', $fields['village'] ?? '']
-    );
-    if ($phone['area_code'] !== '' && $phone['phone_number'] !== '') {
-        require_once __DIR__ . '/phone_whatsapp_normalize.php';
-        [$dial, $nat] = xander_normalize_job_phone_pair(
-            ltrim($phone['area_code'], '+'),
-            $phone['phone_number']
-        );
-        if ($dial !== '' && $nat !== '') {
-            $normalized['phone_area_code'] = $dial;
-            $normalized['phone_number'] = $nat;
-        }
-    }
-
-    $emergencyPhone = ai_normalize_phone_pair(
-        $fields['emergency_phone_international'] ?? '',
-        [$fields['address_country'] ?? '', $fields['work_country'] ?? '']
-    );
-    if ($emergencyPhone['area_code'] !== '' && $emergencyPhone['phone_number'] !== '') {
-        require_once __DIR__ . '/phone_whatsapp_normalize.php';
-        [$dial, $nat] = xander_normalize_job_phone_pair(
-            ltrim($emergencyPhone['area_code'], '+'),
-            $emergencyPhone['phone_number']
-        );
-        if ($dial !== '' && $nat !== '') {
-            $normalized['emergency_area_code'] = $dial;
-            $normalized['emergency_phone_number'] = $nat;
-        }
-    }
+    // Phone numbers are entered by the applicant on the form — never taken from CV/documents.
 
     return $normalized;
 }

@@ -1009,7 +1009,9 @@ foreach ($uploadedFiles as $file) {
         $fileNameHint = strtolower($originalName);
         $docInstruction = 'Classify this document and extract applicant fields.';
         if (pcvc_contains($fileNameHint, 'cv') || pcvc_contains($fileNameHint, 'resume')) {
-            $docInstruction .= ' This file is likely a CV/resume, so prioritize extracting applicant email, phone, address, nationality, and education history.';
+            $docInstruction .= $autofillMode === 'job'
+                ? ' This file is likely a CV/resume. Extract email, address, and nationality only — do not extract any phone numbers.'
+                : ' This file is likely a CV/resume, so prioritize extracting applicant email, phone, address, nationality, and education history.';
         } elseif (pcvc_contains($fileNameHint, 'passport')) {
             $docInstruction .= ' This file may be a passport, so prioritize legal identity fields like first name, last name, date of birth, nationality, and passport number.';
         } elseif (pcvc_contains($fileNameHint, 'transcript') || pcvc_contains($fileNameHint, 'degree')) {
@@ -1136,6 +1138,12 @@ if (!$documents && !$mergedFields) {
         'warnings' => $warnings,
         'debug' => $debug
     ], 422);
+}
+
+if ($autofillMode === 'job') {
+    foreach (['phone_area_code', 'phone_number', 'emergency_area_code', 'emergency_phone_number'] as $phoneField) {
+        unset($mergedFields[$phoneField]);
+    }
 }
 
 add_stage($debug, 'save', 'Batch analysis completed successfully.');
