@@ -128,6 +128,71 @@ function xander_prescreening_resolve_application_user_id(mysqli $conn, array $ro
 }
 
 /**
+ * Phone digits for application prefill (job + study).
+ *
+ * @return array{phone_area_code?:string,phone_number?:string,phone_e164?:string,area_code?:string}
+ */
+function xander_prescreening_phone_prefill_fields(string $phone, bool $forStudyForm): array
+{
+    $phone = trim($phone);
+    if ($phone === '') {
+        return [];
+    }
+
+    require_once __DIR__ . '/phone_whatsapp_normalize.php';
+    require_once __DIR__ . '/env_load.php';
+    xander_load_env_file();
+    $waDigits = xander_prescreening_normalize_whatsapp(
+        $phone,
+        xander_env_get('WHATSAPP_DEFAULT_COUNTRY_CODE') ?: null
+    );
+    if ($waDigits === '') {
+        return [];
+    }
+
+    [$dial, $nat] = xander_split_phone_digits_for_job($waDigits);
+    if ($dial !== '' && $nat !== '') {
+        if ($forStudyForm) {
+            return ['area_code' => $dial, 'phone_number' => $nat];
+        }
+
+        return ['phone_area_code' => $dial, 'phone_number' => $nat];
+    }
+
+    return ['phone_e164' => $waDigits];
+}
+
+/**
+ * @param array{first:string,last:string} $name
+ * @return array<string, string>
+ */
+function xander_prescreening_study_application_prefill(array $row, string $phone, array $name): array
+{
+    $prefill = array_filter([
+        'email' => trim((string) ($row['student_email'] ?? '')),
+        'first_name' => $name['first'],
+        'last_name' => $name['last'],
+    ], static fn ($v) => trim((string) $v) !== '');
+
+    return array_merge($prefill, xander_prescreening_phone_prefill_fields($phone, true));
+}
+
+/**
+ * @param array{first:string,last:string} $name
+ * @return array<string, string>
+ */
+function xander_prescreening_work_application_prefill(array $row, mysqli $conn, string $phone, array $name): array
+{
+    $prefill = array_filter([
+        'email' => trim((string) ($row['student_email'] ?? '')),
+        'first_name' => $name['first'],
+        'last_name' => $name['last'],
+    ], static fn ($v) => trim((string) $v) !== '');
+
+    return array_merge($prefill, xander_prescreening_phone_prefill_fields($phone, false));
+}
+
+/**
  * @return array{token:string,user_id:string,prefill:array<string,string>,hints:array<string,string>,docs:array<int,array<string,string>>}
  */
 function xander_prescreening_build_apply_handoff(mysqli $conn, array $row): array
@@ -152,30 +217,9 @@ function xander_prescreening_build_apply_handoff(mysqli $conn, array $row): arra
         $docs[] = $entry;
     }
 
-    $prefill = array_filter([
-        'email' => trim((string) ($row['student_email'] ?? '')),
-        'first_name' => $name['first'],
-        'last_name' => $name['last'],
-    ], static fn ($v) => trim((string) $v) !== '');
-
-    if ($phone !== '') {
-        require_once __DIR__ . '/phone_whatsapp_normalize.php';
-        require_once __DIR__ . '/env_load.php';
-        xander_load_env_file();
-        $waDigits = xander_prescreening_normalize_whatsapp(
-            $phone,
-            xander_env_get('WHATSAPP_DEFAULT_COUNTRY_CODE') ?: null
-        );
-        if ($waDigits !== '') {
-            [$dial, $nat] = xander_split_phone_digits_for_job($waDigits);
-            if ($dial !== '' && $nat !== '') {
-                $prefill['phone_area_code'] = $dial;
-                $prefill['phone_number'] = $nat;
-            } else {
-                $prefill['phone_e164'] = $waDigits;
-            }
-        }
-    }
+    $prefill = $work
+        ? xander_prescreening_work_application_prefill($row, $conn, $phone, $name)
+        : xander_prescreening_study_application_prefill($row, $phone, $name);
 
     $hints = [];
     if ($work) {
@@ -209,6 +253,7 @@ function xander_prescreening_build_apply_handoff(mysqli $conn, array $row): arra
             'course_program' => trim((string) ($row['course_program'] ?? '')),
             'education_level' => trim((string) ($row['education_level'] ?? '')),
         ], static fn ($v) => trim((string) $v) !== '');
+        // work prefill already built above; study hints only here
     }
 
     return [

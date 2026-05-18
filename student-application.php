@@ -4268,14 +4268,37 @@ function startValidationSimulation(progress) {
 
   function hasCoreApplicantInfo(fields) {
     const values = fields || {};
+    const hasPhone =
+      (String(values.area_code || values.phone_area_code || "").trim() !== "" &&
+        String(values.phone_number || "").trim() !== "") ||
+      String(values.phone_e164 || "").trim() !== "";
+
     return [
       values.first_name,
       values.last_name,
       values.email,
       values.passport_number,
       values.student_national_id,
-      values.phone_number
+      hasPhone ? "1" : ""
     ].some(value => String(value || "").trim() !== "");
+  }
+
+  function mergeWithPrescreenFields(aiFields) {
+    if (typeof window.mergePrescreenIntoAutofillFields === "function" && prescreenHandoff?.prefill) {
+      return window.mergePrescreenIntoAutofillFields(aiFields, prescreenHandoff.prefill);
+    }
+    return { ...(aiFields || {}) };
+  }
+
+  function applyMergedAutofillFields(aiFields) {
+    const merged = mergeWithPrescreenFields(aiFields);
+    if (typeof window.applyAutofillFields === "function") {
+      window.applyAutofillFields(merged);
+    }
+    if (typeof window.syncApplicantPhoneHiddenFields === "function") {
+      window.syncApplicantPhoneHiddenFields();
+    }
+    return merged;
   }
 
   function renderQueue() {
@@ -4481,9 +4504,7 @@ function startValidationSimulation(progress) {
         throw new Error(analysisData?.message || texts.error);
       }
 
-      if (analysisData.fields && typeof window.applyAutofillFields === "function") {
-        window.applyAutofillFields(analysisData.fields);
-      }
+      const mergedFields = applyMergedAutofillFields(analysisData.fields || {});
 
       const { queue, warnings: queueWarnings } = buildUploadQueue(analysisData.documents || []);
       const warnings = [...(analysisData.warnings || []), ...queueWarnings];
@@ -4529,7 +4550,7 @@ function startValidationSimulation(progress) {
       setStage("save", <?php echo json_encode($t['smart_autofill_stage_save'], JSON_UNESCAPED_UNICODE); ?>, "info", "Saving extracted student details and current study choices.");
       try {
         if (typeof window.persistAutofillDraftData === "function") {
-          await window.persistAutofillDraftData(applicationId, analysisData.fields || {});
+          await window.persistAutofillDraftData(applicationId, mergedFields);
         }
       } catch (err) {
         warnings.push(err && err.message ? err.message : "Autofilled form values were applied, but saving the draft needs another try.");
@@ -4538,14 +4559,29 @@ function startValidationSimulation(progress) {
       renderPanels(analysisData.documents || [], warnings);
       clearPendingFiles();
 
-      if (!hasCoreApplicantInfo(analysisData.fields || {})) {
+      if (!hasCoreApplicantInfo(mergedFields)) {
         setStage("save", texts.draftOnly, "warning", "You can add more documents later and run the analysis again.");
+        return;
+      }
+
+      if (typeof collectStudyChoices === "function" && collectStudyChoices().length === 0) {
+        setStage(
+          "submit",
+          "Select at least one study program on step 1, then run Start analysis again to submit.",
+          "warning",
+          "Study choice is required before final submission."
+        );
         return;
       }
 
       if (attachFailures > 0) {
         warnings.push("Some documents could not be attached, but the application will still continue to final submission with the details already extracted.");
         renderPanels(analysisData.documents || [], warnings);
+      }
+
+      applyMergedAutofillFields(mergedFields);
+      if (typeof window.syncApplicantPhoneHiddenFields === "function") {
+        window.syncApplicantPhoneHiddenFields();
       }
 
       setStage("submit", texts.submitAttempt, "info", "Continuing automatically to the final submission even if only one identity document was provided.");
@@ -4668,6 +4704,9 @@ function startValidationSimulation(progress) {
     if (!fields || typeof fields !== "object") return;
     if (typeof window.applyAutofillFields === "function") {
       window.applyAutofillFields(fields);
+      if (typeof window.syncApplicantPhoneHiddenFields === "function") {
+        window.syncApplicantPhoneHiddenFields();
+      }
       return;
     }
     Object.keys(fields).forEach((name) => {

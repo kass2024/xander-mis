@@ -406,12 +406,67 @@ function setPhoneWidgetValue(inputId, areaCode, phoneDigits) {
 function restorePhoneInputsFromData(data) {
   if (!data || typeof data !== "object") return;
 
-  setPhoneWidgetValue("intl_phone", data.area_code, data.phone_number);
+  const areaCode = data.area_code || data.phone_area_code || "";
+  const phoneNumber = data.phone_number || "";
+
+  if (areaCode && phoneNumber) {
+    setPhoneWidgetValue("intl_phone", areaCode, phoneNumber);
+  } else if (data.phone_e164) {
+    const input = document.getElementById("intl_phone");
+    const iti = input && window.intlTelInputGlobals?.getInstance(input);
+    const e164 = String(data.phone_e164).trim();
+    if (iti && e164 && typeof iti.setNumber === "function") {
+      try {
+        iti.setNumber(e164.startsWith("+") ? e164 : `+${e164}`);
+        input.dispatchEvent(new Event("blur", { bubbles: true }));
+      } catch (err) {
+        input.value = e164;
+      }
+    }
+  }
+
   setPhoneWidgetValue(
     "emergency_phone",
     data.emergency_area_code,
     data.emergency_phone_number
   );
+}
+
+function normalizeAutofillFieldNames(fields) {
+  if (!fields || typeof fields !== "object") return {};
+  const out = { ...fields };
+  if (!out.area_code && out.phone_area_code) {
+    out.area_code = out.phone_area_code;
+  }
+  return out;
+}
+
+function formFieldHasValue(name) {
+  if (name === "area_code" || name === "phone_number") {
+    const area = form.querySelector('[name="area_code"]')?.value?.trim() || "";
+    const num = form.querySelector('[name="phone_number"]')?.value?.trim() || "";
+    if (area && num) return true;
+    const phoneInput = document.getElementById("intl_phone");
+    const iti = phoneInput && window.intlTelInputGlobals?.getInstance(phoneInput);
+    if (iti && typeof iti.isValidNumber === "function") {
+      try {
+        return iti.isValidNumber();
+      } catch (e) {
+        return false;
+      }
+    }
+    return Boolean(phoneInput?.value?.trim());
+  }
+
+  const el = form.querySelector(`[name="${escapeFieldName(name)}"]`);
+  if (!el || el.type === "file") return false;
+  if (el.type === "radio") {
+    return Boolean(form.querySelector(`[name="${escapeFieldName(name)}"]:checked`));
+  }
+  if (el.type === "checkbox") {
+    return el.checked;
+  }
+  return String(el.value || "").trim() !== "";
 }
 
 function setFieldValueByName(name, value) {
@@ -465,25 +520,57 @@ function setFieldValueByName(name, value) {
   });
 }
 
-function applyAutofillFields(fields) {
+function applyAutofillFields(fields, options = {}) {
   if (!fields || typeof fields !== "object") return;
 
-  Object.entries(fields).forEach(([name, value]) => {
+  const normalized = normalizeAutofillFieldNames(fields);
+  const respectExisting = options.respectExisting === true;
+
+  Object.entries(normalized).forEach(([name, value]) => {
+    if (respectExisting && formFieldHasValue(name)) return;
     setFieldValueByName(name, value);
   });
 
   restorePhoneInputsFromData({
-    area_code: form.querySelector('[name="area_code"]')?.value || fields.area_code,
+    area_code:
+      form.querySelector('[name="area_code"]')?.value ||
+      normalized.area_code ||
+      normalized.phone_area_code,
     phone_number:
-      form.querySelector('[name="phone_number"]')?.value || fields.phone_number,
+      form.querySelector('[name="phone_number"]')?.value || normalized.phone_number,
+    phone_e164: normalized.phone_e164,
     emergency_area_code:
       form.querySelector('[name="emergency_area_code"]')?.value ||
-      fields.emergency_area_code,
+      normalized.emergency_area_code,
     emergency_phone_number:
       form.querySelector('[name="emergency_phone_number"]')?.value ||
-      fields.emergency_phone_number,
+      normalized.emergency_phone_number,
   });
 }
+
+/** Fill empty applicant fields from pre-screening (after document AI). */
+function mergePrescreenIntoAutofillFields(aiFields, prescreenFields) {
+  const merged = { ...(aiFields || {}) };
+  const prescreen = normalizeAutofillFieldNames(prescreenFields || {});
+  Object.entries(prescreen).forEach(([key, value]) => {
+    if (value == null || String(value).trim() === "") return;
+    const current = merged[key];
+    if (current == null || String(current).trim() === "") {
+      merged[key] = value;
+    }
+  });
+  return merged;
+}
+
+function syncApplicantPhoneHiddenFields() {
+  const phoneInput = document.getElementById("intl_phone");
+  if (!phoneInput) return;
+  phoneInput.dispatchEvent(new Event("blur", { bubbles: true }));
+  phoneInput.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+window.mergePrescreenIntoAutofillFields = mergePrescreenIntoAutofillFields;
+window.syncApplicantPhoneHiddenFields = syncApplicantPhoneHiddenFields;
 
 function applicationHasUploadedIdentityDocs() {
   const docFields = ["valid_passport", "cv_resume"];

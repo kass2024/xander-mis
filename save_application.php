@@ -678,8 +678,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $identityLast = trim((string)($_POST['last_name'] ?? ''));
 
         if ($identityAppId > 0 && looks_like_human_name($identityFirst) && looks_like_human_name($identityLast)) {
+            $storedPassport = '';
+            $storedCv = '';
+            $storedDegree = '';
+            $storedHighSchool = '';
+            $storedPersonalStatement = '';
+            $storedEnglishCertificate = '';
+            $storedRecommendationLetters = '';
+            $storedBirthCertificate = '';
             $stmt = $conn->prepare("
-                SELECT valid_passport, cv_resume, degree_transcripts, high_school_degree
+                SELECT valid_passport, cv_resume, degree_transcripts, high_school_degree,
+                       personal_statement, english_certificate, recommendation_letters, birth_certificate
                 FROM student_applications
                 WHERE id = ?
                 LIMIT 1
@@ -688,13 +697,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($stmt) {
                 $stmt->bind_param("i", $identityAppId);
                 $stmt->execute();
-                $stmt->bind_result($storedPassport, $storedCv, $storedDegree, $storedHighSchool);
+                $stmt->bind_result(
+                    $storedPassport,
+                    $storedCv,
+                    $storedDegree,
+                    $storedHighSchool,
+                    $storedPersonalStatement,
+                    $storedEnglishCertificate,
+                    $storedRecommendationLetters,
+                    $storedBirthCertificate
+                );
                 if ($stmt->fetch()) {
                     $identityOnlySubmitAllowed = (
                         trim((string)$storedPassport) !== ''
                         || trim((string)$storedCv) !== ''
                         || trim((string)$storedDegree) !== ''
                         || trim((string)$storedHighSchool) !== ''
+                        || trim((string)$storedPersonalStatement) !== ''
+                        || trim((string)$storedEnglishCertificate) !== ''
+                        || trim((string)$storedRecommendationLetters) !== ''
+                        || trim((string)$storedBirthCertificate) !== ''
                     );
                 }
                 $stmt->close();
