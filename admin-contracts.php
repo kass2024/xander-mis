@@ -50,313 +50,45 @@ if (!$result) {
 <title>Signed Student Contracts | Xander Global Scholars</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="<?= $basePath ?>/assets/css/contract-modern.css">
 
 <style>
-:root{
-    --blue:#1f4fd8;
-    --green:#28a745;
-    --teal:#17a2b8;
-    --orange:#fd7e14;
-    --red:#dc3545;
-    --gray:#6c757d;
-    --bg:#f3f5f9;
-    --success-bg:#d4edda;
-    --success-text:#155724;
-    --success-border:#c3e6cb;
-    --error-bg:#f8d7da;
-    --error-text:#721c24;
-    --error-border:#f5c6cb;
-}
-
-*{
-    box-sizing:border-box;
-    margin:0;
-    padding:0;
-}
-
-body{
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', Arial, sans-serif;
-    background:var(--bg);
-    padding:30px 20px;
-    margin:0;
-    line-height:1.5;
-}
-
-.container{
-    max-width:1300px;
-    margin:0 auto;
-    background:#fff;
-    border-radius:14px;
-    box-shadow:0 15px 40px rgba(0,0,0,.08);
-    padding:25px;
-}
-
-.header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:25px;
-    flex-wrap:wrap;
-    gap:15px;
-}
-
-.header h1{
-    margin:0;
-    font-size:24px;
-    font-weight:600;
-    color:#333;
-}
-
-.back-btn{
-    background:#eef2ff;
-    color:var(--blue);
-    padding:8px 16px;
-    border-radius:8px;
-    font-size:13px;
-    text-decoration:none;
-    font-weight:600;
-    transition: background 0.2s;
-}
-
-.back-btn:hover {
-    background: #e0e7ff;
-}
-
-/* Alert Messages */
-.alert {
-    padding: 16px 20px;
-    border-radius: 8px;
-    margin-bottom: 25px;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    animation: slideDown 0.3s ease;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.alert-success {
-    background-color: var(--success-bg);
-    color: var(--success-text);
-    border: 1px solid var(--success-border);
-}
-
-.alert-error {
-    background-color: var(--error-bg);
-    color: var(--error-text);
-    border: 1px solid var(--error-border);
-}
-
-.alert .close-btn {
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    color: inherit;
-    opacity: 0.5;
-    padding: 0 5px;
-    transition: opacity 0.2s;
-}
-
-.alert .close-btn:hover {
-    opacity: 1;
-}
-
-/* Table Styles */
-.table-responsive {
-    overflow-x: auto;
-    border-radius: 10px;
-    border: 1px solid #eef2f6;
-}
-
-table{
-    width:100%;
-    border-collapse:collapse;
-    min-width: 900px;
-}
-
-th, td{
-    padding:16px 12px;
-    border-bottom:1px solid #eef2f6;
-    font-size:14px;
-    text-align:left;
-}
-
-th{
-    background:#f8fafd;
-    font-size:12px;
-    font-weight:600;
-    text-transform:uppercase;
-    letter-spacing:0.5px;
-    color:#5a6a7e;
-}
-
-tr:hover {
-    background-color: #fafbfe;
-}
-
-tr:last-child td {
-    border-bottom: none;
-}
-
-.status{
-    display: inline-block;
-    padding:6px 14px;
-    border-radius:30px;
-    font-size:12px;
-    font-weight:600;
-    text-align:center;
-    min-width: 80px;
-}
-
-.status.signed{
-    background:#e6f4ea;
-    color:#1e7e34;
-}
-
-.actions{
-    display:flex;
-    gap:8px;
-    align-items:center;
-    flex-wrap:wrap;
-}
-
-.btn{
-    border:none;
-    padding:8px 14px;
-    font-size:12px;
-    font-weight:600;
-    border-radius:6px;
-    color:#fff;
-    cursor:pointer;
-    white-space:nowrap;
-    text-decoration:none;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    transition: all 0.2s;
-    min-width: 65px;
-    border: 1px solid transparent;
-}
-
-.btn:focus-visible {
-    outline: 2px solid var(--blue);
-    outline-offset: 2px;
-}
-
-.btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.btn-pdf{ 
-    background:var(--green);
-}
-.btn-pdf:hover:not(:disabled) { 
-    background: #218838;
-}
-
-.btn-send{ 
-    background:var(--teal);
-}
-.btn-send:hover:not(:disabled) { 
-    background: #138496;
-}
-
-.btn-resend{ 
-    background:var(--orange);
-}
-.btn-resend:hover:not(:disabled) { 
-    background: #e46a0e;
-}
-
-.btn-del{ 
-    background:var(--red);
-}
-.btn-del:hover:not(:disabled) { 
-    background: #c82333;
-}
-
-.small-text{
-    font-size:11px;
-    color:#6c757d;
-    margin-left:8px;
-    white-space:nowrap;
-}
-
-.empty-state {
-    text-align: center;
-    color: #6c757d;
-    padding: 50px 20px !important;
-    font-size: 16px;
-}
-
-.empty-state p {
-    margin-top: 10px;
-    font-size: 14px;
-}
-
-/* Loading state */
-.loading {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid #fff;
-    border-radius: 50%;
-    border-top-color: transparent;
-    animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    body { padding: 15px; }
-    .container { padding: 15px; }
-    .header h1 { font-size: 20px; }
-}
+/* Page-specific tweaks for admin contracts list */
+body { padding: 32px 20px; }
+.container { /* preserved for backward compatibility */ }
+.btn, .status, .actions, .alert, .alert-success, .alert-error,
+.empty-state, .loading, .header, .back-btn, table th, table td { /* will be styled by below */ }
 </style>
 </head>
 
-<body>
+<body class="xgs-contract-body">
 
-<div class="container">
+<div class="container xgs-admin-shell">
 
-<div class="header">
-    <h1>📄 Signed Student Contracts</h1>
-    <a href="<?= $basePath ?>/admin-dashboard.php" class="back-btn">
+<div class="header xgs-admin-header">
+    <h1>Signed Student Contracts</h1>
+    <a href="<?= $basePath ?>/admin-dashboard.php" class="back-btn xgs-back-btn">
         ← Back to Dashboard
     </a>
 </div>
 
 <?php if ($showSuccess): ?>
-<div class="alert alert-success" id="successAlert">
+<div class="alert alert-success xgs-alert success" id="successAlert">
     <span>✅ Email sent successfully!</span>
     <button type="button" class="close-btn" onclick="this.parentElement.remove()" aria-label="Close">×</button>
 </div>
 <?php endif; ?>
 
 <?php if ($showError): ?>
-<div class="alert alert-error" id="errorAlert">
+<div class="alert alert-error xgs-alert error" id="errorAlert">
     <span>❌ <?= htmlspecialchars(urldecode($_GET['error'])) ?></span>
     <button type="button" class="close-btn" onclick="this.parentElement.remove()" aria-label="Close">×</button>
 </div>
 <?php endif; ?>
 
-<div class="table-responsive">
-<table>
+<div class="table-responsive xgs-admin-table-wrap">
+<table class="xgs-admin-table">
 <thead>
 <tr>
     <th>#</th>
@@ -371,34 +103,34 @@ tr:last-child td {
 
 <?php if ($result->num_rows === 0): ?>
 <tr>
-    <td colspan="6" class="empty-state">
-        <div>📭 No signed contracts found</div>
-        <p>Contracts will appear here once students sign them</p>
+    <td colspan="6" class="empty-state xgs-empty-state">
+        <strong>📭 No signed contracts found</strong>
+        <p>Contracts will appear here once students sign them.</p>
     </td>
 </tr>
 <?php endif; ?>
 
 <?php $i = 1; while ($row = $result->fetch_assoc()): ?>
-<?php 
+<?php
     $fullName = trim((string) ($row['student_name'] ?? ''));
     $fullName = !empty($fullName) ? $fullName : 'Unknown Student';
     $hasBeenSent = !empty($row['sent_at']);
 ?>
 <tr>
     <td><?= $i++ ?></td>
-    <td><?= htmlspecialchars($fullName) ?></td>
+    <td><strong><?= htmlspecialchars($fullName) ?></strong></td>
     <td><?= htmlspecialchars($row['email'] ?? '—') ?></td>
-    <td><span class="status signed">SIGNED</span></td>
+    <td><span class="status signed xgs-badge signed">✓ SIGNED</span></td>
     <td><?= htmlspecialchars(date('Y-m-d H:i', strtotime($row['signed_at'] ?? 'now'))) ?></td>
-    <td class="actions">
+    <td class="actions xgs-actions">
 
         <!-- PDF Button -->
-        <a class="btn btn-pdf"
+        <a class="btn btn-pdf xgs-admin-btn pdf"
            href="<?= $basePath ?>/admin-download-contract.php?id=<?= (int)$row['contract_id'] ?>"
            target="_blank"
            rel="noopener noreferrer"
            title="Download PDF">
-            PDF
+            📄 PDF
         </a>
 
         <!-- Send/Resend Form -->
@@ -410,9 +142,9 @@ tr:last-child td {
             <input type="hidden" name="contract_id" value="<?= (int)$row['contract_id'] ?>">
             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
 
-            <button class="btn <?= $hasBeenSent ? 'btn-resend' : 'btn-send' ?>"
+            <button class="btn <?= $hasBeenSent ? 'btn-resend' : 'btn-send' ?> xgs-admin-btn <?= $hasBeenSent ? 'resend' : 'send' ?>"
                     title="<?= $hasBeenSent ? 'Resend contract email' : 'Send contract email' ?>">
-                <?= $hasBeenSent ? 'Resend' : 'Send' ?>
+                <?= $hasBeenSent ? '↻ Resend' : '✉ Send' ?>
             </button>
         </form>
 
@@ -425,11 +157,11 @@ tr:last-child td {
             <input type="hidden" name="contract_id" value="<?= (int)$row['contract_id'] ?>">
             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
 
-            <button class="btn btn-del" title="Delete contract permanently">Delete</button>
+            <button class="btn btn-del xgs-admin-btn del" title="Delete contract permanently">🗑 Delete</button>
         </form>
 
         <?php if ($hasBeenSent): ?>
-            <span class="small-text" title="Last email sent">
+            <span class="small-text" style="font-size:11px; color:#64748b; margin-left:6px; white-space:nowrap;" title="Last email sent">
                 📧 <?= htmlspecialchars(date('Y-m-d H:i', strtotime($row['sent_at']))) ?>
             </span>
         <?php endif; ?>

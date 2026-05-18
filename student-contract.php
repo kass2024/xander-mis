@@ -101,239 +101,85 @@ if (!empty($contract['student_id']) && is_numeric($contract['student_id'])) {
 <meta charset="UTF-8">
 <title>Xander Global Scholars – Service Contract</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/contract-modern.css">
 <style>
-/* =========================
-   MODERN RESET
-========================= */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+/* Page-specific tweaks for the main student contract */
+.contract            { /* legacy alias mapped onto modern card */ }
+.page-section        { padding: 32px 16px 64px; }
+.contract            { max-width: 980px; margin: 0 auto; background:#fff; padding:40px 44px; border-radius:16px; box-shadow:0 16px 48px rgba(15,23,42,.10); font-size:15px; line-height:1.75; color:#1e293b; }
+.contract h2         { font-size:17px; font-weight:700; color:#0f172a; margin:32px 0 12px; padding-bottom:8px; border-bottom:2px solid #e2e8f0; display:flex; align-items:center; gap:10px; }
+.contract h2::before { content:""; display:inline-block; width:4px; height:18px; background:linear-gradient(180deg,#1d4ed8,#2563eb); border-radius:2px; }
+.contract-title      { font-size:clamp(20px,2vw,24px); font-weight:800; text-align:center; margin:0 0 8px; color:#0f172a; letter-spacing:-0.01em; }
+.contract-subtitle   { font-size:14px; text-align:center; color:#64748b; margin:0 0 28px; }
+.hr                  { height:1px; border:none; background:linear-gradient(to right,transparent,#cbd5e1,transparent); margin:28px 0; }
+.line-sm             { display:inline-block; min-width:140px; border-bottom:1.5px solid #94a3b8; }
+.line                { display:inline-block; min-width:220px; border-bottom:1.5px solid #94a3b8; }
+@media (max-width:768px){ .contract { padding:28px 20px; border-radius:12px; } }
 
-html {
-  scroll-behavior: smooth;
+/* Override legacy underline-style inputs inside paragraphs */
+.contract p input[type="text"],
+.contract p input[type="email"],
+.contract p input[type="date"],
+.contract p input[type="tel"] {
+  border:none !important;
+  border-bottom:1.5px solid #cbd5e1 !important;
+  border-radius:0 !important;
+  padding:4px 2px !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  transition:border-color .15s;
 }
-
-body {
-  margin: 0;
-  background: #f4f6fb;
-  color: #111827;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  line-height: 1.7;
+.contract p input[type="text"]:focus,
+.contract p input[type="email"]:focus,
+.contract p input[type="date"]:focus,
+.contract p input[type="tel"]:focus {
+  border-bottom-color:#2563eb !important;
+  box-shadow:none !important;
 }
+.contract p input[readonly] { background:#f8fafc !important; color:#64748b; }
 
-/* =========================
-   PAGE WRAPPER
-========================= */
-.page-section {
-  padding: 24px 12px;
-}
+/* Signature panel */
+.signature { margin-top:28px; padding:20px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; }
+.signature canvas { width:100%; height:140px; background:#fff; border:2px dashed #cbd5e1; border-radius:8px; cursor:crosshair; display:block; }
+.signature p { margin:6px 0; }
 
-/* =========================
-   CONTRACT CARD
-========================= */
-.contract {
-  max-width: 900px;
-  margin: 0 auto;
-  background: #ffffff;
-  padding: 32px 28px;
-  border-radius: 14px;
-  box-shadow: 0 15px 40px rgba(15, 23, 42, 0.08);
-  font-size: 15px;
-}
+/* Action buttons */
+#signContract  { background:linear-gradient(135deg,#1d4ed8,#2563eb); color:#fff; padding:12px 24px; border-radius:8px; font-weight:600; border:none; box-shadow:0 4px 12px rgba(37,99,235,.28); cursor:pointer; transition:all .15s; }
+#signContract:hover  { transform:translateY(-1px); box-shadow:0 8px 20px rgba(37,99,235,.36); }
+#signContract:disabled{ background:#94a3b8; cursor:not-allowed; transform:none; box-shadow:none; }
+#clearSignature{ background:#fff; color:#1e293b; padding:12px 24px; border-radius:8px; font-weight:600; border:1.5px solid #cbd5e1; cursor:pointer; transition:all .15s; }
+#clearSignature:hover { background:#f8fafc; }
 
-/* =========================
-   HEADERS
-========================= */
-.contract-title {
-  font-size: 20px;
-  font-weight: 800;
-  text-align: center;
-  margin-bottom: 6px;
-}
+.contract-warning { margin:18px 0; padding:14px 16px; background:#fef3c7; border-left:4px solid #d97706; border-radius:8px; color:#7c2d12; }
 
-.contract-subtitle {
-  font-size: 14px;
-  text-align: center;
-  color: #475569;
-  margin-bottom: 24px;
-}
-
-h2 {
-  font-size: 16px;
-  margin: 28px 0 10px;
-  font-weight: 700;
-}
-
-/* =========================
-   DIVIDERS
-========================= */
-.hr {
-  height: 1px;
-  background: linear-gradient(to right, transparent, #cbd5e1, transparent);
-  margin: 24px 0;
-}
-
-/* =========================
-   PARAGRAPHS
-========================= */
-p {
-  margin: 8px 0;
-}
-
-/* =========================
-   FORM GRID (RESPONSIVE)
-========================= */
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px 20px;
-  margin-top: 16px;
-}
-
-.form-grid.full {
-  grid-template-columns: 1fr;
-}
-
-@media (max-width: 768px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* =========================
-   INPUTS
-========================= */
-input[type="text"],
-input[type="email"],
-input[type="date"],
-input[type="tel"] {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1.5px solid #cbd5e1;
-  font-size: 14px;
-  outline: none;
-  background: #fff;
-}
-
-input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
-}
-
-/* =========================
-   CHECKBOX & RADIO
-========================= */
-label {
-  cursor: pointer;
-}
-
-input[type="checkbox"],
-input[type="radio"] {
-  transform: scale(1.1);
-  margin-right: 6px;
-}
-
-/* =========================
-   PACKAGE BOXES
-========================= */
-.package-item {
-  margin: 14px 0;
-  padding: 14px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  background: #f9fafb;
-}
-
-.package-label {
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.package-details {
-  margin-top: 8px;
-  padding-left: 24px;
-  display: none;
-  color: #334155;
-}
-
-/* =========================
-   SIGNATURE BLOCK
-========================= */
-.signature {
-  margin-top: 32px;
-}
-
-.signature canvas {
-  width: 100%;
-  height: 140px;
-}
-
-/* =========================
-   ACTION BUTTONS
-========================= */
-button {
-  appearance: none;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-#signContract {
-  background: #2563eb;
-  color: white;
-}
-
-#clearSignature {
-  background: #e5e7eb;
-}
-
-/* =========================
-   WARNING
-========================= */
-.contract-warning {
-  margin-top: 14px;
-  padding: 12px;
-  background: #fff7ed;
-  border-left: 4px solid #fb923c;
-  border-radius: 6px;
-}
-
-/* =========================
-   PRINT MODE (PDF SAFE)
-========================= */
 @media print {
-  body {
-    background: white;
-  }
-
-  .contract {
-    box-shadow: none;
-    border-radius: 0;
-    padding: 0;
-  }
-
-  button {
-    display: none;
-  }
+  body { background:#fff; }
+  .contract { box-shadow:none; border-radius:0; padding:0; }
+  button, #signContract, #clearSignature { display:none; }
 }
 </style>
 
 
 </head>
 
-<body>
+<body class="xgs-contract-body">
 
 <?php include 'header.php'; ?>
 
 <section class="page-section">
 
+<div class="xgs-contract-hero">
+  <span class="xgs-hero-eyebrow">Service Agreement</span>
+  <h1 class="xgs-hero-title">Xander Global Scholars – Master International Services Agreement</h1>
+  <p class="xgs-hero-sub">Education, Employment &amp; Immigration Services for Africa, EU, UK, USA, Canada &amp; Asia</p>
+  <div class="xgs-hero-meta">
+    <span>📄 Service Contract</span>
+    <span>🔒 Securely Signed Digitally</span>
+    <span>🌍 International Coverage</span>
+    <?php if ($isSigned): ?><span class="xgs-signed-stamp" style="background:rgba(255,255,255,.18); color:#fff; border-color:rgba(255,255,255,.30);">✓ Signed</span><?php endif; ?>
+  </div>
+</div>
 
 <div class="contract">
 
@@ -524,22 +370,15 @@ Email: info@xanderglobalscholars.com
   </p>
 
   <!-- CLIENT TYPE (ACTIVE CHECKBOXES) -->
-  <p style="margin-top:14px;">
-    Client Type:
-    <label style="margin-left:10px;">
-      <input type="checkbox" name="client_type[]" value="Student"> Student
-    </label>
-    <label style="margin-left:10px;">
-      <input type="checkbox" name="client_type[]" value="Professional"> Professional
-    </label>
-    <label style="margin-left:10px;">
-      <input type="checkbox" name="client_type[]" value="Job Seeker"> Job Seeker
-    </label>
-    <label style="margin-left:10px;">
-      <input type="checkbox" name="client_type[]" value="Visitor Visa Applicant">
-      Visitor Visa Applicant
-    </label>
-  </p>
+  <div style="margin-top:18px;">
+    <div style="font-weight:600; margin-bottom:8px; color:#0f172a;">Client Type:</div>
+    <div class="xgs-checkgroup">
+      <label><input type="checkbox" name="client_type[]" value="Student"> Student</label>
+      <label><input type="checkbox" name="client_type[]" value="Professional"> Professional</label>
+      <label><input type="checkbox" name="client_type[]" value="Job Seeker"> Job Seeker</label>
+      <label><input type="checkbox" name="client_type[]" value="Visitor Visa Applicant"> Visitor Visa Applicant</label>
+    </div>
+  </div>
 
 </div>
 

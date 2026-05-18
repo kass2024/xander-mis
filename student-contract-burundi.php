@@ -84,57 +84,161 @@ if ($isSigned && !empty($sig['effective_date'] ?? '')) {
 <meta charset="UTF-8">
 <title>HEERA–Xander Client Contract | Xander Global Scholars</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/contract-modern.css">
 <style>
-:root{--ink:#111827;--muted:#374151;--border:#d1d5db;--paper:#fff;--link:#1d4ed8}
-body{margin:0;padding:32px 16px 48px;background:linear-gradient(180deg,#eef2f7,#e5e7eb);font-family:Inter,"Segoe UI",system-ui,sans-serif;color:var(--ink)}
-.burundi-sheet{max-width:920px;margin:0 auto;background:var(--paper);box-shadow:0 10px 40px rgba(0,0,0,.08);border-radius:10px;overflow:hidden}
+:root{
+  --ink:#0f172a; --muted:#475569; --border:#e2e8f0;
+  --paper:#fff; --link:#1d4ed8; --soft:#f8fafc;
+}
+body{
+  margin:0;
+  padding:32px 16px 64px;
+  background:linear-gradient(180deg,#eef2f7 0%,#e2e8f0 100%);
+  font-family:Inter,"Segoe UI",system-ui,sans-serif;
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+}
+.burundi-sheet{
+  max-width:980px; margin:0 auto;
+  background:var(--paper);
+  box-shadow:0 16px 48px rgba(15,23,42,.10);
+  border-radius:16px;
+  overflow:hidden;
+}
 .burundi-letterhead,.burundi-letterfoot{width:100%;line-height:0}
 .burundi-letterhead img,.burundi-letterfoot img{width:100%;height:auto;display:block}
-.burundi-inner{padding:48px 64px 40px;font-family:Georgia,"Times New Roman",serif;font-size:12.2pt;line-height:1.75;color:#000}
-@media(max-width:768px){.burundi-inner{padding:32px 24px}}
-.bc-main-title{text-align:center;font-size:17pt;font-weight:700;text-transform:uppercase;margin:0 0 6pt;line-height:1.35}
+.burundi-inner{
+  padding:56px 64px 48px;
+  font-family:"Source Serif Pro",Georgia,"Times New Roman",serif;
+  font-size:12.2pt; line-height:1.75; color:#000;
+}
+@media(max-width:768px){ .burundi-inner{padding:32px 24px} }
+.bc-main-title{
+  text-align:center; font-size:17pt; font-weight:700;
+  text-transform:uppercase; margin:0 0 6pt;
+  line-height:1.35; letter-spacing:0.02em;
+}
 .bc-subtitle{text-align:center;font-size:11.5pt;margin:0 0 22pt;color:var(--muted)}
-.bc-h3{font-size:14pt;font-weight:700;margin:28pt 0 12pt}
+.bc-h3{
+  font-size:14pt; font-weight:700;
+  margin:28pt 0 12pt;
+  padding-bottom:6pt;
+  border-bottom:2px solid var(--border);
+  display:flex; align-items:center; gap:10pt;
+}
+.bc-h3::before{
+  content:""; display:inline-block; width:4px; height:18px;
+  background:linear-gradient(180deg,#1d4ed8,#2563eb); border-radius:2px; flex-shrink:0;
+}
 .bc-intro,.burundi-contract-body p{text-align:justify;margin:0 0 12pt}
 .bc-list{margin:0 0 14pt 22pt;padding:0}
 .bc-list li{margin-bottom:6pt}
-.bc-and{text-align:center;font-weight:700;margin:18pt 0}
-.bc-client-grid{display:grid;gap:10pt}
+.bc-and{text-align:center;font-weight:700;margin:18pt 0;color:var(--muted);letter-spacing:.08em}
+.bc-client-grid{display:grid;gap:12pt}
 .bc-client-grid label{display:block;font-size:12pt}
-.bc-client-grid input,.bc-inline-input{border:none;border-bottom:1.6px solid #111;width:min(100%,420px);font:inherit;padding:4px 2px;background:transparent}
+.bc-client-grid input,.bc-inline-input{
+  border:none; border-bottom:1.6px solid #94a3b8;
+  width:min(100%,440px); font:inherit; padding:6px 2px;
+  background:transparent; transition:border-color .15s;
+}
+.bc-client-grid input:focus,.bc-inline-input:focus{
+  outline:none; border-bottom-color:var(--link);
+}
 .bc-email-first{margin-bottom:4pt}
-.bc-input-email{border-bottom-color:var(--link)!important;font-weight:600;color:var(--link);width:min(100%,480px)!important}
-.bc-client-grid input[readonly]{background:#f7f9fc}
-.bc-client-type{display:flex;flex-wrap:wrap;gap:12px;margin:12pt 0}
-.bc-check{font-weight:600;cursor:pointer}
+.bc-input-email{
+  border-bottom-color:var(--link)!important;
+  font-weight:600; color:var(--link);
+  width:min(100%,480px)!important;
+}
+.bc-client-grid input[readonly]{background:#f7f9fc;color:#64748b}
+.bc-client-type{display:flex;flex-wrap:wrap;gap:10px;margin:14pt 0}
+.bc-check{
+  font-weight:500; cursor:pointer;
+  padding:8px 14px; border:1.5px solid #cbd5e1;
+  border-radius:999px; background:#fff;
+  font-size:11pt; transition:all .15s;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.bc-check:hover{ border-color:var(--link); background:#eef2ff; }
+.bc-check:has(input:checked){
+  border-color:var(--link); background:#eef2ff;
+  color:#1e3a8a; font-weight:600;
+}
 .bc-fee-head{margin:16pt 0 8pt;font-weight:700}
-.bc-fee-divider{color:#9ca3af;margin:12pt 0}
+.bc-fee-divider{color:#cbd5e1;margin:12pt 0}
 .bc-fee-intro{margin-bottom:10pt}
-.bc-selected-pkg-summary{margin-top:14pt;padding:12pt;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px}
-.package-item{margin:14px 0;padding:14px;border:1px solid #e5e7eb;border-radius:10px;background:#f9fafb}
-.package-label{font-weight:700;display:flex;align-items:flex-start;gap:10px;cursor:pointer}
-.package-details{margin-top:8px;padding-left:28px;display:none;font-size:11.5pt}
-.package-label input[type=radio]{margin-top:3px;flex-shrink:0}
+.bc-selected-pkg-summary{
+  margin-top:14pt; padding:14pt 16pt;
+  background:#dcfce7; border:1.5px solid #86efac;
+  border-radius:10px; color:#14532d;
+}
+.package-item{
+  margin:14px 0; padding:16px 18px;
+  border:1.5px solid #e2e8f0; border-radius:12px;
+  background:#f8fafc; transition:all .15s;
+}
+.package-item:hover{border-color:#2563eb; background:#fff; box-shadow:0 4px 16px rgba(15,23,42,.08);}
+.package-item:has(input[type=radio]:checked){
+  border-color:#2563eb;
+  background:linear-gradient(180deg,#fff,#eef2ff);
+  box-shadow:0 4px 16px rgba(15,23,42,.08);
+}
+.package-label{font-weight:700;display:flex;align-items:flex-start;gap:10px;cursor:pointer;color:#0f172a}
+.package-details{margin-top:10px;padding:10px 0 0 28px;display:none;font-size:11.5pt;border-top:1px dashed #e2e8f0}
+.package-label input[type=radio]{margin-top:3px;flex-shrink:0;accent-color:#2563eb}
 .bc-sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:24pt;margin-top:16pt}
 @media(max-width:768px){.bc-sig-grid{grid-template-columns:1fr}}
-.bc-sig-block{font-size:11.5pt}
-.bc-sig-canvas-wrap{border:1px dashed #9ca3af;height:120px;margin:8pt 0}
-.signature-canvas{width:100%;height:120px;display:block;cursor:crosshair}
-.bc-sig-img{max-height:118px;max-width:100%}
-.bc-sig-actions{margin-top:10pt;display:flex;gap:10px;flex-wrap:wrap}
-.bc-sig-actions button{font-family:system-ui,sans-serif;font-size:14px;font-weight:600;padding:10px 18px;border-radius:6px;border:none;cursor:pointer}
-#clearSignature{background:#f3f4f6}
-#signContract{background:var(--link);color:#fff}
-#signContract:disabled{background:#9ca3af}
-.bc-progress{margin-top:10pt}
-.bc-progress-bar{height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden}
-#signatureProgressBar{height:100%;width:0;background:#2563eb;transition:width .2s}
-.footer-ref{text-align:center;margin-top:32pt;font-size:10.5pt;color:#6b7280}
+.bc-sig-block{
+  font-size:11.5pt; padding:18pt;
+  background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;
+}
+.bc-xander-sig-wrap{border-bottom:1px solid #000;min-height:48px;position:relative;max-width:300px;margin:4pt 0 8pt}
+.bc-xander-sig-img{max-height:42px;position:absolute;bottom:2px;left:0}
+.bc-sig-canvas-wrap{
+  border:2px dashed #cbd5e1; height:130px;
+  margin:8pt 0; border-radius:8px; background:#fff;
+}
+.signature-canvas{width:100%;height:130px;display:block;cursor:crosshair}
+.bc-sig-img{max-height:128px;max-width:100%}
+.bc-sig-actions{margin-top:12pt;display:flex;gap:10px;flex-wrap:wrap}
+.bc-sig-actions button{
+  font-family:Inter,system-ui,sans-serif;
+  font-size:14px; font-weight:600;
+  padding:11px 22px; border-radius:8px; border:none;
+  cursor:pointer; transition:all .15s;
+  display:inline-flex; align-items:center; gap:8px;
+}
+#clearSignature{background:#fff;color:#1e293b;border:1.5px solid #cbd5e1}
+#clearSignature:hover{background:#f8fafc;border-color:#94a3b8}
+#signContract{
+  background:linear-gradient(135deg,#1d4ed8,#2563eb);
+  color:#fff;
+  box-shadow:0 4px 12px rgba(37,99,235,.28);
+}
+#signContract:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(37,99,235,.36)}
+#signContract:disabled{background:#94a3b8;cursor:not-allowed;transform:none;box-shadow:none}
+.bc-progress{margin-top:12pt}
+.bc-progress-bar{height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden}
+#signatureProgressBar{height:100%;width:0;background:linear-gradient(90deg,#1d4ed8,#2563eb);transition:width .2s}
+.footer-ref{text-align:center;margin-top:32pt;font-size:10.5pt;color:#94a3b8}
 a{color:var(--link)}
 @media print{body{background:#fff;padding:0}.burundi-sheet{box-shadow:none;border-radius:0}.bc-sig-actions,.bc-progress{display:none!important}}
 </style>
 </head>
-<body>
+<body class="xgs-contract-body">
+
+<div class="xgs-contract-hero">
+  <span class="xgs-hero-eyebrow">HEERA – Xander Client Contract</span>
+  <h1 class="xgs-hero-title">Master International Employment, Education &amp; Immigration Services Agreement</h1>
+  <p class="xgs-hero-sub">Burundi-specific edition – Africa, EU, UK, USA, Canada &amp; Asia coverage</p>
+  <div class="xgs-hero-meta">
+    <span>🤝 HEERA 10 (SURL) &amp; Xander Global Scholars</span>
+    <span>🔒 E-Signed Agreement</span>
+    <?php if ($isSigned): ?><span style="background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.30); padding:4px 12px; border-radius:999px; font-weight:700;">✓ Signed</span><?php endif; ?>
+  </div>
+</div>
+
 <div class="burundi-sheet">
   <?php if ($headerSrc): ?>
   <div class="burundi-letterhead"><img src="<?= htmlspecialchars($headerSrc, ENT_QUOTES, 'UTF-8') ?>" alt="Xander Global Scholars and HEERA 10 (SURL)"></div>

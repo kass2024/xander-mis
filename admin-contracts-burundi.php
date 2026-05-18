@@ -40,121 +40,15 @@ if (!$result) {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Burundi Signed Contracts</title>
+<title>Burundi Signed Contracts | Xander Global Scholars</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="<?= $basePath ?>/assets/css/contract-modern.css">
 
 <style>
-:root{
-    --blue:#1f4fd8;
-    --green:#28a745;
-    --teal:#17a2b8;
-    --orange:#fd7e14;
-    --red:#dc3545;
-    --gray:#6c757d;
-    --bg:#f3f5f9;
-}
-
-*{
-    box-sizing:border-box;
-}
-
-body{
-    font-family:Inter,Segoe UI,Arial,sans-serif;
-    background:var(--bg);
-    padding:30px;
-    margin:0;
-}
-
-.container{
-    max-width:1300px;
-    margin:auto;
-    background:#fff;
-    border-radius:14px;
-    box-shadow:0 15px 40px rgba(0,0,0,.08);
-    padding:25px;
-}
-
-.header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:20px;
-}
-
-.header h1{
-    margin:0;
-    font-size:22px;
-}
-
-.back-btn{
-    background:#eef2ff;
-    color:var(--blue);
-    padding:8px 14px;
-    border-radius:8px;
-    font-size:13px;
-    text-decoration:none;
-    font-weight:600;
-}
-
-table{
-    width:100%;
-    border-collapse:collapse;
-}
-
-th,td{
-    padding:14px 12px;
-    border-bottom:1px solid #e6e9ef;
-    font-size:14px;
-}
-
-th{
-    background:#f9fafc;
-    font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:.04em;
-}
-
-.status{
-    padding:5px 12px;
-    border-radius:20px;
-    font-size:11px;
-    font-weight:700;
-}
-
-.status.signed{
-    background:#e6f4ea;
-    color:#1e7e34;
-}
-
-.actions{
-    display:flex;
-    gap:6px;
-    align-items:center;
-    flex-wrap:nowrap;
-}
-
-.btn{
-    border:none;
-    padding:7px 12px;
-    font-size:12px;
-    font-weight:600;
-    border-radius:6px;
-    color:#fff;
-    cursor:pointer;
-    white-space:nowrap;
-}
-
-.btn-view{ background:var(--blue); }
-.btn-pdf{ background:var(--green); }
-.btn-send{ background:var(--teal); }
-.btn-resend{ background:var(--orange); }
-.btn-del{ background:var(--red); }
-
-.small-text{
-    font-size:11px;
-    color:#666;
-    margin-left:6px;
-}
+body { padding: 32px 20px; }
+.btn-view{ background:#2563eb; }
+.btn-view:hover{ background:#1d4ed8; }
 </style>
 
 <script>
@@ -180,24 +74,25 @@ function sendContract(form, btn){
 </script>
 </head>
 
-<body>
+<body class="xgs-contract-body">
+
+<div class="container xgs-admin-shell">
 
 <?php if (!empty($_GET['deleted'])): ?>
-<p style="background:#d1e7dd;color:#0f5132;padding:10px 14px;border-radius:8px;margin-bottom:16px;">Contract deleted from database.</p>
+<div class="xgs-alert success"><span>✓ Contract deleted from database.</span><button type="button" class="close-btn" onclick="this.parentElement.remove()">×</button></div>
 <?php elseif (!empty($_GET['error']) && $_GET['error'] === 'delete_failed'): ?>
-<p style="background:#f8d7da;color:#842029;padding:10px 14px;border-radius:8px;margin-bottom:16px;">Could not delete contract. Please try again.</p>
+<div class="xgs-alert error"><span>✗ Could not delete contract. Please try again.</span><button type="button" class="close-btn" onclick="this.parentElement.remove()">×</button></div>
 <?php endif; ?>
 
-<div class="container">
-
-<div class="header">
-    <h1>📄 Burundi Signed Contracts</h1>
-    <a href="<?= $basePath ?>/admin-dashboard.php" class="back-btn">
+<div class="header xgs-admin-header">
+    <h1>Signed Student Contracts <span style="font-size:12px;font-weight:500;color:#64748b;background:#eef2ff;padding:4px 10px;border-radius:999px;margin-left:8px;">Burundi</span></h1>
+    <a href="<?= $basePath ?>/admin-dashboard.php" class="back-btn xgs-back-btn">
         ← Back to Dashboard
     </a>
 </div>
 
-<table>
+<div class="xgs-admin-table-wrap">
+<table class="xgs-admin-table">
 <thead>
 <tr>
     <th>#</th>
@@ -212,8 +107,9 @@ function sendContract(form, btn){
 
 <?php if ($result->num_rows === 0): ?>
 <tr>
-    <td colspan="6" style="text-align:center;color:#777;padding:30px;">
-        No signed contracts found.
+    <td colspan="6" class="xgs-empty-state">
+        <strong>📭 No signed contracts found</strong>
+        <p>Contracts will appear here once students sign them.</p>
     </td>
 </tr>
 <?php endif; ?>
@@ -223,53 +119,53 @@ function sendContract(form, btn){
 
 <td><?= $i++ ?></td>
 
-<td><?= htmlspecialchars(trim((string) ($row['student_name'] ?? ''))) ?></td>
+<td><strong><?= htmlspecialchars(trim((string) ($row['student_name'] ?? ''))) ?></strong></td>
 
 <td><?= htmlspecialchars($row['email'] ?? '—') ?></td>
 
-<td>
-    <span class="status signed">SIGNED</span>
-</td>
+<td><span class="xgs-badge signed">✓ SIGNED</span></td>
 
 <td><?= htmlspecialchars($row['signed_at'] ?? '—') ?></td>
 
-<td class="actions">
+<td class="actions xgs-actions">
 
-<a class="btn btn-view" target="_blank"
+<a class="btn btn-view xgs-admin-btn send" target="_blank"
    href="<?= $basePath ?>/student-contract-burundi.php?token=<?= urlencode($row['contract_token']) ?>">
-View
+👁 View
 </a>
 
-<a class="btn btn-pdf"
+<a class="btn btn-pdf xgs-admin-btn pdf"
    href="<?= $basePath ?>/admin-download-contract-burundi.php?id=<?= (int)$row['contract_id'] ?>">
-PDF
+📄 PDF
 </a>
 
 <form action="<?= $basePath ?>/admin-send-contract-special.php"
       method="post"
-      onsubmit="return sendContract(this,this.querySelector('button'))">
+      onsubmit="return sendContract(this,this.querySelector('button'))"
+      style="display:inline;">
 
 <input type="hidden" name="contract_id" value="<?= (int)$row['contract_id'] ?>">
 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
 
-<button class="btn <?= empty($row['sent_at']) ? 'btn-send' : 'btn-resend' ?>">
-<?= empty($row['sent_at']) ? 'Send' : 'Resend' ?>
+<button class="btn xgs-admin-btn <?= empty($row['sent_at']) ? 'send' : 'resend' ?>">
+<?= empty($row['sent_at']) ? '✉ Send' : '↻ Resend' ?>
 </button>
 </form>
 
 <form action="<?= $basePath ?>/admin-delete-contract-burundi.php"
       method="post"
-      onsubmit="return confirm('Delete this contract permanently?')">
+      onsubmit="return confirm('⚠️ Delete this contract permanently?\nThis action cannot be undone.')"
+      style="display:inline;">
 
 <input type="hidden" name="contract_id" value="<?= (int)$row['contract_id'] ?>">
 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
 
-<button class="btn btn-del">Delete</button>
+<button class="btn btn-del xgs-admin-btn del">🗑 Delete</button>
 </form>
 
 <?php if (!empty($row['sent_at'])): ?>
-<span class="small-text">
-    Last sent <?= htmlspecialchars($row['sent_at']) ?>
+<span class="small-text" style="font-size:11px;color:#64748b;margin-left:6px;white-space:nowrap;">
+    📧 Last sent <?= htmlspecialchars($row['sent_at']) ?>
 </span>
 <?php endif; ?>
 
@@ -279,6 +175,7 @@ PDF
 
 </tbody>
 </table>
+</div>
 
 </div>
 

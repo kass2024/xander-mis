@@ -84,102 +84,135 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Issue Student Contract</title>
+<title>Issue Student Contract | Xander Global Scholars</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/contract-modern.css">
 
-<!-- PAGE-SPECIFIC STYLES ONLY -->
 <style>
-:root {
-    --primary: #1e3a5f;
-    --success: #28a745;
-    --bg: #f8fafc;
-    --card: #ffffff;
-    --text-muted: #6c757d;
+.issue-shell {
+    max-width: 640px;
+    margin: 48px auto;
+    background: #fff;
+    padding: 40px 36px;
+    border-radius: 16px;
+    box-shadow: 0 16px 48px rgba(15, 23, 42, .10);
 }
-
-body {
-    font-family: 'Inter', sans-serif;
-    background: var(--bg);
-}
-
-.container {
-    max-width: 620px;
-    margin: 80px auto;
-    background: var(--card);
-    padding: 32px;
-    border-radius: 14px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.08);
-}
-
-h1 {
+.issue-shell h1 {
     text-align: center;
-    margin-bottom: 6px;
+    margin: 0 0 6px;
+    font-size: 24px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.01em;
 }
-
-.subtitle {
+.issue-shell .subtitle {
     text-align: center;
-    color: var(--text-muted);
-    margin-bottom: 30px;
+    color: #64748b;
+    margin: 0 0 28px;
     font-size: 14px;
 }
-
-.btn {
+.issue-shell .btn {
     width: 100%;
-    padding: 14px;
-    font-size: 16px;
+    padding: 13px 16px;
+    font-size: 15px;
+    font-weight: 600;
     border-radius: 8px;
     border: none;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all .15s;
+    font-family: inherit;
 }
-
-.btn-primary {
-    background: var(--primary);
+.issue-shell .btn-primary {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb);
     color: #fff;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, .28);
 }
-
-.btn-success {
-    background: var(--success);
+.issue-shell .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(37, 99, 235, .36);
+}
+.issue-shell .btn-success {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
     color: #fff;
     margin-top: 10px;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, .25);
 }
-
-.btn-back {
-    background: #e9ecef;
-    margin-bottom: 20px;
+.issue-shell .btn-success:hover { transform: translateY(-1px); }
+.issue-shell .btn-back {
+    background: #eef2ff;
+    color: #1e3a8a;
+    margin-bottom: 22px;
+    width: auto;
+    padding: 8px 16px;
+    font-size: 13px;
 }
-
-.alert-success {
-    background: #e6f4ea;
-    padding: 12px;
-    border-radius: 6px;
-    text-align: center;
-    margin-bottom: 18px;
-}
-
-.link-box {
-    margin-top: 25px;
-    padding: 16px;
-    background: #f7f9fc;
+.issue-shell .btn-back:hover { background: #fff; box-shadow: 0 1px 4px rgba(15,23,42,.08); }
+.issue-shell .alert-success {
+    background: #dcfce7;
+    color: #14532d;
+    padding: 12px 16px;
     border-radius: 8px;
+    border: 1px solid #86efac;
+    margin-bottom: 18px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.issue-shell .link-box {
+    margin-top: 22px;
+    padding: 18px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+}
+.issue-shell .link-box label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+}
+.issue-shell .link-box input {
+    width: 100%;
+    padding: 11px 14px;
+    border-radius: 8px;
+    border: 1.5px solid #cbd5e1;
+    background: #fff;
+    font-size: 13px;
+    font-family: "SF Mono", Consolas, monospace;
+    color: #0f172a;
+    outline: none;
+}
+.issue-shell .link-box input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,.18);
 }
 </style>
 </head>
 
-<body>
+<body class="xgs-contract-body">
 
 <?php include 'header.php'; ?>
 
-<main class="container">
+<main class="issue-shell">
 
     <a href="admin-dashboard.php">
         <button class="btn btn-back" type="button">← Back to Dashboard</button>
     </a>
 
-    <h1>Issue Student Contract</h1>
+    <h1>📄 Issue Student Contract</h1>
     <p class="subtitle">Generate or retrieve a persistent student contract link</p>
 
     <?php if ($message): ?>
-        <div class="alert-success"><?= htmlspecialchars($message) ?></div>
+        <div class="alert-success">✓ <?= htmlspecialchars($message) ?></div>
     <?php endif; ?>
 
     <form method="post">
@@ -191,8 +224,8 @@ h1 {
             <label>Contract Link</label>
             <input type="text" id="contractLink" value="<?= htmlspecialchars($contractLink) ?>" readonly>
             <button class="btn btn-success" type="button" onclick="copyLink()">📋 Copy Link</button>
-            <div id="copyMsg" style="display:none;text-align:center;color:green;margin-top:8px;">
-                ✔ Contract link copied
+            <div id="copyMsg" style="display:none;text-align:center;color:#16a34a;margin-top:10px;font-weight:600;font-size:13px;">
+                ✓ Contract link copied
             </div>
         </div>
     <?php endif; ?>

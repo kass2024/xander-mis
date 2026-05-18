@@ -75,8 +75,8 @@ function generateBurundiContractPDF(int $contractId): string
 body {
   font-family: DejaVu Sans, Arial, sans-serif;
   font-size: 10.5pt;
-  line-height: 1.5;
-  color: #000;
+  line-height: 1.55;
+  color: #111;
   margin: 0;
   padding: 0;
 }
@@ -89,9 +89,19 @@ body {
   text-transform: uppercase;
   margin: 0 0 3pt;
   line-height: 1.35;
+  color: #0f172a;
+  letter-spacing: 0.3pt;
 }
-.bc-subtitle { text-align: center; font-size: 9.5pt; margin: 0 0 10pt; }
-.bc-h3 { font-size: 11pt; font-weight: bold; margin: 12pt 0 6pt; page-break-after: avoid; }
+.bc-subtitle { text-align: center; font-size: 9.5pt; margin: 0 0 10pt; color: #475569; }
+.bc-h3 {
+  font-size: 11pt;
+  font-weight: bold;
+  margin: 12pt 0 6pt;
+  page-break-after: avoid;
+  color: #1e3a8a;
+  border-bottom: 0.8pt solid #1d4ed8;
+  padding-bottom: 2pt;
+}
 p { text-align: justify; margin: 0 0 6pt; }
 .bc-intro { margin-bottom: 8pt; }
 .bc-list { margin: 0 0 8pt 16pt; padding: 0; }
@@ -126,6 +136,7 @@ p { text-align: justify; margin: 0 0 6pt; }
 .pdf-sig-title { font-weight: bold; margin: 0 0 4pt; font-size: 9.5pt; }
 .pdf-sig-cell p { margin: 0 0 3pt; text-align: left; }
 .pdf-sig-img { max-width: 140px; max-height: 42px; display: block; margin: 4pt 0; }
+.pdf-xander-sig-img { max-width: 180px; max-height: 48px; }
 .pdf-sig-line { margin: 6pt 0; }
 .pdf-contract-ref {
   text-align: center;

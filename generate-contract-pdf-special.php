@@ -300,8 +300,8 @@ $stmt = $conn->prepare("
 body {
     font-family: "Times New Roman", Times, serif;
     font-size: 12pt;
-    line-height: 1.6;
-    color: #000;
+    line-height: 1.65;
+    color: #111;
 }
 
 /* =========================
@@ -313,6 +313,8 @@ h1 {
     font-weight: bold;
     text-transform: uppercase;
     margin: 0 0 18pt 0;
+    color: #0f172a;
+    letter-spacing: 0.5pt;
 }
 
 /* =========================
@@ -323,6 +325,9 @@ h2 {
     font-weight: bold;
     text-transform: uppercase;
     margin: 22pt 0 10pt 0;
+    color: #1e3a8a;
+    border-bottom: 1.2pt solid #1d4ed8;
+    padding-bottom: 4pt;
 }
 
 /* =========================
@@ -332,6 +337,7 @@ h3 {
     font-size: 12pt;
     font-weight: bold;
     margin: 16pt 0 6pt 0;
+    color: #1e3a8a;
 }
 
 /* =========================

@@ -4,8 +4,13 @@
 /** @var string $contractToken */
 /** @var string $sigStudentName */
 /** @var string $sigSignedDate */
+require_once __DIR__ . '/burundi_contract_assets.php';
+
 $sigStudentName = trim((string) ($sigStudentName ?? ''));
 $sigSignedDate = trim((string) ($sigSignedDate ?? ''));
+$burundiAssets = xander_burundi_contract_paths();
+$xanderSigSrc = xander_burundi_img_src($burundiAssets['signature'], false);
+$xanderSigDate = date('F j, Y');
 ?>
 <h3 class="bc-h3">19. SIGNATURES</h3>
 <div class="bc-sig-grid">
@@ -13,8 +18,13 @@ $sigSignedDate = trim((string) ($sigSignedDate ?? ''));
     <p><strong>For Xander Tech LLC</strong></p>
     <p>Name: Jean de Dieu Hakizimana</p>
     <p>Title: Owner / Managing Director</p>
-    <p>Stamp/Signature: ______________________________</p>
-    <p>Date: _________________________________</p>
+    <p>Stamp/Signature:</p>
+    <div class="bc-xander-sig-wrap">
+      <?php if ($xanderSigSrc !== ''): ?>
+      <img src="<?= htmlspecialchars($xanderSigSrc, ENT_QUOTES, 'UTF-8') ?>" alt="Authorized signature" class="bc-xander-sig-img">
+      <?php endif; ?>
+    </div>
+    <p>Date: <?= htmlspecialchars($xanderSigDate, ENT_QUOTES, 'UTF-8') ?></p>
   </div>
   <div class="bc-sig-block">
     <p><strong>For Recruitment Partner / Exclusive Agent for Burundi</strong></p>

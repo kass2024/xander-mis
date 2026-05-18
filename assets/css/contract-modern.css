@@ -1,0 +1,667 @@
+/* ==========================================================================
+   XANDER GLOBAL SCHOLARS — MODERN CONTRACT UI
+   Unified stylesheet for all student & admin contract pages.
+   Backend-safe: no logic changes, only visual layer.
+   ========================================================================== */
+
+/* ---------- 1. DESIGN TOKENS ---------- */
+:root {
+  /* Brand */
+  --xgs-brand:        #1d4ed8;
+  --xgs-brand-dark:   #1e3a8a;
+  --xgs-brand-soft:   #eef2ff;
+  --xgs-accent:       #2563eb;
+  --xgs-accent-hover: #1d4ed8;
+
+  /* Surface */
+  --xgs-bg:           #f1f5f9;
+  --xgs-bg-grad:      linear-gradient(180deg, #eef2f7 0%, #e2e8f0 100%);
+  --xgs-paper:        #ffffff;
+  --xgs-soft:         #f8fafc;
+  --xgs-border:       #e2e8f0;
+  --xgs-border-strong:#cbd5e1;
+
+  /* Ink */
+  --xgs-ink:          #0f172a;
+  --xgs-text:         #1e293b;
+  --xgs-muted:        #64748b;
+  --xgs-faint:        #94a3b8;
+
+  /* Status */
+  --xgs-success:      #16a34a;
+  --xgs-success-soft: #dcfce7;
+  --xgs-warn:         #d97706;
+  --xgs-warn-soft:    #fef3c7;
+  --xgs-danger:       #dc2626;
+  --xgs-danger-soft:  #fee2e2;
+  --xgs-info:         #0284c7;
+  --xgs-info-soft:    #e0f2fe;
+
+  /* Geometry */
+  --xgs-radius-xs:    6px;
+  --xgs-radius-sm:    8px;
+  --xgs-radius-md:    12px;
+  --xgs-radius-lg:    16px;
+  --xgs-radius-xl:    20px;
+
+  /* Shadows */
+  --xgs-shadow-sm:    0 1px 2px rgba(15,23,42,.06);
+  --xgs-shadow-md:    0 4px 16px rgba(15,23,42,.08);
+  --xgs-shadow-lg:    0 16px 48px rgba(15,23,42,.10);
+  --xgs-shadow-xl:    0 24px 64px rgba(15,23,42,.12);
+
+  /* Type */
+  --xgs-font:         "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --xgs-font-serif:   "Source Serif Pro", Georgia, "Times New Roman", serif;
+}
+
+/* ---------- 2. PAGE FOUNDATION ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body.xgs-contract-body {
+  margin: 0;
+  background: var(--xgs-bg-grad);
+  color: var(--xgs-text);
+  font-family: var(--xgs-font);
+  font-size: 15px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.xgs-page-section {
+  padding: 32px 16px 64px;
+}
+
+/* ---------- 3. HERO HEADER ---------- */
+.xgs-contract-hero {
+  max-width: 980px;
+  margin: 0 auto 22px;
+  background: linear-gradient(135deg, var(--xgs-brand-dark) 0%, var(--xgs-accent) 100%);
+  border-radius: var(--xgs-radius-lg);
+  color: #fff;
+  padding: 28px 32px;
+  box-shadow: var(--xgs-shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+.xgs-contract-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(600px 200px at 100% -40%, rgba(255,255,255,.18), transparent 60%),
+    radial-gradient(400px 200px at -10% 120%, rgba(255,255,255,.12), transparent 60%);
+  pointer-events: none;
+}
+.xgs-contract-hero > * { position: relative; z-index: 1; }
+.xgs-hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.30);
+  border-radius: 999px;
+  margin-bottom: 14px;
+}
+.xgs-hero-title {
+  font-size: clamp(20px, 2.5vw, 28px);
+  font-weight: 800;
+  line-height: 1.25;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+.xgs-hero-sub {
+  font-size: 14px;
+  opacity: 0.92;
+  margin: 0;
+}
+.xgs-hero-meta {
+  margin-top: 14px;
+  display: flex; gap: 18px; flex-wrap: wrap;
+  font-size: 13px; opacity: 0.92;
+}
+.xgs-hero-meta span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---------- 4. CONTRACT CARD ---------- */
+.xgs-contract {
+  max-width: 980px;
+  margin: 0 auto;
+  background: var(--xgs-paper);
+  border-radius: var(--xgs-radius-lg);
+  box-shadow: var(--xgs-shadow-lg);
+  padding: 40px 44px;
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--xgs-text);
+}
+@media (max-width: 768px) {
+  .xgs-contract { padding: 28px 20px; border-radius: var(--xgs-radius-md); }
+  .xgs-contract-hero { padding: 22px 20px; border-radius: var(--xgs-radius-md); }
+  .xgs-page-section { padding: 20px 12px 40px; }
+}
+
+/* ---------- 5. TYPOGRAPHY ---------- */
+.xgs-contract-title {
+  font-size: clamp(20px, 2vw, 24px);
+  font-weight: 800;
+  text-align: center;
+  margin: 0 0 8px;
+  color: var(--xgs-ink);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+.xgs-contract-subtitle {
+  font-size: 14px;
+  text-align: center;
+  color: var(--xgs-muted);
+  margin: 0 0 28px;
+}
+.xgs-contract h2 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--xgs-ink);
+  margin: 32px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--xgs-border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.xgs-contract h2::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 18px;
+  background: linear-gradient(180deg, var(--xgs-brand), var(--xgs-accent));
+  border-radius: 2px;
+}
+.xgs-contract h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--xgs-ink);
+  margin: 22px 0 10px;
+}
+.xgs-contract p { margin: 8px 0; }
+.xgs-contract ul, .xgs-contract ol { margin: 8px 0 14px 22px; padding: 0; }
+.xgs-contract li { margin-bottom: 4px; }
+
+.xgs-hr {
+  height: 1px;
+  border: none;
+  background: linear-gradient(to right, transparent, var(--xgs-border-strong), transparent);
+  margin: 28px 0;
+}
+
+/* ---------- 6. FORM GRID & INPUTS ---------- */
+.xgs-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px 20px;
+  margin-top: 14px;
+}
+.xgs-form-grid.full { grid-template-columns: 1fr; }
+@media (max-width: 768px) { .xgs-form-grid { grid-template-columns: 1fr; } }
+
+.xgs-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.xgs-field label,
+.xgs-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--xgs-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.xgs-input,
+.xgs-contract input[type="text"],
+.xgs-contract input[type="email"],
+.xgs-contract input[type="date"],
+.xgs-contract input[type="tel"],
+.xgs-contract input[type="number"],
+.xgs-contract select,
+.xgs-contract textarea {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: var(--xgs-radius-sm);
+  border: 1.5px solid var(--xgs-border-strong);
+  background: var(--xgs-paper);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--xgs-ink);
+  outline: none;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.xgs-contract input:focus,
+.xgs-contract select:focus,
+.xgs-contract textarea:focus,
+.xgs-input:focus {
+  border-color: var(--xgs-accent);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.18);
+  background: #fff;
+}
+.xgs-contract input[readonly],
+.xgs-contract input:read-only {
+  background: var(--xgs-soft);
+  color: var(--xgs-muted);
+  cursor: not-allowed;
+}
+.xgs-contract input[type="checkbox"],
+.xgs-contract input[type="radio"] {
+  transform: scale(1.15);
+  margin-right: 6px;
+  accent-color: var(--xgs-accent);
+}
+
+/* Inline underline-style inputs (legacy compatibility) */
+.xgs-underline-input {
+  border: none !important;
+  border-bottom: 1.5px solid var(--xgs-border-strong) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 4px 2px !important;
+}
+.xgs-underline-input:focus {
+  border-bottom-color: var(--xgs-accent) !important;
+  box-shadow: none !important;
+}
+
+/* ---------- 7. CHECKBOX GROUPS ---------- */
+.xgs-checkgroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+.xgs-checkgroup label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1.5px solid var(--xgs-border-strong);
+  border-radius: 999px;
+  background: var(--xgs-paper);
+  cursor: pointer;
+  transition: all .15s;
+  font-size: 13px;
+  font-weight: 500;
+}
+.xgs-checkgroup label:hover {
+  border-color: var(--xgs-accent);
+  background: var(--xgs-brand-soft);
+}
+.xgs-checkgroup label:has(input:checked) {
+  border-color: var(--xgs-accent);
+  background: var(--xgs-brand-soft);
+  color: var(--xgs-brand-dark);
+  font-weight: 600;
+}
+
+/* ---------- 8. PACKAGE / CARD SELECTOR ---------- */
+.xgs-contract .package-item,
+.xgs-package-item {
+  margin: 14px 0;
+  padding: 16px 18px;
+  border: 1.5px solid var(--xgs-border);
+  border-radius: var(--xgs-radius-md);
+  background: var(--xgs-soft);
+  transition: all .15s;
+  position: relative;
+}
+.xgs-contract .package-item:hover,
+.xgs-package-item:hover {
+  border-color: var(--xgs-accent);
+  background: #fff;
+  box-shadow: var(--xgs-shadow-md);
+}
+.xgs-contract .package-item:has(input[type="radio"]:checked),
+.xgs-package-item:has(input[type="radio"]:checked) {
+  border-color: var(--xgs-accent);
+  background: linear-gradient(180deg, #fff, var(--xgs-brand-soft));
+  box-shadow: var(--xgs-shadow-md);
+}
+.xgs-contract .package-label,
+.xgs-package-label {
+  font-weight: 700;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  color: var(--xgs-ink);
+  font-size: 15px;
+}
+.xgs-contract .package-details,
+.xgs-package-details {
+  margin-top: 12px;
+  padding: 12px 0 0 28px;
+  color: var(--xgs-text);
+  border-top: 1px dashed var(--xgs-border);
+  font-size: 14px;
+}
+
+/* ---------- 9. SIGNATURE BLOCK ---------- */
+.xgs-signature {
+  margin-top: 28px;
+  padding: 20px;
+  background: var(--xgs-soft);
+  border: 1px solid var(--xgs-border);
+  border-radius: var(--xgs-radius-md);
+}
+.xgs-signature p { margin: 6px 0; }
+.xgs-signature .signature-canvas,
+.xgs-signature canvas {
+  width: 100%;
+  height: 140px;
+  background: #fff;
+  border-radius: var(--xgs-radius-sm);
+  border: 2px dashed var(--xgs-border-strong);
+  cursor: crosshair;
+  display: block;
+}
+
+/* ---------- 10. BUTTONS ---------- */
+.xgs-btn,
+.xgs-contract button,
+button.xgs-btn {
+  appearance: none;
+  border: none;
+  padding: 11px 22px;
+  border-radius: var(--xgs-radius-sm);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all .15s;
+  text-decoration: none;
+  line-height: 1.2;
+}
+.xgs-btn-primary,
+#signContract {
+  background: linear-gradient(135deg, var(--xgs-brand), var(--xgs-accent));
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(37,99,235,.28);
+}
+.xgs-btn-primary:hover,
+#signContract:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(37,99,235,.36);
+}
+.xgs-btn-primary:disabled,
+#signContract:disabled {
+  background: var(--xgs-faint);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.xgs-btn-secondary,
+#clearSignature {
+  background: var(--xgs-paper);
+  color: var(--xgs-text);
+  border: 1.5px solid var(--xgs-border-strong);
+}
+.xgs-btn-secondary:hover,
+#clearSignature:hover {
+  background: var(--xgs-soft);
+  border-color: var(--xgs-faint);
+}
+.xgs-btn-ghost {
+  background: transparent;
+  color: var(--xgs-muted);
+}
+.xgs-btn-danger { background: var(--xgs-danger); color: #fff; }
+.xgs-btn-success { background: var(--xgs-success); color: #fff; }
+
+/* ---------- 11. CALLOUT / NOTICE ---------- */
+.xgs-callout,
+.contract-warning {
+  margin: 18px 0;
+  padding: 14px 16px;
+  border-radius: var(--xgs-radius-sm);
+  background: var(--xgs-warn-soft);
+  border-left: 4px solid var(--xgs-warn);
+  color: #7c2d12;
+  font-size: 14px;
+}
+.xgs-callout.info { background: var(--xgs-info-soft); border-color: var(--xgs-info); color: #075985; }
+.xgs-callout.success { background: var(--xgs-success-soft); border-color: var(--xgs-success); color: #14532d; }
+.xgs-callout.danger { background: var(--xgs-danger-soft); border-color: var(--xgs-danger); color: #7f1d1d; }
+
+/* ---------- 12. STATUS BADGES ---------- */
+.xgs-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+.xgs-badge.signed,
+.xgs-badge.success { background: var(--xgs-success-soft); color: #166534; }
+.xgs-badge.pending { background: var(--xgs-warn-soft); color: #92400e; }
+.xgs-badge.danger { background: var(--xgs-danger-soft); color: #991b1b; }
+.xgs-badge.info { background: var(--xgs-info-soft); color: #075985; }
+
+/* ---------- 13. ADMIN — DASHBOARD CONTAINER ---------- */
+.xgs-admin-shell {
+  max-width: 1320px;
+  margin: 0 auto;
+  background: var(--xgs-paper);
+  border-radius: var(--xgs-radius-lg);
+  box-shadow: var(--xgs-shadow-md);
+  padding: 28px;
+}
+.xgs-admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--xgs-border);
+}
+.xgs-admin-header h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--xgs-ink);
+  display: flex; align-items: center; gap: 10px;
+}
+.xgs-admin-header h1::before {
+  content: "";
+  width: 5px;
+  height: 26px;
+  background: linear-gradient(180deg, var(--xgs-brand), var(--xgs-accent));
+  border-radius: 3px;
+}
+.xgs-back-btn {
+  background: var(--xgs-brand-soft);
+  color: var(--xgs-brand-dark);
+  padding: 9px 16px;
+  border-radius: var(--xgs-radius-sm);
+  font-size: 13px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all .15s;
+  border: 1px solid transparent;
+}
+.xgs-back-btn:hover {
+  background: #fff;
+  border-color: var(--xgs-brand-soft);
+  box-shadow: var(--xgs-shadow-sm);
+}
+
+/* ---------- 14. ADMIN — TABLE ---------- */
+.xgs-admin-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--xgs-radius-md);
+  border: 1px solid var(--xgs-border);
+  background: #fff;
+}
+.xgs-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 920px;
+}
+.xgs-admin-table th {
+  background: var(--xgs-soft);
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--xgs-muted);
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--xgs-border);
+  white-space: nowrap;
+}
+.xgs-admin-table td {
+  padding: 14px 16px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--xgs-border);
+  color: var(--xgs-text);
+  vertical-align: middle;
+}
+.xgs-admin-table tbody tr { transition: background .12s; }
+.xgs-admin-table tbody tr:hover { background: #fafbff; }
+.xgs-admin-table tbody tr:last-child td { border-bottom: none; }
+
+.xgs-actions {
+  display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+}
+.xgs-admin-btn {
+  border: none;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--xgs-radius-xs);
+  color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.xgs-admin-btn:hover { transform: translateY(-1px); box-shadow: var(--xgs-shadow-sm); }
+.xgs-admin-btn.pdf  { background: var(--xgs-success); }
+.xgs-admin-btn.pdf:hover  { background: #15803d; }
+.xgs-admin-btn.send { background: var(--xgs-info); }
+.xgs-admin-btn.send:hover { background: #0369a1; }
+.xgs-admin-btn.resend { background: var(--xgs-warn); }
+.xgs-admin-btn.resend:hover { background: #b45309; }
+.xgs-admin-btn.del  { background: var(--xgs-danger); }
+.xgs-admin-btn.del:hover  { background: #b91c1c; }
+
+.xgs-empty-state {
+  text-align: center;
+  color: var(--xgs-muted);
+  padding: 64px 20px !important;
+}
+.xgs-empty-state strong { display: block; font-size: 17px; color: var(--xgs-text); margin-bottom: 4px; }
+.xgs-empty-state p { margin: 4px 0 0; font-size: 13px; }
+
+/* ---------- 15. ADMIN — ALERT ---------- */
+.xgs-alert {
+  padding: 14px 18px;
+  border-radius: var(--xgs-radius-sm);
+  margin-bottom: 22px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  animation: xgs-slide-down .25s ease;
+  border: 1px solid;
+}
+.xgs-alert.success { background: var(--xgs-success-soft); color: #14532d; border-color: #bbf7d0; }
+.xgs-alert.error,
+.xgs-alert.danger  { background: var(--xgs-danger-soft); color: #7f1d1d; border-color: #fecaca; }
+.xgs-alert.info    { background: var(--xgs-info-soft); color: #075985; border-color: #bae6fd; }
+.xgs-alert .close-btn {
+  background: none; border: none; cursor: pointer; color: inherit;
+  font-size: 22px; line-height: 1; opacity: .55; padding: 0 4px;
+}
+.xgs-alert .close-btn:hover { opacity: 1; }
+@keyframes xgs-slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- 16. LOADING / SPINNER ---------- */
+.xgs-loading {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: xgs-spin .6s linear infinite;
+}
+@keyframes xgs-spin { to { transform: rotate(360deg); } }
+
+/* ---------- 17. SECTION CARD (forms / generators) ---------- */
+.xgs-card {
+  background: var(--xgs-paper);
+  border-radius: var(--xgs-radius-lg);
+  box-shadow: var(--xgs-shadow-md);
+  padding: 28px;
+  margin-bottom: 20px;
+}
+.xgs-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 18px;
+  padding-bottom: 14px; border-bottom: 1px solid var(--xgs-border);
+}
+.xgs-card-header h2 {
+  margin: 0; font-size: 18px; font-weight: 700; color: var(--xgs-ink);
+  border: none; padding: 0;
+}
+.xgs-card-header h2::before { display: none; }
+
+/* ---------- 18. SIGNED STAMP ---------- */
+.xgs-signed-stamp {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 18px;
+  background: var(--xgs-success-soft);
+  color: #14532d;
+  border: 1.5px solid #86efac;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ---------- 19. PRINT MODE ---------- */
+@media print {
+  body.xgs-contract-body { background: #fff; }
+  .xgs-contract-hero,
+  .xgs-admin-header,
+  .xgs-back-btn,
+  .xgs-actions,
+  button,
+  .xgs-btn,
+  #signContract,
+  #clearSignature { display: none !important; }
+  .xgs-contract,
+  .xgs-card,
+  .xgs-admin-shell {
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+    max-width: none;
+  }
+}

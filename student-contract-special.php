@@ -100,25 +100,27 @@ if (!empty($contract['student_id']) && is_numeric($contract['student_id'])) {
 <meta charset="UTF-8">
 <title>International Student Admission & Visa Consultancy Agreement</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/contract-modern.css">
 
 <style>
 /* =====================================================
    ROOT DESIGN TOKENS
 ===================================================== */
 :root {
-  --ink: #111827;
-  --muted: #374151;
-  --border: #d1d5db;
-  --soft: #f9fafb;
+  --ink: #0f172a;
+  --muted: #475569;
+  --border: #e2e8f0;
+  --soft: #f8fafc;
   --paper: #ffffff;
   --link: #1d4ed8;
   --warn: #b91c1c;
   --success: #15803d;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
 
-  --shadow-paper: 0 10px 40px rgba(0,0,0,.08);
+  --shadow-paper: 0 16px 48px rgba(15, 23, 42, .10);
 }
 
 /* =====================================================
@@ -126,26 +128,28 @@ if (!empty($contract['student_id']) && is_numeric($contract['student_id'])) {
 ===================================================== */
 body {
   margin: 0;
-  padding: 48px 16px;
-  background: linear-gradient(180deg, #eef2f7, #e5e7eb);
+  padding: 32px 16px 64px;
+  background: linear-gradient(180deg, #eef2f7 0%, #e2e8f0 100%);
   font-family: "Inter", "Segoe UI", system-ui, sans-serif;
   color: var(--ink);
+  -webkit-font-smoothing: antialiased;
 }
 
 /* =====================================================
    CONTRACT SHEET
 ===================================================== */
 .contract-page {
-  max-width: 900px;
-  margin: auto;
+  max-width: 980px;
+  margin: 0 auto;
   background: var(--paper);
-  padding: 64px 72px;
+  padding: 56px 64px;
   box-shadow: var(--shadow-paper);
   border-radius: var(--radius-md);
 
-  font-family: "Georgia", "Times New Roman", serif;
+  font-family: "Source Serif Pro", "Georgia", "Times New Roman", serif;
   font-size: 12.2pt;
   line-height: 1.75;
+  color: var(--ink);
 }
 
 /* =====================================================
@@ -353,36 +357,46 @@ body {
    BUTTONS (SIGNATURE ACTIONS)
 ===================================================== */
 button {
-  font-family: system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 14px;
   font-weight: 600;
-  padding: 10px 18px;
+  padding: 11px 22px;
   border-radius: var(--radius-sm);
   border: none;
   cursor: pointer;
+  transition: all .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 #clearSignature {
-  background: #f3f4f6;
+  background: #ffffff;
   color: var(--ink);
+  border: 1.5px solid #cbd5e1;
 }
 
 #clearSignature:hover {
-  background: #e5e7eb;
+  background: #f8fafc;
+  border-color: #94a3b8;
 }
 
 #signContract {
-  background: var(--link);
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
   color: #ffffff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, .28);
 }
 
 #signContract:hover {
-  background: #1e40af;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, .36);
 }
 
 #signContract:disabled {
-  background: #9ca3af;
+  background: #94a3b8;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 /* =====================================================
@@ -417,7 +431,19 @@ button {
 
 </head>
 
-<body>
+<body class="xgs-contract-body">
+
+<div class="xgs-contract-hero">
+  <span class="xgs-hero-eyebrow">Visa Consultancy Agreement</span>
+  <h1 class="xgs-hero-title">International Student Admission &amp; Visa Consultancy</h1>
+  <p class="xgs-hero-sub">Parrot Canada Visa Consultant Company Ltd – Professional Admission &amp; Visa Services</p>
+  <div class="xgs-hero-meta">
+    <span>🎓 Student Admission</span>
+    <span>🛂 Visa Consultancy</span>
+    <span>🔒 E-Signed Agreement</span>
+    <?php if ($isSigned): ?><span style="background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.30); padding:4px 12px; border-radius:999px; font-weight:700;">✓ Signed</span><?php endif; ?>
+  </div>
+</div>
 
 <!-- ============================
      CONTRACT HEADER + ARTICLE 1

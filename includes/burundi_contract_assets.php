@@ -5,9 +5,10 @@ function xander_burundi_contract_paths(): array
 {
     $root = realpath(__DIR__ . '/../contracts') ?: (__DIR__ . '/../contracts');
     return [
-        'header' => $root . DIRECTORY_SEPARATOR . 'header.png',
-        'footer' => $root . DIRECTORY_SEPARATOR . 'footer.png',
-        'pdf'    => $root . DIRECTORY_SEPARATOR . 'HEERA-Xander CLIENT CONTRACT-MAY 2026.pdf',
+        'header'    => $root . DIRECTORY_SEPARATOR . 'header.png',
+        'footer'    => $root . DIRECTORY_SEPARATOR . 'footer.png',
+        'signature' => $root . DIRECTORY_SEPARATOR . 'Xander-signatture.jpeg',
+        'pdf'       => $root . DIRECTORY_SEPARATOR . 'HEERA-Xander CLIENT CONTRACT-MAY 2026.pdf',
     ];
 }
 
