@@ -171,6 +171,8 @@ $index_translations = [
         'card2_point1' => 'Up to 90% scholarships',
         'card2_point2' => 'Education loans (Canada & USA)',
         'card2_point3' => 'Financial planning support',
+        'scholarships_home_title' => 'Institution Scholarships',
+        'scholarships_home_desc' => 'Apply directly to scholarship programs from our partner universities and institutions.',
         
         // Card 3: I-20 Application
         'card3_title' => 'I-20 Application',
@@ -378,6 +380,8 @@ $index_translations = [
         'card2_point1' => 'Bourses jusqu\'à 90%',
         'card2_point2' => 'Prêts éducation (Canada & USA)',
         'card2_point3' => 'Support financier',
+        'scholarships_home_title' => 'Bourses des institutions',
+        'scholarships_home_desc' => 'Postulez directement aux programmes de bourses de nos universités et institutions partenaires.',
         
         // Card 3: I-20 Application
         'card3_title' => 'Demande I-20',
@@ -452,7 +456,7 @@ $cards = [
         'subtitle_key' => 'card2_subtitle',
         'description_key' => 'card2_description',
         'points_keys' => ['card2_point1', 'card2_point2', 'card2_point3'],
-        'form' => 'master-loan.php',
+        'form' => '#scholarships',
         'color' => '#254D81'
     ],
     [
@@ -1105,6 +1109,109 @@ body {
 .back-to-all:hover {
   background: rgba(255, 255, 255, 0.25);
   transform: translateY(-2px);
+}
+
+/* ===== INSTITUTION SCHOLARSHIPS (homepage) ===== */
+.scholarships-home {
+  padding: 80px 20px;
+  background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+}
+
+.scholarships-home-grid {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.scholarship-home-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(1, 47, 107, 0.06);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.scholarship-home-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(1, 47, 107, 0.12);
+}
+
+.sch-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 0.8rem;
+}
+
+.sch-uni {
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.sch-country {
+  color: #64748b;
+}
+
+.scholarship-home-card h3 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin: 0 0 8px;
+}
+
+.sch-tagline {
+  font-size: 0.9rem;
+  color: #475569;
+  margin: 0 0 8px;
+}
+
+.sch-summary {
+  font-size: 0.88rem;
+  color: #64748b;
+  flex: 1;
+  margin-bottom: 12px;
+}
+
+.sch-meta {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  font-size: 0.82rem;
+  color: #334155;
+}
+
+.sch-meta li {
+  margin-bottom: 4px;
+}
+
+.sch-meta i {
+  width: 18px;
+  color: var(--accent);
+}
+
+.sch-apply-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--primary);
+  color: #fff !important;
+  text-decoration: none;
+  font-weight: 700;
+  padding: 12px 20px;
+  border-radius: 10px;
+  margin-top: auto;
+}
+
+.sch-apply-btn:hover {
+  background: var(--secondary);
+  color: #fff;
 }
 
 /* ===== UNIVERSITIES SECTION ===== */
@@ -2136,6 +2243,11 @@ body {
   </div>
 </section>
 
+<?php
+require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/includes/homepage_scholarships.php';
+?>
+
 <!-- Global Universities Section -->
 <section class="universities-section section-padding">
   <div class="section-header">
@@ -2709,7 +2821,21 @@ body {
       let targetUrl = '';
       switch (type) {
         case 'scholarships':
-          targetUrl = `loan-providers.php?form=${encodeURIComponent(form)}&id=${encodeURIComponent(userId)}`;
+          if (form && form.startsWith('#')) {
+            const el = document.querySelector(form);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              return;
+            }
+          }
+          targetUrl = form || '#scholarships';
+          if (targetUrl.startsWith('#')) {
+            const el = document.querySelector(targetUrl);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              return;
+            }
+          }
           break;
   case 'visa':
   // Don't pass any ID - let visa.php generate a new one

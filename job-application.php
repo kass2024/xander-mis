@@ -24,7 +24,7 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 }
 
 // Validate and sanitize user ID
-$user_id = preg_replace('/[^a-zA-Z0-9\-]/', '', $_GET['id']);
+$user_id = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) $_GET['id']);
 
 // Store in session (must match save_job_application.php)
 $_SESSION['user_id'] = $user_id;
@@ -64,7 +64,7 @@ $prescreenHandoffForJs = null;
 if (!empty($_GET['from_prescreen']) && !empty($_SESSION['xander_prescreen_handoff'])) {
     $handoff = $_SESSION['xander_prescreen_handoff'];
     $reqId = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) ($_GET['id'] ?? ''));
-    if ($reqId !== '' && ($handoff['user_id'] ?? '') === $reqId && ($handoff['service_type'] ?? '') === 'work_abroad') {
+    if ($reqId !== '' && ($handoff['user_id'] ?? '') === $user_id && ($handoff['service_type'] ?? '') === 'work_abroad') {
         $_SESSION['user_id'] = $reqId;
         $prescreenHandoffForJs = [
             'docs' => $handoff['docs'] ?? [],
@@ -723,6 +723,7 @@ if (!empty($_GET['from_prescreen']) && !empty($_SESSION['xander_prescreen_handof
                             <option value="">Select a country...</option>
                             <!-- Countries loaded via JavaScript -->
                         </select>
+                        <div id="prescreenWorkCountriesHint" class="alert alert-info mt-2 py-2 small d-none" role="status"></div>
                         <div class="invalid-feedback">Please select a work country</div>
                         <div class="form-text">We'll match you with opportunities in this country</div>
                     </div>

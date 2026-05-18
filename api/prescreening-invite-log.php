@@ -14,6 +14,14 @@ if (empty($_SESSION['id']) && empty($_SESSION['admin_id'])) {
     exit;
 }
 
+require_once dirname(__DIR__) . '/db.php';
+require_once dirname(__DIR__) . '/helpers/prescreening_access.php';
+if (!isset($conn) || !($conn instanceof mysqli) || !xander_prescreening_has_menu_access($conn, 'prescreening.php')) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Forbidden']);
+    exit;
+}
+
 require_once dirname(__DIR__) . '/helpers/whatsapp_track_log.php';
 require_once dirname(__DIR__) . '/helpers/env_load.php';
 require_once dirname(__DIR__) . '/helpers/prescreening_whatsapp_schema.php';

@@ -213,3 +213,95 @@ function xander_prescreening_render_select(
 
     return $html;
 }
+
+/**
+ * Parse posted country list (multi-select array or legacy single field).
+ *
+ * @param array<string, mixed> $post
+ * @return list<string>
+ */
+function xander_prescreening_parse_country_list_from_post(array $post, string $arrayKey, string $singleKey = ''): array
+{
+    $list = [];
+    if (isset($post[$arrayKey]) && is_array($post[$arrayKey])) {
+        foreach ($post[$arrayKey] as $c) {
+            $c = trim((string) $c);
+            if ($c !== '') {
+                $list[] = $c;
+            }
+        }
+    } elseif ($singleKey !== '' && trim((string) ($post[$singleKey] ?? '')) !== '') {
+        $raw = trim((string) $post[$singleKey]);
+        foreach (preg_split('/\s*,\s*/', $raw) ?: [] as $part) {
+            $part = trim((string) $part);
+            if ($part !== '') {
+                $list[] = $part;
+            }
+        }
+    }
+
+    return array_values(array_unique($list));
+}
+
+/**
+ * @return list<string>
+ */
+function xander_prescreening_split_stored_countries(string $stored): array
+{
+    $stored = trim($stored);
+    if ($stored === '') {
+        return [];
+    }
+    if (str_starts_with($stored, '[')) {
+        $decoded = json_decode($stored, true);
+        if (is_array($decoded)) {
+            return array_values(array_filter(array_map(static fn ($v) => trim((string) $v), $decoded)));
+        }
+    }
+
+    return array_values(array_filter(array_map('trim', preg_split('/\s*,\s*/', $stored) ?: [])));
+}
+
+/**
+ * @param list<string> $countries
+ */
+function xander_prescreening_format_country_list(array $countries): string
+{
+    $countries = array_values(array_unique(array_filter(array_map('trim', $countries))));
+
+    return implode(', ', $countries);
+}
+
+/**
+ * Multi-select for countries (at least min selections enforced client/server-side).
+ *
+ * @param list<string> $options
+ * @param list<string>|string $selected
+ */
+function xander_prescreening_render_country_multi_select(
+    string $name,
+    array $options,
+    $selected,
+    bool $readonly,
+    int $min = 2,
+    string $placeholder = 'Select countries'
+): string {
+    $selectedList = is_array($selected)
+        ? $selected
+        : xander_prescreening_split_stored_countries((string) $selected);
+    $dis = $readonly ? ' disabled' : '';
+    $minAttr = $min > 0 ? ' data-min-selections="' . (int) $min . '"' : '';
+    $html = '<select name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '[]" class="form-select prescreen-country-multi" multiple size="8"' . $dis . $minAttr . '>';
+    $html .= '<option value="" disabled>' . htmlspecialchars($placeholder, ENT_QUOTES, 'UTF-8') . '</option>';
+    foreach ($options as $opt) {
+        $sel = in_array($opt, $selectedList, true) ? ' selected' : '';
+        $html .= '<option value="' . htmlspecialchars($opt, ENT_QUOTES, 'UTF-8') . '"' . $sel . '>'
+            . htmlspecialchars($opt, ENT_QUOTES, 'UTF-8') . '</option>';
+    }
+    $html .= '</select>';
+    if ($min > 0 && !$readonly) {
+        $html .= '<div class="form-text">Select at least ' . (int) $min . ' countries (hold Ctrl/Cmd to select multiple).</div>';
+    }
+
+    return $html;
+}

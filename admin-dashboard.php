@@ -352,7 +352,8 @@ $sidebarAccess = [
   ],
   'staff' => [
     'staff_attendance', 'agent_report', 'university_portal', 'commission_request',
-    'all_admissions', 'loan_applications', 'schools', 'marketing', 'contracts','jobsabrod','credit_transfer', 'visit_study_visa'
+    'all_admissions', 'loan_applications', 'schools', 'marketing', 'contracts','jobsabrod','credit_transfer', 'visit_study_visa',
+    'prescreening',
   ],
   'standard' => [
     'university_admissions', 'loan_applications', 'I-20_applications', 'all_admissions',
@@ -1655,14 +1656,18 @@ if (strtolower($role) !== 'catholic university of america') {
         <i class="bi bi-chevron-down arrow"></i>
       </a>
       <div class="sidebar-submenu" id="submenu_prescreening">
+        <?php if (adm_sub('prescreening', 'prescreening.php')): ?>
         <a href="#" onclick="loadInFrame('prescreening.php', 'Pre-screening Form')">
           <i class="bi bi-plus-circle"></i>
           New pre-screening
         </a>
+        <?php endif; ?>
+        <?php if (adm_sub('prescreening', 'prescreening-report.php')): ?>
         <a href="#" onclick="loadInFrame('prescreening-report.php', 'Pre-screening List')">
           <i class="bi bi-list-ul"></i>
           Pre-screening list
         </a>
+        <?php endif; ?>
       </div>
       <?php endif; ?>
 

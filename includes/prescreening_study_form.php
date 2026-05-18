@@ -40,14 +40,14 @@ $studyCountries = xander_prescreening_study_countries($dbConn);
     ) ?>
   </div>
   <div class="mb-3">
-    <label class="form-label"><span class="q-num">3.</span> Country of interest?</label>
-    <?= xander_prescreening_render_select(
+    <label class="form-label"><span class="q-num">3.</span> Countries of interest? *</label>
+    <?= xander_prescreening_render_country_multi_select(
         'country_interest',
         $studyCountries,
         (string) ($prefill['country_interest'] ?? ''),
-        false,
         $readonly,
-        'Select a country'
+        2,
+        'Select at least two countries'
     ) ?>
   </div>
   <div class="mb-3">

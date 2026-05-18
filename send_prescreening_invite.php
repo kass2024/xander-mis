@@ -18,11 +18,6 @@ function invite_respond(array $data, int $code = 200): void
 if (empty($_SESSION['admin_id'])) {
     invite_respond(['status' => 'error', 'message' => 'Unauthorized'], 401);
 }
-require_once __DIR__ . '/helpers/role.php';
-if (!pcvc_is_superadmin_role($_SESSION['role'] ?? '')) {
-    invite_respond(['status' => 'error', 'message' => 'Superadmin only'], 403);
-}
-
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     invite_respond(['status' => 'error', 'message' => 'Invalid method'], 405);
 }
@@ -33,6 +28,10 @@ xander_load_env_file();
 
 try {
     require_once __DIR__ . '/db.php';
+    require_once __DIR__ . '/helpers/prescreening_access.php';
+    if (!xander_prescreening_has_menu_access($conn, 'prescreening.php')) {
+        invite_respond(['status' => 'error', 'message' => 'You do not have access to Pre-screening.'], 403);
+    }
     require_once __DIR__ . '/helpers/prescreening_whatsapp_schema.php';
     require_once __DIR__ . '/helpers/prescreening_whatsapp_flow.php';
     require_once __DIR__ . '/helpers/prescreening_invite.php';

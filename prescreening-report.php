@@ -9,7 +9,7 @@ require_once __DIR__ . '/helpers/prescreening_access.php';
 require_once __DIR__ . '/helpers/prescreening_apply.php';
 require_once __DIR__ . '/helpers/prescreening_work_profile.php';
 
-xander_prescreening_require_superadmin();
+xander_prescreening_require_menu_access('prescreening-report.php');
 xander_ensure_prescreening_schema($conn);
 
 $prescreenCsrf = xander_prescreening_csrf_token();

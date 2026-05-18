@@ -639,6 +639,7 @@ function xander_institution_save_profile(mysqli $conn, int $universityId, array 
 
     $schComplete = ($schName !== '' && $schSummary !== '') ? 1 : 0;
     $loanComplete = ($loanName !== '' && $loanSummary !== '') ? 1 : 0;
+    $homepagePublished = !empty($post['homepage_published']) ? 1 : 0;
 
     $deadline = trim((string) ($post['scholarship_deadline'] ?? ''));
     $deadlineVal = $deadline !== '' ? $deadline : null;
@@ -651,8 +652,8 @@ function xander_institution_save_profile(mysqli $conn, int $universityId, array 
             scholarship_deadline, scholarship_apply_url,
             loan_program_name, loan_institution_name, loan_summary, loan_coverage,
             loan_eligibility, loan_rates_notes, loan_contact_email, loan_apply_url,
-            profile_complete_scholarship, profile_complete_loan
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            profile_complete_scholarship, profile_complete_loan, homepage_published
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
             scholarship_program_name = VALUES(scholarship_program_name),
             scholarship_tagline = VALUES(scholarship_tagline),
@@ -671,7 +672,8 @@ function xander_institution_save_profile(mysqli $conn, int $universityId, array 
             loan_contact_email = VALUES(loan_contact_email),
             loan_apply_url = VALUES(loan_apply_url),
             profile_complete_scholarship = VALUES(profile_complete_scholarship),
-            profile_complete_loan = VALUES(profile_complete_loan)
+            profile_complete_loan = VALUES(profile_complete_loan),
+            homepage_published = VALUES(homepage_published)
     ';
 
     $st = $conn->prepare($sql);
@@ -692,7 +694,7 @@ function xander_institution_save_profile(mysqli $conn, int $universityId, array 
     $loanUrl = trim((string) ($post['loan_apply_url'] ?? ''));
 
     $st->bind_param(
-        'isssssssssssssssii',
+        'isssssssssssssssiii',
         $universityId,
         $schName,
         $schTag,
@@ -711,7 +713,8 @@ function xander_institution_save_profile(mysqli $conn, int $universityId, array 
         $loanEmail,
         $loanUrl,
         $schComplete,
-        $loanComplete
+        $loanComplete,
+        $homepagePublished
     );
     $ok = $st->execute();
     $st->close();

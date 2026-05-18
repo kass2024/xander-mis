@@ -35,6 +35,10 @@ try {
         }
         $userId = trim((string) ($_POST['user_id'] ?? ''));
         if (!empty($_SESSION['admin_id']) && $userId !== '' && preg_match('/^user-[0-9]+-[0-9]+$/', $userId)) {
+            require_once __DIR__ . '/helpers/prescreening_access.php';
+            if (!xander_prescreening_has_menu_access($conn, 'prescreening.php')) {
+                doc_upload_respond(['status' => 'error', 'message' => 'You do not have access to Pre-screening.'], 403);
+            }
             xander_prescreening_ensure_admin_draft($conn, $userId);
             $invite = xander_prescreening_load_draft_by_user_id($conn, $userId);
         }

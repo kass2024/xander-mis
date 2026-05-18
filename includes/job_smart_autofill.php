@@ -395,6 +395,17 @@ $prescreenHandoffForJs = $prescreenHandoffForJs ?? null;
     if (prescreenHandoff.prefill) {
       window.applyAutofillFields(prescreenHandoff.prefill);
     }
+    const hintEl = document.getElementById("prescreenWorkCountriesHint");
+    if (hintEl && prescreenHandoff.hints) {
+      const list = prescreenHandoff.hints.work_countries || prescreenHandoff.hints.work_country;
+      if (Array.isArray(list) && list.length) {
+        hintEl.textContent = "Pre-screening destinations: " + list.join(", ") + ". Primary country is pre-selected below.";
+        hintEl.classList.remove("d-none");
+      } else if (typeof list === "string" && list.trim()) {
+        hintEl.textContent = "Pre-screening destination(s): " + list + ".";
+        hintEl.classList.remove("d-none");
+      }
+    }
 
     const docList = Array.isArray(prescreenHandoff.docs) ? prescreenHandoff.docs : [];
     if (!docList.length) {

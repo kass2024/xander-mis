@@ -183,6 +183,12 @@ $asyncDocs = true;
     form.querySelectorAll('input, select, textarea').forEach(el => {
       if (!el.name || el.disabled) return;
       if (el.type === 'file') return;
+      if (el.tagName === 'SELECT' && el.multiple) {
+        Array.from(el.selectedOptions).forEach(function (opt) {
+          if (opt.value) fd.append(el.name, opt.value);
+        });
+        return;
+      }
       if (el.type === 'checkbox' || el.type === 'radio') {
         if (el.checked) fd.append(el.name, el.value);
         return;

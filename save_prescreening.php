@@ -30,9 +30,8 @@ try {
 
     require_once __DIR__ . '/db.php';
     require_once __DIR__ . '/helpers/prescreening_access.php';
-    require_once __DIR__ . '/helpers/role.php';
-    if (!pcvc_is_superadmin_role($_SESSION['role'] ?? '')) {
-        prescreening_respond(['status' => 'error', 'message' => 'Superadmin only'], 403);
+    if (!xander_prescreening_has_menu_access($conn, 'prescreening.php')) {
+        prescreening_respond(['status' => 'error', 'message' => 'You do not have access to Pre-screening.'], 403);
     }
     require_once __DIR__ . '/helpers/prescreening_schema.php';
     require_once __DIR__ . '/helpers/prescreening_invite.php';

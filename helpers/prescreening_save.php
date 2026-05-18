@@ -197,7 +197,15 @@ function xander_prescreening_parse_form_payload(array $post, array $files, ?stri
 
     if ($serviceType === 'work_abroad') {
         $fields['applicant_address'] = trim((string) ($post['applicant_address'] ?? ''));
-        $fields['work_country_destination'] = trim((string) ($post['work_country_destination'] ?? ''));
+        $workCountries = xander_prescreening_parse_country_list_from_post(
+            $post,
+            'work_country_destination',
+            'work_country_destination'
+        );
+        if (count($workCountries) < 2) {
+            $errors[] = 'Please select at least two countries of interest for work abroad.';
+        }
+        $fields['work_country_destination'] = xander_prescreening_format_country_list($workCountries);
 
         $profile = xander_prescreening_work_profile_pack($post);
         $fields['work_profile_json'] = json_encode($profile, JSON_UNESCAPED_UNICODE);
@@ -224,7 +232,15 @@ function xander_prescreening_parse_form_payload(array $post, array $files, ?stri
     } else {
         $fields['education_level'] = trim((string) ($post['education_level'] ?? ''));
         $fields['course_program'] = trim((string) ($post['course_program'] ?? ''));
-        $fields['country_interest'] = trim((string) ($post['country_interest'] ?? ''));
+        $studyCountries = xander_prescreening_parse_country_list_from_post(
+            $post,
+            'country_interest',
+            'country_interest'
+        );
+        if (count($studyCountries) < 2) {
+            $errors[] = 'Please select at least two countries of interest.';
+        }
+        $fields['country_interest'] = xander_prescreening_format_country_list($studyCountries);
         $fields['open_other_countries'] = trim((string) ($post['open_other_countries'] ?? ''));
         $fields['budget_tuition'] = trim((string) ($post['budget_tuition'] ?? ''));
         $fields['funds_application_visa'] = trim((string) ($post['funds_application_visa'] ?? ''));

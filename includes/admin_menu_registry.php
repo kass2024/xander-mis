@@ -185,6 +185,7 @@ function xander_admin_menu_role_defaults(): array
         'staff' => [
             'staff_attendance', 'university_portal', 'commission_request',
             'all_admissions', 'loan_applications', 'marketing', 'contracts', 'jobsabrod', 'credit_transfer', 'visit_study_visa',
+            'prescreening',
         ],
         'standard' => [
             'loan_applications', 'I-20_applications', 'all_admissions',

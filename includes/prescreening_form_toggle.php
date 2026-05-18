@@ -49,10 +49,42 @@ declare(strict_types=1);
     });
   });
 
+  function selectedCountryCount(selectEl) {
+    if (!selectEl) return 0;
+    return Array.from(selectEl.selectedOptions).filter(function (o) {
+      return o.value && o.value.trim() !== '';
+    }).length;
+  }
+
+  function validateCountryMulti(form) {
+    const type = currentType();
+    if (type === 'work_abroad') {
+      const sel = form.querySelector('select.prescreen-country-multi[name="work_country_destination[]"]');
+      if (selectedCountryCount(sel) < 2) {
+        alert('Please select at least two countries of interest for work abroad.');
+        sel && sel.focus();
+        return false;
+      }
+    }
+    if (type === 'study_abroad') {
+      const sel = form.querySelector('select.prescreen-country-multi[name="country_interest[]"]');
+      if (selectedCountryCount(sel) < 2) {
+        alert('Please select at least two countries of interest.');
+        sel && sel.focus();
+        return false;
+      }
+    }
+    return true;
+  }
+
   document.addEventListener('submit', function (e) {
     const form = e.target;
     if (!form || !form.querySelector('select[name="service_type"]')) return;
     applyService(currentType());
+    if (!validateCountryMulti(form)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
   }, true);
 })();
 </script>

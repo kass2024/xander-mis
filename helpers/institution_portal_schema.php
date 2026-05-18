@@ -136,4 +136,86 @@ function xander_institution_portal_ensure_schema(mysqli $conn): void
     if (!$conn->query($sqlDocs)) {
         throw new RuntimeException('Failed creating institution_profile_documents: ' . $conn->error);
     }
+
+    $sqlScholarships = "
+        CREATE TABLE IF NOT EXISTS institution_scholarships (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            university_id INT UNSIGNED NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            slug VARCHAR(191) NULL DEFAULT NULL,
+            tagline VARCHAR(500) NULL DEFAULT NULL,
+            summary TEXT NULL,
+            eligibility TEXT NULL,
+            requirements TEXT NULL,
+            tuition_coverage VARCHAR(500) NULL DEFAULT NULL,
+            accommodation_details TEXT NULL,
+            benefits TEXT NULL,
+            award_amount VARCHAR(255) NULL DEFAULT NULL,
+            deadline DATE NULL DEFAULT NULL,
+            status ENUM('draft','active','expired') NOT NULL DEFAULT 'draft',
+            is_published TINYINT(1) NOT NULL DEFAULT 0,
+            brochure_path VARCHAR(500) NULL DEFAULT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_inst_sch_university (university_id),
+            KEY idx_inst_sch_status (university_id, status),
+            KEY idx_inst_sch_published (is_published, status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ";
+    if (!$conn->query($sqlScholarships)) {
+        throw new RuntimeException('Failed creating institution_scholarships: ' . $conn->error);
+    }
+
+    $sqlPrograms = "
+        CREATE TABLE IF NOT EXISTS institution_programs (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            university_id INT UNSIGNED NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            program_type ENUM('undergraduate','masters','phd','diploma','online','short') NOT NULL DEFAULT 'undergraduate',
+            summary TEXT NULL,
+            tuition_notes VARCHAR(500) NULL DEFAULT NULL,
+            duration VARCHAR(120) NULL DEFAULT NULL,
+            intake_dates VARCHAR(255) NULL DEFAULT NULL,
+            requirements TEXT NULL,
+            language_requirements TEXT NULL,
+            status ENUM('draft','active') NOT NULL DEFAULT 'active',
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_inst_prog_university (university_id),
+            KEY idx_inst_prog_type (university_id, program_type)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ";
+    if (!$conn->query($sqlPrograms)) {
+        throw new RuntimeException('Failed creating institution_programs: ' . $conn->error);
+    }
+
+    $sqlApplications = "
+        CREATE TABLE IF NOT EXISTS institution_scholarship_applications (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            scholarship_id INT UNSIGNED NOT NULL,
+            university_id INT UNSIGNED NOT NULL,
+            applicant_name VARCHAR(191) NOT NULL,
+            applicant_email VARCHAR(190) NOT NULL,
+            applicant_phone VARCHAR(64) NULL DEFAULT NULL,
+            nationality VARCHAR(120) NULL DEFAULT NULL,
+            date_of_birth DATE NULL DEFAULT NULL,
+            education_level VARCHAR(120) NULL DEFAULT NULL,
+            current_institution VARCHAR(255) NULL DEFAULT NULL,
+            statement TEXT NULL,
+            status ENUM('new','under_review','accepted','rejected','waitlisted') NOT NULL DEFAULT 'new',
+            internal_notes TEXT NULL,
+            reviewed_at TIMESTAMP NULL DEFAULT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_inst_app_scholarship (scholarship_id),
+            KEY idx_inst_app_university (university_id),
+            KEY idx_inst_app_status (university_id, status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ";
+    if (!$conn->query($sqlApplications)) {
+        throw new RuntimeException('Failed creating institution_scholarship_applications: ' . $conn->error);
+    }
 }

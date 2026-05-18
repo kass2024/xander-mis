@@ -12,7 +12,7 @@ require_once __DIR__ . '/helpers/prescreening_schema.php';
 require_once __DIR__ . '/helpers/prescreening_notify.php';
 require_once __DIR__ . '/helpers/prescreening_access.php';
 
-xander_prescreening_require_superadmin();
+xander_prescreening_require_menu_access('prescreening.php');
 xander_ensure_prescreening_schema($conn);
 require_once __DIR__ . '/helpers/prescreening_invite.php';
 
@@ -133,6 +133,12 @@ $asyncDocs = true;
     const fd = new FormData();
     form.querySelectorAll('input, select, textarea').forEach(el => {
       if (!el.name || el.disabled || el.type === 'file') return;
+      if (el.tagName === 'SELECT' && el.multiple) {
+        Array.from(el.selectedOptions).forEach(function (opt) {
+          if (opt.value) fd.append(el.name, opt.value);
+        });
+        return;
+      }
       if ((el.type === 'checkbox' || el.type === 'radio') && !el.checked) return;
       fd.append(el.name, el.value);
     });

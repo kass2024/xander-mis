@@ -32,9 +32,7 @@ function xander_send_student_portal_access_email(
         $introHtml = '<p>Thank you for submitting your application. Your account is ready so you can track status and upload required materials securely.</p>';
     }
 
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
-    $loginUrl = $scheme . '://' . $host . pcvc_url('/student-login.php') . '?email=' . rawurlencode($email);
+    $loginUrl = pcvc_public_url('/student-login.php') . '?email=' . rawurlencode($email);
     $defaultPw = PCVC_STUDENT_DEFAULT_PASSWORD;
 
     $body = '

@@ -5,7 +5,7 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers/prescreening_schema.php';
 require_once __DIR__ . '/helpers/prescreening_access.php';
 
-xander_prescreening_require_superadmin();
+xander_prescreening_require_menu_access('prescreening.php');
 
 xander_ensure_prescreening_schema($conn);
 ?>

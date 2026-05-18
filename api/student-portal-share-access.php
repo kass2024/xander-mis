@@ -53,11 +53,8 @@ try {
     // keep going; email still may be sent
 }
 
-// Build login link (prefill email)
-$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$host = (string)($_SERVER['HTTP_HOST'] ?? 'localhost');
-$base = $scheme . '://' . $host;
-$loginUrl = $base . pcvc_url('/student-login.php') . '?email=' . rawurlencode($email);
+// Build login link (prefill email) — use APP_URL from .env, not localhost
+$loginUrl = pcvc_public_url('/student-login.php') . '?email=' . rawurlencode($email);
 
 $defaultPw = PCVC_STUDENT_DEFAULT_PASSWORD;
 $studentName = $name !== '' ? $name : 'Student';

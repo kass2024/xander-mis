@@ -6,7 +6,7 @@ require_once __DIR__ . '/helpers/prescreening_schema.php';
 require_once __DIR__ . '/helpers/prescreening_access.php';
 require_once __DIR__ . '/helpers/prescreening_apply.php';
 
-xander_prescreening_require_superadmin();
+xander_prescreening_require_menu_access('prescreening-report.php');
 xander_ensure_prescreening_schema($conn);
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {

@@ -60,15 +60,15 @@ if ($checkedKeys === [] && isset($_POST['work_checklist']) && is_array($_POST['w
              <?= ($readonly && !$editableContact) ? 'readonly' : '' ?>
              value="<?= htmlspecialchars((string) ($prefill['whatsapp_number'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
     </div>
-    <div class="col-md-6">
-      <label class="form-label">Country destination</label>
-      <?= xander_prescreening_render_select(
+    <div class="col-12">
+      <label class="form-label">Countries of interest (work destinations) *</label>
+      <?= xander_prescreening_render_country_multi_select(
           'work_country_destination',
           $workCountries,
           (string) ($prefill['work_country_destination'] ?? ''),
-          false,
           $readonly,
-          'Select work destination country'
+          2,
+          'Select at least two countries'
       ) ?>
     </div>
     <div class="col-12">

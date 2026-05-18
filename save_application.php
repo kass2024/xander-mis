@@ -151,11 +151,8 @@ function pcvc_send_student_portal_access_email(string $email, string $studentNam
         debug_log('PORTAL ACCESS STUDY CHOICES LOAD FAILED', $e->getMessage());
     }
 
-    // Build login link (prefill email)
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = (string)($_SERVER['HTTP_HOST'] ?? 'localhost');
-    $base = $scheme . '://' . $host;
-    $loginUrl = $base . pcvc_url('/student-login.php') . '?email=' . rawurlencode($email);
+    // Build login link (prefill email) — use APP_URL from .env, not localhost
+    $loginUrl = pcvc_public_url('/student-login.php') . '?email=' . rawurlencode($email);
 
     $defaultPw = PCVC_STUDENT_DEFAULT_PASSWORD;
     $subject = 'Your Student Portal Access – ' . PCVC_COMPANY_DISPLAY_NAME;

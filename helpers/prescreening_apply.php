@@ -162,11 +162,13 @@ function xander_prescreening_build_apply_handoff(mysqli $conn, array $row): arra
     $hints = [];
     if ($work) {
         require_once __DIR__ . '/prescreening_work_profile.php';
-        $workCountry = trim((string) ($row['work_country_destination'] ?? ''));
-        if ($workCountry !== '') {
-            $hints['work_country'] = $workCountry;
+        $workCountries = xander_prescreening_split_stored_countries((string) ($row['work_country_destination'] ?? ''));
+        if ($workCountries !== []) {
+            $hints['work_country'] = implode(', ', $workCountries);
+            $hints['work_countries'] = $workCountries;
             require_once __DIR__ . '/ai_autofill_utils.php';
-            $workCountryId = ai_lookup_country_id($conn, $workCountry);
+            $primary = $workCountries[0];
+            $workCountryId = ai_lookup_country_id($conn, $primary);
             if ($workCountryId !== '') {
                 $prefill['work_country_id'] = $workCountryId;
             }
