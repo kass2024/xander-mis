@@ -1875,8 +1875,9 @@ $prefillSrcAmount = (string)($_GET['src_amount'] ?? '');
                             </div>
                             
                             <div class="form-actions">
-                                <button type="submit" class="btn btn-success">
-                                    <i class="fas fa-user-plus"></i> Create & Continue
+                                <button type="submit" class="btn btn-success" id="register-submit-btn">
+                                    <i class="fas fa-user-plus register-btn-icon" aria-hidden="true"></i>
+                                    <span class="register-btn-label">Create &amp; Continue</span>
                                 </button>
                             </div>
                         </form>
@@ -2300,12 +2301,42 @@ document.addEventListener('DOMContentLoaded', function() {
         updatePhoneHint();
     }
 
+    function setRegisterSubmitLoading(isLoading) {
+        const btn = document.getElementById('register-submit-btn');
+        if (!btn) return;
+
+        const icon = btn.querySelector('.register-btn-icon');
+        const label = btn.querySelector('.register-btn-label');
+
+        btn.disabled = isLoading;
+        btn.classList.toggle('is-loading', isLoading);
+        btn.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+
+        if (icon) {
+            icon.className = isLoading
+                ? 'fas fa-spinner fa-spin register-btn-icon'
+                : 'fas fa-user-plus register-btn-icon';
+        }
+        if (label) {
+            label.textContent = isLoading ? 'Creating your account…' : 'Create & Continue';
+        }
+    }
+
     const registrationForm = document.getElementById('registration-form');
     if (registrationForm) {
         registrationForm.addEventListener('submit', function(e) {
+            const submitBtn = document.getElementById('register-submit-btn');
+            if (submitBtn && submitBtn.disabled && submitBtn.classList.contains('is-loading')) {
+                e.preventDefault();
+                return false;
+            }
+
             const phoneInput = document.getElementById('phone_number');
             const areaSelect = document.getElementById('area_code');
-            if (!phoneInput) return true;
+            if (!phoneInput) {
+                setRegisterSubmitLoading(true);
+                return true;
+            }
 
             const digits = normalizePhoneDigits(phoneInput.value);
             phoneInput.value = digits;
@@ -2317,6 +2348,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 phoneInput.focus();
                 return false;
             }
+
+            setRegisterSubmitLoading(true);
             return true;
         });
     }
@@ -3200,6 +3233,23 @@ body {
 
 .register-panel .create-prompt.compact {
     margin-bottom: 20px;
+}
+
+#register-submit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 48px;
+}
+
+#register-submit-btn.is-loading {
+    cursor: wait;
+    opacity: 0.92;
+}
+
+#register-submit-btn .register-btn-icon {
+    flex-shrink: 0;
 }
 
 .other-service-panel {

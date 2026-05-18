@@ -325,13 +325,13 @@ $chat_session_id = $_SESSION['chat_session_id'];
     
     /* Using header's CSS variables but adding footer-specific ones */
     :root {
-        /* Header variables */
-        --primary: #1e3a5f;
-        --primary-dark: #0f2542;
-        --primary-light: #2d4f7c;
-        --accent: #ff8c42;
-        --accent-dark: #e6732f;
-        --accent-light: #ffa366;
+        /* Brand alignment with index.php navy + gold */
+        --primary: #012F6B;
+        --primary-dark: #001A3D;
+        --primary-light: #254D81;
+        --accent: #F2A65A;
+        --accent-dark: #E6892E;
+        --accent-light: #FBC58A;
         --bg: #f8fafc;
         --card: #ffffff;
         --text: #1e293b;
@@ -340,14 +340,14 @@ $chat_session_id = $_SESSION['chat_session_id'];
         --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        
+
         /* Chat specific variables */
-        --chat-user-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --chat-bot-bg: #f8f9fa;
+        --chat-user-bg: linear-gradient(135deg, #1e4a8c 0%, #012F6B 100%);
+        --chat-bot-bg: #f8fafc;
         --chat-success: #10b981;
         --chat-error: #ef4444;
         --chat-warning: #f59e0b;
-        
+
         /* Original footer colors for reference */
         --xgs-navy: <?php echo XGS_NAVY; ?>;
         --xgs-blue: <?php echo XGS_BLUE; ?>;
@@ -362,15 +362,43 @@ $chat_session_id = $_SESSION['chat_session_id'];
         padding: 0;
     }
 
-    /* ===== MAIN FOOTER CONTAINER (Matches header styling) ===== */
+    /* ===== MAIN FOOTER CONTAINER — premium 2026 ===== */
     .footer-main {
-        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        background:
+            radial-gradient(820px 280px at 12% -10%, rgba(242, 166, 90, 0.18), transparent 60%),
+            radial-gradient(920px 320px at 92% 110%, rgba(37, 77, 129, 0.36), transparent 60%),
+            linear-gradient(180deg, var(--primary-dark) 0%, var(--primary) 60%, #002457 100%);
         color: #fff;
-        padding: 60px 40px 0;
+        padding: 72px 40px 0;
         position: relative;
-        border-top: 3px solid var(--accent);
-        font-family: 'Inter', sans-serif;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        overflow: hidden;
     }
+
+    .footer-main::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(242, 166, 90, 0.55), transparent);
+    }
+
+    .footer-main::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image:
+            linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+        background-size: 56px 56px;
+        mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 35%, transparent 80%);
+        -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 35%, transparent 80%);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .footer-container { position: relative; z-index: 1; }
 
     .footer-container {
         max-width: 1400px;
@@ -422,16 +450,28 @@ $chat_session_id = $_SESSION['chat_session_id'];
         }
     }
 
-    /* ===== FOOTER COLUMNS (Matching header style) ===== */
+    /* ===== FOOTER COLUMNS — modern title treatment ===== */
     .footer-column h3 {
-        color: var(--accent);
-        font-size: 1.1rem;
-        font-weight: 700;
+        color: #fff;
+        font-size: 0.95rem;
+        font-weight: 800;
         margin-bottom: 24px;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.12em;
         position: relative;
-        padding-bottom: 10px;
+        padding-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .footer-column h3::before {
+        content: '';
+        display: inline-block;
+        width: 4px;
+        height: 16px;
+        background: linear-gradient(180deg, var(--accent), var(--accent-light));
+        border-radius: 2px;
     }
 
     .footer-column h3::after {
@@ -439,71 +479,103 @@ $chat_session_id = $_SESSION['chat_session_id'];
         position: absolute;
         bottom: 0;
         left: 0;
-        width: 40px;
+        width: 48px;
         height: 2px;
-        background: var(--accent);
+        background: linear-gradient(90deg, var(--accent), transparent);
+        border-radius: 2px;
     }
 
-    /* ===== BRAND COLUMN (Enhanced to match header but keeping content) ===== */
+    /* ===== BRAND COLUMN — refined identity ===== */
     .footer-logo-container {
         display: flex;
         align-items: center;
-        gap: 15px;
-        margin-bottom: 20px;
+        gap: 14px;
+        margin-bottom: 22px;
     }
 
     .footer-logo-icon {
-        width: 50px;
-        height: 50px;
+        width: 54px;
+        height: 54px;
         background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
-        border-radius: 10px;
+        border-radius: 14px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
+        font-size: 22px;
         color: #fff;
-        box-shadow: 0 4px 12px rgba(255, 140, 66, 0.3);
+        box-shadow:
+            0 10px 24px rgba(242, 166, 90, 0.32),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.20);
         transition: var(--transition);
     }
 
     .footer-logo-icon:hover {
-        transform: rotate(15deg) scale(1.1);
+        transform: rotate(-6deg) scale(1.06);
+        box-shadow: 0 14px 32px rgba(242, 166, 90, 0.42), inset 0 0 0 1px rgba(255,255,255,0.30);
     }
 
     .footer-logo-text {
-        font-size: 1.5rem;
+        font-size: 1.35rem;
         font-weight: 900;
         line-height: 1.2;
         text-transform: uppercase;
+        letter-spacing: 0.01em;
+        background: linear-gradient(180deg, #fff 0%, #f6ddc1 110%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
 
     .footer-logo-text span {
         display: block;
-        color: var(--accent);
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        font-size: 0.95rem;
+        letter-spacing: 0.06em;
+        margin-top: 2px;
     }
 
     .footer-brand-description {
-        color: rgba(255, 255, 255, 0.85);
-        line-height: 1.7;
-        margin-bottom: 25px;
-        font-size: 0.95rem;
+        color: rgba(255, 255, 255, 0.82);
+        line-height: 1.75;
+        margin-bottom: 24px;
+        font-size: 0.93rem;
     }
 
-    /* Email Contact (Matching header button style) */
+    /* Email Contact — refined card */
     .footer-email-contact {
-        background: rgba(255, 255, 255, 0.08);
-        border: 2px solid rgba(255, 140, 66, 0.2);
-        border-radius: 8px;
-        padding: 15px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+        border: 1px solid rgba(242, 166, 90, 0.22);
+        border-radius: 14px;
+        padding: 16px;
         transition: var(--transition);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .footer-email-contact::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(180px 80px at 100% 0%, rgba(242,166,90,0.18), transparent 60%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
     }
 
     .footer-email-contact:hover {
-        background: rgba(255, 255, 255, 0.12);
+        background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
         border-color: var(--accent);
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(255, 140, 66, 0.2);
+        box-shadow: 0 12px 28px rgba(242, 166, 90, 0.20);
     }
+
+    .footer-email-contact:hover::before { opacity: 1; }
 
     .footer-email-contact a {
         color: #fff;
@@ -511,79 +583,94 @@ $chat_session_id = $_SESSION['chat_session_id'];
         display: flex;
         align-items: center;
         gap: 12px;
+        position: relative;
+        z-index: 1;
     }
 
     .footer-email-icon {
-        width: 40px;
-        height: 40px;
+        width: 42px;
+        height: 42px;
         background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
-        border-radius: 6px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
+        font-size: 17px;
         flex-shrink: 0;
+        box-shadow: 0 6px 14px rgba(242, 166, 90, 0.30), inset 0 0 0 1px rgba(255,255,255,0.18);
     }
 
     .footer-email-content {
         flex: 1;
+        min-width: 0;
     }
 
     .footer-email-title {
-        font-weight: 600;
-        font-size: 0.9rem;
-        color: var(--accent);
+        font-weight: 700;
+        font-size: 0.72rem;
+        color: var(--accent-light);
         margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
     }
 
     .footer-email-address {
         font-weight: 700;
-        font-size: 0.95rem;
+        font-size: 0.92rem;
         word-break: break-all;
+        color: #fff;
     }
 
-    /* ===== SERVICES COLUMN (Matching header navigation style) ===== */
+    /* ===== SERVICES COLUMN ===== */
     .footer-services-list {
         display: grid;
-        gap: 12px;
+        gap: 4px;
     }
 
     .footer-service-item {
         display: flex;
         align-items: center;
         gap: 12px;
-        padding: 10px 0;
+        padding: 10px 12px;
         color: rgba(255, 255, 255, 0.85);
         text-decoration: none;
-        transition: var(--transition);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .footer-service-item:last-child {
-        border-bottom: none;
+        transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+        border-radius: 10px;
+        border: 1px solid transparent;
+        font-size: 0.9rem;
+        font-weight: 500;
     }
 
     .footer-service-item i {
         color: var(--accent);
-        font-size: 16px;
-        width: 24px;
-        text-align: center;
-        transition: var(--transition);
+        font-size: 14px;
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(242, 166, 90, 0.10);
+        border-radius: 8px;
+        transition: all 0.22s ease;
+        flex-shrink: 0;
     }
 
     .footer-service-item:hover {
         color: #fff;
-        transform: translateX(8px);
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(242, 166, 90, 0.20);
+        transform: translateX(4px);
     }
 
     .footer-service-item:hover i {
-        color: var(--accent-light);
-        transform: scale(1.2);
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        color: #fff;
+        transform: scale(1.05);
     }
 
-    /* ===== SITE MAP COLUMN (Matching header dropdown style) ===== */
+    /* ===== SITE MAP COLUMN ===== */
     .footer-sitemap-section {
-        margin-bottom: 20px;
+        margin-bottom: 22px;
     }
 
     .footer-sitemap-section:last-child {
@@ -591,29 +678,41 @@ $chat_session_id = $_SESSION['chat_session_id'];
     }
 
     .footer-sitemap-title {
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: var(--accent);
+        font-size: 0.72rem;
+        font-weight: 800;
+        color: var(--accent-light);
         margin-bottom: 12px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        display: block;
+        letter-spacing: 0.10em;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .footer-sitemap-title::before {
+        content: '';
+        display: inline-block;
+        width: 14px;
+        height: 1.5px;
+        background: var(--accent);
     }
 
     .footer-sitemap-list {
         display: grid;
-        gap: 10px;
+        gap: 4px;
     }
 
     .footer-sitemap-item {
-        color: rgba(255, 255, 255, 0.85);
+        color: rgba(255, 255, 255, 0.78);
         text-decoration: none;
-        font-size: 0.9rem;
-        padding: 8px 0;
-        transition: var(--transition);
+        font-size: 0.88rem;
+        padding: 7px 10px;
+        transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
         display: flex;
         align-items: center;
         gap: 8px;
+        border-radius: 8px;
+        border: 1px solid transparent;
     }
 
     .footer-sitemap-item::before {
@@ -621,20 +720,22 @@ $chat_session_id = $_SESSION['chat_session_id'];
         color: var(--accent);
         font-size: 16px;
         line-height: 1;
-        transition: var(--transition);
+        transition: transform 0.22s ease, color 0.22s ease;
+        font-weight: 700;
     }
 
     .footer-sitemap-item:hover {
         color: #fff;
-        transform: translateX(5px);
+        background: rgba(255, 255, 255, 0.05);
+        transform: translateX(4px);
     }
 
     .footer-sitemap-item:hover::before {
-        transform: translateX(3px);
+        transform: translateX(2px);
         color: var(--accent-light);
     }
 
-    /* ===== MAP COLUMN (Keeping original map functionality but matching header style) ===== */
+    /* ===== MAP COLUMN — premium frame ===== */
     .footer-map-column {
         display: flex;
         flex-direction: column;
@@ -642,52 +743,66 @@ $chat_session_id = $_SESSION['chat_session_id'];
 
     .footer-map-wrapper {
         background: rgba(255, 255, 255, 0.05);
-        border-radius: 8px;
+        border-radius: 16px;
         padding: 0;
         overflow: hidden;
-        border: 2px solid rgba(255, 140, 66, 0.2);
-        height: 280px;
+        border: 1px solid rgba(242, 166, 90, 0.25);
+        height: 300px;
         position: relative;
         flex: 1;
-        min-height: 280px;
+        min-height: 300px;
         width: 100%;
+        box-shadow:
+            0 16px 40px rgba(0, 0, 0, 0.25),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+        transition: border-color 0.28s ease, box-shadow 0.28s ease;
+    }
+
+    .footer-map-wrapper:hover {
+        border-color: var(--accent);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.32), 0 0 0 1px rgba(242, 166, 90, 0.20);
     }
 
     #footerFixedMap {
         width: 100%;
         height: 100%;
-        border-radius: 6px;
+        border-radius: 14px;
     }
 
     .footer-map-controls {
         position: absolute;
-        bottom: 15px;
-        right: 15px;
+        bottom: 14px;
+        right: 14px;
         display: flex;
-        gap: 10px;
+        flex-direction: column;
+        gap: 8px;
         z-index: 1000;
     }
 
     .footer-map-btn {
-        width: 40px;
-        height: 40px;
-        background: rgba(30, 58, 95, 0.9);
-        border: 2px solid var(--accent);
-        border-radius: 6px;
+        width: 38px;
+        height: 38px;
+        background: rgba(1, 26, 61, 0.92);
+        border: 1px solid rgba(242, 166, 90, 0.40);
+        border-radius: 10px;
         color: var(--accent);
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
+        font-size: 14px;
         transition: var(--transition);
-        box-shadow: var(--shadow-lg);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.30);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
     }
 
     .footer-map-btn:hover {
-        background: var(--accent);
-        color: var(--primary);
-        transform: scale(1.1);
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        color: #1e1e1e;
+        transform: translateY(-2px);
+        border-color: var(--accent);
+        box-shadow: 0 10px 22px rgba(242, 166, 90, 0.36);
     }
 
     .footer-map-loading {
@@ -707,41 +822,61 @@ $chat_session_id = $_SESSION['chat_session_id'];
         backdrop-filter: blur(4px);
     }
 
-    /* ===== CONTACT COLUMN (Matching header style) ===== */
+    /* ===== CONTACT COLUMN — cards with glass ===== */
     .footer-contact-list {
         display: grid;
-        gap: 16px;
+        gap: 12px;
     }
 
     .footer-contact-item {
         display: flex;
         align-items: flex-start;
         gap: 12px;
-        padding: 15px;
-        background: rgba(255, 255, 255, 0.03);
-        border-radius: 8px;
+        padding: 14px 14px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+        border-radius: 12px;
         transition: var(--transition);
-        border: 1px solid rgba(255, 140, 66, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        position: relative;
+        overflow: hidden;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+    }
+
+    .footer-contact-item::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0;
+        width: 3px;
+        height: 0;
+        background: linear-gradient(180deg, var(--accent), var(--accent-light));
+        border-radius: 0 3px 3px 0;
+        transition: height 0.28s ease;
     }
 
     .footer-contact-item:hover {
-        background: rgba(255, 255, 255, 0.08);
+        background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04));
         transform: translateY(-2px);
-        border-color: var(--accent);
-        box-shadow: var(--shadow-lg);
+        border-color: rgba(242, 166, 90, 0.30);
+        box-shadow: 0 14px 32px rgba(0, 0, 0, 0.25);
+    }
+
+    .footer-contact-item:hover::before {
+        height: 70%;
     }
 
     .footer-contact-icon {
-        width: 36px;
-        height: 36px;
+        width: 38px;
+        height: 38px;
         background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
-        border-radius: 50%;
+        border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 16px;
+        font-size: 15px;
         color: #fff;
         flex-shrink: 0;
+        box-shadow: 0 6px 14px rgba(242, 166, 90, 0.30), inset 0 0 0 1px rgba(255,255,255,0.18);
     }
 
     .footer-contact-details {
@@ -758,63 +893,97 @@ $chat_session_id = $_SESSION['chat_session_id'];
         margin-bottom: 4px;
         transition: var(--transition);
         word-break: break-all;
+        letter-spacing: 0.01em;
     }
 
     .footer-contact-phone:hover {
-        color: var(--accent);
+        color: var(--accent-light);
     }
 
     .footer-contact-label {
-        font-size: 0.85rem;
+        font-size: 0.7rem;
         color: var(--accent);
-        font-weight: 600;
+        font-weight: 700;
         margin-bottom: 2px;
         display: block;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
     }
 
     .footer-contact-address {
-        font-size: 0.8rem;
-        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.78rem;
+        color: rgba(255, 255, 255, 0.65);
         line-height: 1.4;
     }
 
-    /* ===== SOCIAL LINKS (Matching header social style) ===== */
+    /* ===== SOCIAL LINKS — premium icon chips ===== */
     .footer-social-links {
         display: flex;
-        gap: 12px;
-        margin-top: 24px;
+        gap: 10px;
+        margin-top: 26px;
         flex-wrap: wrap;
     }
 
     .footer-social-link {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
         background: rgba(255, 255, 255, 0.05);
         color: #fff;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
+        font-size: 16px;
         text-decoration: none;
-        transition: var(--transition);
-        border: 1px solid rgba(255, 140, 66, 0.2);
+        transition: all 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .footer-social-link::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        opacity: 0;
+        transition: opacity 0.28s ease;
+    }
+
+    .footer-social-link i {
+        position: relative;
+        z-index: 1;
+        transition: transform 0.28s ease, color 0.28s ease;
     }
 
     .footer-social-link:hover {
-        background: var(--accent);
-        color: var(--primary);
-        transform: translateY(-4px) rotate(10deg);
-        box-shadow: 0 8px 20px rgba(255, 140, 66, 0.3);
+        color: #1e1e1e;
+        transform: translateY(-4px);
+        box-shadow: 0 12px 28px rgba(242, 166, 90, 0.40);
         border-color: var(--accent);
     }
 
-    /* ===== FOOTER BOTTOM (Matching header bottom style) ===== */
+    .footer-social-link:hover::before { opacity: 1; }
+    .footer-social-link:hover i { transform: scale(1.15) rotate(-5deg); }
+
+    /* ===== FOOTER BOTTOM ===== */
     .footer-bottom {
-        background: var(--primary-dark);
-        padding: 25px 0;
-        border-top: 1px solid rgba(255, 140, 66, 0.1);
+        background:
+            radial-gradient(420px 120px at 50% 0%, rgba(242, 166, 90, 0.10), transparent 60%),
+            var(--primary-dark);
+        padding: 22px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
         width: 100%;
+        position: relative;
+        margin-top: 40px;
+    }
+
+    .footer-bottom::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(242, 166, 90, 0.40), transparent);
     }
 
     .footer-bottom-container {
@@ -856,11 +1025,11 @@ $chat_session_id = $_SESSION['chat_session_id'];
     }
 
     .footer-link {
-        color: rgba(255, 255, 255, 0.7);
+        color: rgba(255, 255, 255, 0.70);
         text-decoration: none;
-        font-size: 0.9rem;
-        font-weight: 500;
-        transition: var(--transition);
+        font-size: 0.875rem;
+        font-weight: 600;
+        transition: color 0.22s ease;
         padding: 6px 0;
         position: relative;
     }
@@ -872,8 +1041,9 @@ $chat_session_id = $_SESSION['chat_session_id'];
         left: 0;
         width: 0;
         height: 2px;
-        background: var(--accent);
-        transition: width 0.3s ease;
+        background: linear-gradient(90deg, var(--accent), var(--accent-light));
+        transition: width 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+        border-radius: 2px;
     }
 
     .footer-link:hover {
@@ -885,14 +1055,18 @@ $chat_session_id = $_SESSION['chat_session_id'];
     }
 
     .footer-copyright {
-        color: rgba(255, 255, 255, 0.7);
-        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.68);
+        font-size: 0.85rem;
         font-weight: 500;
+        letter-spacing: 0.01em;
     }
 
     .footer-copyright strong {
-        color: var(--accent);
-        font-weight: 700;
+        background: linear-gradient(135deg, var(--accent), var(--accent-light));
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
     }
 
     /* ===== MODERN CHAT SYSTEM ===== */
@@ -932,7 +1106,9 @@ $chat_session_id = $_SESSION['chat_session_id'];
         object-fit: contain;
         border-radius: 50%;
         border: 3px solid white;
-        box-shadow: 0 0 0 4px rgba(255, 140, 66, 0.3);
+        box-shadow:
+            0 0 0 4px rgba(242, 166, 90, 0.32),
+            0 14px 32px rgba(1, 47, 107, 0.30);
     }
 
     /* Chat Pulse Effect */
@@ -1006,7 +1182,9 @@ $chat_session_id = $_SESSION['chat_session_id'];
 
     /* Chat Header - Modern Design */
     .footer-chat-header {
-        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        background:
+            radial-gradient(420px 120px at 100% 0%, rgba(242, 166, 90, 0.25), transparent 60%),
+            linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
         padding: 20px;
         display: flex;
         justify-content: space-between;
@@ -1014,6 +1192,7 @@ $chat_session_id = $_SESSION['chat_session_id'];
         color: white;
         position: relative;
         overflow: hidden;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .footer-chat-header::before {
@@ -1041,16 +1220,17 @@ $chat_session_id = $_SESSION['chat_session_id'];
     }
 
     .footer-chat-title-avatar {
-        width: 36px;
-        height: 36px;
-        background: white;
-        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
-        color: var(--primary);
+        font-size: 17px;
+        color: #fff;
         font-weight: bold;
+        box-shadow: 0 4px 12px rgba(242, 166, 90, 0.40), inset 0 0 0 1px rgba(255,255,255,0.20);
     }
 
     .footer-chat-status {
@@ -1171,15 +1351,16 @@ $chat_session_id = $_SESSION['chat_session_id'];
         font-weight: 700;
     }
 
-    /* User Message - Modern Gradient */
+    /* User Message - Modern Gradient (brand-aligned) */
     .footer-message-user {
-        background: var(--chat-user-bg);
+        background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
         color: white;
         align-self: flex-end;
         border-bottom-right-radius: 8px;
         position: relative;
         margin-right: 8px;
         animation: messagePop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        box-shadow: 0 6px 16px rgba(1, 47, 107, 0.28);
     }
 
     @keyframes messagePop {
@@ -1195,7 +1376,7 @@ $chat_session_id = $_SESSION['chat_session_id'];
         top: 0;
         border-width: 8px 0 8px 8px;
         border-style: solid;
-        border-color: transparent transparent transparent #667eea;
+        border-color: transparent transparent transparent var(--primary-light);
     }
 
     /* Typing Indicator */
@@ -1305,7 +1486,7 @@ $chat_session_id = $_SESSION['chat_session_id'];
     }
 
     .footer-chat-input input:focus {
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        box-shadow: 0 0 0 4px rgba(1, 47, 107, 0.10);
         transform: translateY(-1px);
     }
 
