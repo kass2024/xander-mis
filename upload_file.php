@@ -24,29 +24,50 @@ if (empty($_SESSION['user_id'])) {
 // ATTACH TO EXISTING DRAFT APPLICATION ONLY
 // =========================================
 $sessionId = session_id();
+$sessionUserId = trim((string) ($_SESSION['user_id'] ?? ''));
+$requestedAppId = (int) ($_POST['application_id'] ?? 0);
+$appId = 0;
 
-$stmt = $conn->prepare(
-    "SELECT id FROM student_applications
-     WHERE session_id = ?
-       AND submitted = 0
-     LIMIT 1"
-);
-if (!$stmt) {
-    echo json_encode(['status'=>'error','message'=>'DB error']);
-    exit;
+if ($requestedAppId > 0) {
+    $stmt = $conn->prepare(
+        'SELECT id FROM student_applications
+         WHERE id = ?
+           AND submitted = 0
+           AND (session_id = ? OR (user_id = ? AND ? <> ""))
+         LIMIT 1'
+    );
+    if ($stmt) {
+        $stmt->bind_param('isss', $requestedAppId, $sessionId, $sessionUserId, $sessionUserId);
+        $stmt->execute();
+        $stmt->bind_result($appId);
+        $stmt->fetch();
+        $stmt->close();
+    }
 }
 
-$stmt->bind_param('s', $sessionId);
-$stmt->execute();
-$stmt->bind_result($appId);
-$stmt->fetch();
-$stmt->close();
+if ($appId <= 0) {
+    $stmt = $conn->prepare(
+        'SELECT id FROM student_applications
+         WHERE submitted = 0
+           AND (session_id = ? OR (user_id = ? AND ? <> ""))
+         ORDER BY id DESC
+         LIMIT 1'
+    );
+    if (!$stmt) {
+        echo json_encode(['status' => 'error', 'message' => 'DB error']);
+        exit;
+    }
+    $stmt->bind_param('sss', $sessionId, $sessionUserId, $sessionUserId);
+    $stmt->execute();
+    $stmt->bind_result($appId);
+    $stmt->fetch();
+    $stmt->close();
+}
 
-if (!$appId) {
-    // 🚫 Uploads must NOT create applications
+if ($appId <= 0) {
     echo json_encode([
         'status'  => 'error',
-        'message' => 'No active application draft found. Please start or continue your application first.'
+        'message' => 'No active application draft found. Please start or continue your application first.',
     ]);
     exit;
 }

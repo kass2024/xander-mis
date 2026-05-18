@@ -140,3 +140,28 @@ function pcvc_sql_max_effective_status(string $tableAlias = 'sa', ?mysqli $conn 
 
     return 'MAX(' . $inner . ')';
 }
+
+/**
+ * Sidebar list visibility: show submitted applications and drafts with real uploads.
+ */
+function pcvc_sql_application_visible_in_list(string $tableAlias = 'sa'): string
+{
+    $a = preg_replace('/[^a-zA-Z0-9_]/', '', $tableAlias) ?: 'sa';
+    $cols = [
+        'degree_transcripts',
+        'high_school_degree',
+        'valid_passport',
+        'cv_resume',
+        'personal_statement',
+        'recommendation_letters',
+        'english_certificate',
+        'birth_certificate',
+        'payment_proof',
+    ];
+    $parts = [];
+    foreach ($cols as $col) {
+        $parts[] = "({$a}.{$col} IS NOT NULL AND TRIM({$a}.{$col}) <> '' AND TRIM({$a}.{$col}) <> '[]')";
+    }
+
+    return '((' . $a . '.submitted = 1) OR ' . implode(' OR ', $parts) . ')';
+}

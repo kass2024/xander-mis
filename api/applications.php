@@ -771,21 +771,8 @@ if (!empty($_GET['application_status']) && in_array((string)$_GET['application_s
     $values[] = (string)$_GET['application_status'];
 }
 
-    /* ======================================================
-       REQUIRE AT LEAST ONE UPLOADED DOCUMENT
-       (HIDE EMPTY APPLICATIONS FROM SIDEBAR)
-    ====================================================== */
-    $where[] = "(
-        (sa.degree_transcripts IS NOT NULL AND sa.degree_transcripts != '[]')
-        OR sa.high_school_degree IS NOT NULL
-        OR sa.valid_passport IS NOT NULL
-        OR sa.cv_resume IS NOT NULL
-        OR sa.personal_statement IS NOT NULL
-        OR sa.recommendation_letters IS NOT NULL
-        OR sa.english_certificate IS NOT NULL
-        OR sa.birth_certificate IS NOT NULL
-        OR sa.payment_proof IS NOT NULL
-    )";
+    /* Submitted apps always visible; drafts only when they have real uploads */
+    $where[] = pcvc_sql_application_visible_in_list('sa');
 
     $assignedSelectSql = $hasAssignedCol
         ? "MAX(COALESCE(

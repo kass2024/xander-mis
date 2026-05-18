@@ -3870,6 +3870,13 @@ function uploadSingleFile(field, file, options = {}) {
       document.querySelector('[name="last_name"]')?.value || ""
     );
     formData.append("lang", document.documentElement.lang || "en");
+    const uploadAppId =
+      window.currentApplicationId ||
+      document.querySelector('[name="application_id"]')?.value ||
+      "";
+    if (uploadAppId) {
+      formData.append("application_id", String(uploadAppId));
+    }
     if (fromSmartAutofill) {
       formData.append("from_smart_autofill", "1");
     }
