@@ -1168,10 +1168,16 @@ $allowed = [
         }
 
         if ($isFinal) {
-            $set[] = "submitted=1";
-            $set[] = "application_date=?";
+            $set[] = 'submitted=1';
+            $set[] = 'application_date=?';
             $vals[] = date('Y-m-d');
             $types .= 's';
+            if (!function_exists('pcvc_application_status_columns_for_db')) {
+                require_once __DIR__ . '/helpers/application_filters.php';
+            }
+            if (in_array('incomplete_app', pcvc_application_status_columns_for_db($conn), true)) {
+                $set[] = 'incomplete_app=0';
+            }
         }
 
         if ($set) {

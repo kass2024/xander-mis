@@ -163,5 +163,10 @@ function pcvc_sql_application_visible_in_list(string $tableAlias = 'sa'): string
         $parts[] = "({$a}.{$col} IS NOT NULL AND TRIM({$a}.{$col}) <> '' AND TRIM({$a}.{$col}) <> '[]')";
     }
 
-    return '((' . $a . '.submitted = 1) OR ' . implode(' OR ', $parts) . ')';
+    $hasDocs = implode(' OR ', $parts);
+    $hasIdentity = "TRIM(COALESCE({$a}.first_name, '')) <> ''"
+        . " OR TRIM(COALESCE({$a}.last_name, '')) <> ''"
+        . " OR TRIM(COALESCE({$a}.email, '')) <> ''";
+
+    return '(((' . $a . '.submitted = 1) OR ' . $hasDocs . ') OR (' . $hasIdentity . '))';
 }

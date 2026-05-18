@@ -13,6 +13,7 @@ require 'db.php';
 session_start();
 require_once __DIR__ . '/helpers/role.php';
 require_once __DIR__ . '/helpers/application_spam_guard.php';
+require_once __DIR__ . '/helpers/application_filters.php';
 
 // NOTE: Do NOT compute "time ago" in PHP here.
 // Student report uses browser-timezone JS; we match it in JS below for consistency.
@@ -44,6 +45,8 @@ $canDeleteApplication = xander_is_superadmin_role($dbRole) || xander_is_superadm
 if ($canDeleteApplication && isset($conn) && $conn instanceof mysqli) {
     pcvc_spam_purge_database($conn, 40, false, false);
 }
+
+$studentAppsVisibilitySql = pcvc_sql_application_visible_in_list('sa');
 
 // Handle new record submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_new'])) {
@@ -88,6 +91,7 @@ $query1 = $conn->query("
     LEFT JOIN countries c 
         ON sa.nationality = c.id 
         OR sa.nationality = c.name
+    WHERE {$studentAppsVisibilitySql}
     ORDER BY 
         sa.visa_approved DESC,
         sa.admit DESC,
@@ -207,11 +211,6 @@ try {
 } catch (Exception $e) {
     // Table doesn't exist or error
 }
-
-// Filter out empty rows and ensure we have proper data
-$all_applicants = array_filter($all_applicants, function($app) {
-    return !empty($app['first_name']) || !empty($app['email']);
-});
 
 // Sort by ID descending to show newest first
 usort($all_applicants, function($a, $b) {

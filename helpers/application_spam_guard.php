@@ -94,7 +94,9 @@ function pcvc_spam_trust_extracted_names(array $post, ?mysqli $conn = null): boo
     }
 
     $stmt = $conn->prepare(
-        'SELECT valid_passport, cv_resume FROM student_applications WHERE id = ? LIMIT 1'
+        'SELECT valid_passport, cv_resume, degree_transcripts, high_school_degree,
+                personal_statement, english_certificate, recommendation_letters, birth_certificate
+         FROM student_applications WHERE id = ? LIMIT 1'
     );
     if (!$stmt) {
         return false;
@@ -104,7 +106,22 @@ function pcvc_spam_trust_extracted_names(array $post, ?mysqli $conn = null): boo
     $stmt->execute();
     $passport = null;
     $cv = null;
-    $stmt->bind_result($passport, $cv);
+    $degree = null;
+    $highSchool = null;
+    $personalStatement = null;
+    $englishCert = null;
+    $recommendation = null;
+    $birthCert = null;
+    $stmt->bind_result(
+        $passport,
+        $cv,
+        $degree,
+        $highSchool,
+        $personalStatement,
+        $englishCert,
+        $recommendation,
+        $birthCert
+    );
     $ok = $stmt->fetch();
     $stmt->close();
 
@@ -112,7 +129,15 @@ function pcvc_spam_trust_extracted_names(array $post, ?mysqli $conn = null): boo
         return false;
     }
 
-    return trim((string) $passport) !== '' || trim((string) $cv) !== '';
+    $paths = [$passport, $cv, $degree, $highSchool, $personalStatement, $englishCert, $recommendation, $birthCert];
+    foreach ($paths as $path) {
+        $p = trim((string) $path);
+        if ($p !== '' && $p !== '[]') {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 function pcvc_spam_name_token_looks_random(string $token): bool
@@ -437,7 +462,8 @@ function pcvc_spam_purge_database(mysqli $conn, int $limit = 200, bool $dryRun =
     $sql = "
         SELECT id, first_name, last_name, email, area_code, phone_number,
                gender, dob, nationality, city, address_line1, submitted, app_start, created_at,
-               valid_passport, cv_resume
+               valid_passport, cv_resume, personal_statement, english_certificate,
+               degree_transcripts, high_school_degree
         FROM student_applications
         WHERE TRIM(COALESCE(email, '')) <> ''
            OR TRIM(COALESCE(first_name, '')) <> ''
@@ -466,7 +492,8 @@ function pcvc_spam_purge_database(mysqli $conn, int $limit = 200, bool $dryRun =
         $bind = [
             'id', 'first_name', 'last_name', 'email', 'area_code', 'phone_number',
             'gender', 'dob', 'nationality', 'city', 'address_line1', 'submitted', 'app_start', 'created_at',
-            'valid_passport', 'cv_resume',
+            'valid_passport', 'cv_resume', 'personal_statement', 'english_certificate',
+            'degree_transcripts', 'high_school_degree',
         ];
         $refs = [];
         $row = [];
@@ -483,6 +510,10 @@ function pcvc_spam_purge_database(mysqli $conn, int $limit = 200, bool $dryRun =
 
     $scanned = count($candidates);
     foreach ($candidates as $row) {
+        if ((int) ($row['submitted'] ?? 0) === 1) {
+            continue;
+        }
+
         $fields = pcvc_spam_fields_from_row($row);
         $verdict = pcvc_spam_evaluate($fields, $useAi);
 
@@ -491,8 +522,14 @@ function pcvc_spam_purge_database(mysqli $conn, int $limit = 200, bool $dryRun =
         $hasContact = ($fields['email'] !== '' || $fields['phone_number'] !== '');
         $looksLikeDraftBot = $profileEmpty && $hasContact && (int) ($row['submitted'] ?? 0) === 0;
 
-        $hasIdentityDoc = trim((string) ($row['valid_passport'] ?? '')) !== ''
-            || trim((string) ($row['cv_resume'] ?? '')) !== '';
+        $hasIdentityDoc = false;
+        foreach (['valid_passport', 'cv_resume', 'personal_statement', 'english_certificate', 'degree_transcripts', 'high_school_degree'] as $docCol) {
+            $p = trim((string) ($row[$docCol] ?? ''));
+            if ($p !== '' && $p !== '[]') {
+                $hasIdentityDoc = true;
+                break;
+            }
+        }
 
         if (!$verdict['is_spam'] && $looksLikeDraftBot && !$hasIdentityDoc) {
             $nameSpam = pcvc_spam_name_token_looks_random($fields['first_name'])
