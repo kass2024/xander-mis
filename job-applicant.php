@@ -10,6 +10,7 @@ require_once __DIR__ . '/helpers/role.php';
 require_once __DIR__ . '/helpers/job_application_status.php';
 require_once __DIR__ . '/helpers/job_application_delete.php';
 require_once __DIR__ . '/helpers/prescreening_options.php';
+require_once __DIR__ . '/helpers/job_application_format.php';
 
 xander_ensure_job_applications_process_status_column($conn);
 
@@ -87,6 +88,15 @@ if ($stmt) {
     $stmt->close();
 } else {
     die("Error preparing query: " . $conn->error);
+}
+
+$countriesList = [];
+$countriesRes = $conn->query('SELECT id, name FROM countries ORDER BY name ASC');
+if ($countriesRes) {
+    while ($cRow = $countriesRes->fetch_assoc()) {
+        $countriesList[] = ['id' => (int) $cRow['id'], 'name' => (string) $cRow['name']];
+    }
+    $countriesRes->free();
 }
 
 // Xander Color Codes
@@ -1214,9 +1224,20 @@ $colors = [
                     // Format date
                     $appliedDate = date('M d, Y h:i A', strtotime($applicant['created_at']));
                     
-                    // Get full address
-                    $address = $applicant['province_state'] . ', ' . $applicant['district'];
-                    $detailedArea = $applicant['sector'] . ' / ' . $applicant['cell_ward'] . ' / ' . $applicant['village'];
+                    // Get full address (skip placeholder "0" / em-dash parts)
+                    $address = xander_job_format_location_primary(
+                        (string) ($applicant['province_state'] ?? ''),
+                        (string) ($applicant['district'] ?? '')
+                    );
+                    $detailedArea = xander_job_format_location_detail(
+                        (string) ($applicant['sector'] ?? ''),
+                        (string) ($applicant['cell_ward'] ?? ''),
+                        (string) ($applicant['village'] ?? '')
+                    );
+                    $destinationsEditValue = trim((string) ($applicant['prescreen_destinations'] ?? ''));
+                    if ($destinationsEditValue === '' && !empty($applicant['work_country_name'])) {
+                        $destinationsEditValue = (string) $applicant['work_country_name'];
+                    }
                     
                     // Emergency contact info
                     $emergencyContact = $applicant['emergency_full_name'] . ' (' . $applicant['emergency_relationship'] . ')';
@@ -1325,14 +1346,31 @@ $colors = [
                         <div class="card-section">
                             <div class="info-block">
                                 <div class="info-block-title"><i class="fas fa-globe-americas"></i> Destination</div>
-                                <div class="info-line"><i class="fas fa-plane-departure"></i><span><?= htmlspecialchars($destination) ?></span></div>
+                                <div class="info-line job-dest-display"><i class="fas fa-plane-departure"></i><span><?= htmlspecialchars($destination) ?></span></div>
+                                <?php if ($canEditJobProcessStatus): ?>
+                                <div class="job-dest-edit mt-2">
+                                    <label class="form-label small mb-1 text-muted">Edit destination (Superadmin)</label>
+                                    <select class="job-dest-country form-select form-select-sm mb-1" aria-label="Work country">
+                                        <option value="">— Primary country —</option>
+                                        <?php foreach ($countriesList as $c): ?>
+                                        <option value="<?= (int) $c['id'] ?>" <?= (int) ($applicant['work_country_id'] ?? 0) === (int) $c['id'] ? 'selected' : '' ?>><?= htmlspecialchars($c['name'], ENT_QUOTES, 'UTF-8') ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <input type="text" class="job-dest-multi form-control form-control-sm mb-1"
+                                           placeholder="Countries (comma-separated), e.g. Rwanda, Kenya"
+                                           value="<?= htmlspecialchars($destinationsEditValue, ENT_QUOTES, 'UTF-8') ?>">
+                                    <button type="button" class="job-dest-save btn btn-sm btn-outline-primary w-100">Save destination</button>
+                                </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <div class="card-section">
                             <div class="info-block">
                                 <div class="info-block-title"><i class="fas fa-location-dot"></i> Location</div>
                                 <div class="info-line"><i class="fas fa-map-marker-alt"></i><span><?= htmlspecialchars($address) ?></span></div>
+                                <?php if ($detailedArea !== ''): ?>
                                 <div class="info-line-muted"><?= htmlspecialchars($detailedArea) ?></div>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <div class="card-section">
@@ -1406,8 +1444,12 @@ $colors = [
                                         'name' => $fullName,
                                         'email' => $applicant['email'],
                                         'phone' => $phone,
+                                        'applicationId' => (int) $applicant['id'],
+                                        'work_country_id' => (int) ($applicant['work_country_id'] ?? 0),
+                                        'destinationsEdit' => $destinationsEditValue,
                                         'destination' => $destination,
                                         'address' => $address,
+                                        'detailedArea' => $detailedArea,
                                         'detailedArea' => $detailedArea,
                                         'emergency' => $emergencyContact,
                                         'emergencyPhone' => $emergencyPhone,
@@ -1599,6 +1641,40 @@ $colors = [
                     searchInput.focus();
                 });
             }
+
+            document.querySelectorAll('.job-dest-save').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var wrap = btn.closest('.job-dest-edit');
+                    var card = btn.closest('.applicant-card');
+                    if (!wrap || !card) return;
+                    var appId = card.getAttribute('data-application-id');
+                    if (!appId) return;
+                    var countrySel = wrap.querySelector('.job-dest-country');
+                    var multiIn = wrap.querySelector('.job-dest-multi');
+                    var fd = new FormData();
+                    fd.append('application_id', appId);
+                    fd.append('work_country_id', countrySel ? countrySel.value : '');
+                    fd.append('destinations', multiIn ? multiIn.value.trim() : '');
+                    btn.disabled = true;
+                    fetch(jaApi('api/job-application-destination.php'), { method: 'POST', body: fd, credentials: 'same-origin' })
+                        .then(jaParseJsonResponse)
+                        .then(function(json) {
+                            btn.disabled = false;
+                            if (!json.success) {
+                                alert(json.message || 'Could not save destination');
+                                return;
+                            }
+                            var label = (json.data && json.data.destination_label) ? json.data.destination_label : '—';
+                            var disp = card.querySelector('.job-dest-display span');
+                            if (disp) disp.textContent = label;
+                            showProcessToast('Destination updated');
+                        })
+                        .catch(function(err) {
+                            btn.disabled = false;
+                            alert(err.message || 'Save failed');
+                        });
+                });
+            });
 
             document.querySelectorAll('.job-process-select').forEach(function(sel) {
                 sel.setAttribute('data-prev-status', sel.value);

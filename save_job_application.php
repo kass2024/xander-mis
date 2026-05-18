@@ -63,6 +63,8 @@ session_write_close();
 ============================= */
 require_once 'db.php';
 require_once __DIR__ . '/helpers/phone_whatsapp_normalize.php';
+require_once __DIR__ . '/helpers/job_application_format.php';
+require_once __DIR__ . '/helpers/student_portal_accounts.php';
 
 if ($conn->connect_error) {
     respond('error', 'Database connection failed', [], 500);
@@ -130,11 +132,11 @@ $_POST['last_name'] = $jobStr('last_name', '—');
 $_POST['email'] = $jobStr('email', 'pending@xander.local');
 $_POST['work_country_id'] = (string) $jobInt('work_country_id');
 $_POST['address_country_id'] = (string) $jobInt('address_country_id');
-$_POST['province_state'] = $jobStr('province_state', '—');
-$_POST['district'] = $jobStr('district', '—');
-$_POST['sector'] = $jobStr('sector', '—');
-$_POST['cell_ward'] = $jobStr('cell_ward', '—');
-$_POST['village'] = $jobStr('village', '—');
+$_POST['province_state'] = xander_job_normalize_address_field($_POST['province_state'] ?? null, $lenient ? '' : '—');
+$_POST['district'] = xander_job_normalize_address_field($_POST['district'] ?? null, $lenient ? '' : '—');
+$_POST['sector'] = xander_job_normalize_address_field($_POST['sector'] ?? null, $lenient ? '' : '—');
+$_POST['cell_ward'] = xander_job_normalize_address_field($_POST['cell_ward'] ?? null, $lenient ? '' : '—');
+$_POST['village'] = xander_job_normalize_address_field($_POST['village'] ?? null, $lenient ? '' : '—');
 $_POST['emergency_full_name'] = $jobStr('emergency_full_name', '—');
 $_POST['emergency_relationship'] = $jobStr('emergency_relationship', '—');
 $_POST['emergency_email'] = $jobStr('emergency_email', '—');
@@ -322,6 +324,16 @@ if ($files) {
    COMMIT
 ============================= */
 $conn->commit();
+
+try {
+    pcvc_student_portal_ensure_account_for_job(
+        $conn,
+        $user_id,
+        (string) $_POST['email']
+    );
+} catch (Throwable $e) {
+    error_log('[save_job_application] portal account: ' . $e->getMessage());
+}
 
 $reference = 'XGS-' . strtoupper(substr(hash('sha256', $user_id), 0, 8));
 

@@ -8,6 +8,9 @@ declare(strict_types=1);
 use PHPMailer\PHPMailer\PHPMailer;
 
 require_once __DIR__ . '/mail_smtp.php';
+require_once __DIR__ . '/job_application_format.php';
+require_once __DIR__ . '/urls.php';
+require_once __DIR__ . '/student_portal_accounts.php';
 
 function xander_h(string $s): string
 {
@@ -77,9 +80,8 @@ function xander_send_job_application_confirmation_emails($conn, string $userId, 
 </table>
 <h3>Address</h3>
 <p>'
-            . xander_h($app['province_state'] ?? '') . ', ' . xander_h($app['district'] ?? '') . '<br>'
-            . xander_h($app['sector'] ?? '') . ', ' . xander_h($app['cell_ward'] ?? '') . '<br>'
-            . xander_h($app['village'] ?? '') . '
+            . xander_h(xander_job_format_location_primary($app['province_state'] ?? '', $app['district'] ?? '')) . '<br>'
+            . xander_h(xander_job_format_location_detail($app['sector'] ?? '', $app['cell_ward'] ?? '', $app['village'] ?? '')) . '
 </p>
 <h3>Emergency Contact</h3>
 <p>'
@@ -104,12 +106,22 @@ function xander_send_job_application_confirmation_emails($conn, string $userId, 
         $mail->clearAddresses();
         $mail->addAddress($email, $fullName);
         $mail->Subject = 'Job Application Submitted Successfully';
+        $loginUrl = pcvc_public_url('/student-login.php') . '?email=' . rawurlencode($email);
+        $defaultPw = PCVC_STUDENT_DEFAULT_PASSWORD;
         $mail->Body = '
 <p>Dear <strong>' . xander_h($fullName) . '</strong>,</p>
 <p>Thank you for submitting your job application with <strong>Xander Global Scholars</strong>.</p>
 <p>Your application has been received and is currently under review. Our recruitment team will contact you if additional information is required.</p>
 <p><strong>Reference ID:</strong> ' . xander_h($referenceDisplay) . '</p>
+<h3>My Account portal</h3>
+<p>Track your application and upload materials anytime:</p>
+<p><a href="' . xander_h($loginUrl) . '" style="display:inline-block;background:#3661B9;color:#fff;text-decoration:none;padding:10px 14px;border-radius:8px;font-weight:700;">Open My Account</a></p>
+<ul>
+<li>Email: <strong>' . xander_h($email) . '</strong></li>
+<li>Password: <strong>' . xander_h($defaultPw) . '</strong></li>
+</ul>
 <p>Kind regards,<br><strong>Xander Global Scholars</strong><br>Recruitment Team</p>';
+        $mail->AltBody = "Reference: {$referenceDisplay}\nPortal: {$loginUrl}\nEmail: {$email}\nPassword: {$defaultPw}\n";
         $mail->send();
     } catch (Throwable $e) {
         error_log('[JOB CONFIRM MAIL] applicant send failed: ' . $e->getMessage());

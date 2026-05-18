@@ -27,6 +27,7 @@ ini_set('error_log', $logDir . '/job_email_fatal.log');
    BOOTSTRAP
 ===================================================== */
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/helpers/job_application_format.php';
 require_once __DIR__ . '/PHPMailer/src/PHPMailer.php';
 require_once __DIR__ . '/PHPMailer/src/SMTP.php';
 require_once __DIR__ . '/PHPMailer/src/Exception.php';
@@ -130,6 +131,13 @@ try {
     }
     $docsHtml .= '</ul>';
 
+    $addrPrimary = xander_job_format_location_primary($app['province_state'] ?? '', $app['district'] ?? '');
+    $addrDetail = xander_job_format_location_detail($app['sector'] ?? '', $app['cell_ward'] ?? '', $app['village'] ?? '');
+    $addrHtml = htmlspecialchars($addrPrimary, ENT_QUOTES, 'UTF-8');
+    if ($addrDetail !== '') {
+        $addrHtml .= '<br>' . htmlspecialchars($addrDetail, ENT_QUOTES, 'UTF-8');
+    }
+
     /* =====================================================
        ADMIN EMAIL
     ===================================================== */
@@ -161,9 +169,7 @@ try {
 
 <h3>Address</h3>
 <p>
-{$app['province_state']}, {$app['district']}<br>
-{$app['sector']}, {$app['cell_ward']}<br>
-{$app['village']}
+{$addrHtml}
 </p>
 
 <h3>Emergency Contact</h3>
