@@ -1,21 +1,29 @@
 <?php
 /**
- * Meta WhatsApp Cloud API webhook — student pre-screening conversational flow.
+ * Meta WhatsApp webhook entry on cPanel.
  *
- * Configure in Meta Developer Console → WhatsApp → Configuration:
- *   Callback URL: https://YOUR-CPANEL-DOMAIN/api/whatsapp-webhook.php
- *   Verify token: same as WHATSAPP_VERIFY_TOKEN in .env
+ * IMPORTANT (Namecheap split hosting):
+ * - Meta callback should be: https://xanderbot.site/api/webhook/meta  (VPS — FAQ bot)
+ * - If Meta still points here, set XANDERBOT_WEBHOOK_URL in .env to proxy to VPS.
+ * - Pre-screening answers are handled on VPS → POST /api/prescreening-inbound.php on this host.
  *
- * Health check: /api/webhook-health.php
+ * Health: /api/webhook-health.php
  */
 declare(strict_types=1);
 
-require_once dirname(__DIR__) . '/db.php';
 require_once dirname(__DIR__) . '/helpers/env_load.php';
+xander_load_env_file();
+
+require_once dirname(__DIR__) . '/helpers/webhook_forward_xanderbot.php';
+
+if (xander_bot_webhook_forward_request()) {
+    exit;
+}
+
+require_once dirname(__DIR__) . '/db.php';
 require_once dirname(__DIR__) . '/helpers/prescreening_whatsapp_schema.php';
 require_once dirname(__DIR__) . '/helpers/prescreening_whatsapp_flow.php';
 
-xander_load_env_file();
 xander_ensure_prescreening_whatsapp_tables($conn);
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET') {
@@ -41,7 +49,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 $raw = file_get_contents('php://input') ?: '';
 $sig = (string) ($_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? '');
 if (!xander_whatsapp_verify_webhook_signature($raw, $sig)) {
-    error_log('[whatsapp-webhook] invalid signature');
+    error_log('[whatsapp-webhook] invalid signature — set WHATSAPP_APP_SECRET to Meta App Secret');
     http_response_code(403);
     exit;
 }
@@ -87,4 +95,4 @@ foreach ($payload['entry'] ?? [] as $entry) {
 }
 
 header('Content-Type: application/json; charset=utf-8');
-echo json_encode(['status' => 'ok']);
+echo json_encode(['status' => 'ok', 'note' => 'legacy prescreening-only; set XANDERBOT_WEBHOOK_URL for FAQ bot']);

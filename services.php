@@ -192,19 +192,20 @@ body {
 /* ===== SERVICE CARD — premium ===== */
 .svc-card {
   background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
-  border-radius: 20px;
+  border-radius: 24px;
   border: 1px solid #eef2f7;
-  box-shadow: 0 8px 28px rgba(1, 47, 107, 0.06);
-  padding: 1.6rem 1.5rem 1.4rem;
+  box-shadow: 0 10px 32px rgba(1, 47, 107, 0.08);
+  padding: 2rem 1.8rem 1.8rem;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 1.2rem;
   position: relative;
   overflow: hidden;
   transition:
     transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.32s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.32s ease;
+  min-height: 420px;
 }
 
 /* Top accent line that animates in on hover */
@@ -232,9 +233,9 @@ body {
 }
 
 .svc-card:hover {
-  transform: translateY(-6px);
-  border-color: rgba(242, 166, 90, 0.30);
-  box-shadow: 0 24px 60px rgba(1, 47, 107, 0.16);
+  transform: translateY(-8px);
+  border-color: rgba(242, 166, 90, 0.35);
+  box-shadow: 0 28px 70px rgba(1, 47, 107, 0.18);
 }
 
 .svc-card:hover::before { transform: scaleX(1); }
@@ -266,31 +267,31 @@ body {
 }
 
 .svc-card-icon {
-  width: 54px;
-  height: 54px;
-  border-radius: 14px;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
   background: linear-gradient(135deg, var(--svc-navy) 0%, var(--svc-blue) 70%, var(--svc-orange) 200%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.55rem;
+  font-size: 1.8rem;
   flex-shrink: 0;
   color: #fff;
   box-shadow:
-    0 10px 22px rgba(1, 47, 107, 0.30),
+    0 12px 26px rgba(1, 47, 107, 0.35),
     inset 0 0 0 1px rgba(255, 255, 255, 0.18);
   transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.32s ease;
 }
 
 .svc-card:hover .svc-card-icon {
-  transform: scale(1.06) rotate(-4deg);
+  transform: scale(1.08) rotate(-5deg);
   box-shadow:
-    0 14px 30px rgba(1, 47, 107, 0.40),
-    0 0 0 6px rgba(242, 166, 90, 0.10);
+    0 16px 34px rgba(1, 47, 107, 0.45),
+    0 0 0 8px rgba(242, 166, 90, 0.12);
 }
 
 .svc-card-title {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--svc-navy);
   margin: 0;
@@ -299,42 +300,96 @@ body {
 }
 
 .svc-card-tagline {
-  font-size: 0.85rem;
+  font-size: 0.92rem;
   color: var(--svc-orange-dark);
-  margin: 0.25rem 0 0;
-  line-height: 1.4;
+  margin: 0.35rem 0 0;
+  line-height: 1.45;
   font-weight: 600;
 }
 
-/* ===== HIGHLIGHT LINE ===== */
-.svc-card-highlight {
+/* ===== CARD DESCRIPTION ===== */
+.svc-card-description {
   font-size: 0.92rem;
-  color: #475569;
+  color: var(--svc-muted);
+  line-height: 1.6;
   margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.75rem 0.9rem;
-  background: linear-gradient(180deg, #f8fafc, #fbfcfe);
-  border-radius: 12px;
-  border: 1px solid #eef2f7;
-  font-weight: 500;
   position: relative;
   z-index: 1;
 }
 
-.svc-card-highlight i {
+/* ===== FEATURES LIST ===== */
+.svc-card-features {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0.5rem 0;
+  position: relative;
+  z-index: 1;
+}
+
+.svc-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.88rem;
+  color: #475569;
+  font-weight: 500;
+  padding: 0.5rem 0.8rem;
+  background: linear-gradient(180deg, #f8fafc, #fbfcfe);
+  border-radius: 10px;
+  border: 1px solid #eef2f7;
+  transition: all 0.2s ease;
+}
+
+.svc-feature-item:hover {
+  background: linear-gradient(180deg, #f1f5f9, #f8fafc);
+  border-color: rgba(242, 166, 90, 0.2);
+  transform: translateX(4px);
+}
+
+.svc-feature-item i {
   color: #fff;
-  font-size: 0.7rem;
-  width: 22px;
-  height: 22px;
+  font-size: 0.65rem;
+  width: 20px;
+  height: 20px;
   background: linear-gradient(135deg, var(--svc-orange), var(--svc-orange-dark));
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 10px rgba(242, 166, 90, 0.32);
+  box-shadow: 0 3px 8px rgba(242, 166, 90, 0.25);
+}
+
+/* ===== HIGHLIGHT LINE ===== */
+.svc-card-highlight {
+  font-size: 0.95rem;
+  color: #475569;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  background: linear-gradient(180deg, #f8fafc, #fbfcfe);
+  border-radius: 12px;
+  border: 1px solid #eef2f7;
+  font-weight: 600;
+  position: relative;
+  z-index: 1;
+}
+
+.svc-card-highlight i {
+  color: #fff;
+  font-size: 0.75rem;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, var(--svc-orange), var(--svc-orange-dark));
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(242, 166, 90, 0.35);
 }
 
 /* ===== ACTIONS ===== */
@@ -352,17 +407,35 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.65rem 1.1rem;
-  border-radius: 10px;
+  padding: 0.7rem 1.2rem;
+  border-radius: 12px;
   font-size: 0.86rem;
   font-weight: 700;
   cursor: pointer;
   text-decoration: none;
   border: none;
   font-family: inherit;
-  transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   position: relative;
   overflow: hidden;
+}
+
+.svc-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s ease, height 0.6s ease;
+}
+
+.svc-btn:active::before {
+  width: 300px;
+  height: 300px;
 }
 
 .svc-btn-primary {
@@ -371,6 +444,7 @@ body {
   box-shadow: 0 8px 20px rgba(1, 47, 107, 0.28);
   flex: 1;
   justify-content: center;
+  transform: translateY(0);
 }
 
 .svc-btn-primary::after {
@@ -385,33 +459,34 @@ body {
 .svc-btn-primary:hover {
   background: linear-gradient(135deg, var(--svc-navy-dark) 0%, var(--svc-navy) 100%);
   color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 14px 30px rgba(1, 47, 107, 0.40);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 35px rgba(1, 47, 107, 0.40);
 }
 
 .svc-btn-primary:hover::after { transform: translateX(100%); }
 
 .svc-btn-primary i {
-  transition: transform 0.22s ease;
+  transition: transform 0.25s ease;
 }
 
 .svc-btn-primary:hover i {
-  transform: translateX(3px) rotate(-8deg);
+  transform: translateX(4px) rotate(-10deg);
 }
 
 .svc-btn-outline {
   background: #fff;
   color: var(--svc-navy);
   border: 1.5px solid #cbd5e1;
-  padding: 0.65rem 0.95rem;
+  padding: 0.7rem 1rem;
+  transform: translateY(0);
 }
 
 .svc-btn-outline:hover {
   background: var(--svc-navy);
   color: #fff;
   border-color: var(--svc-navy);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(1, 47, 107, 0.20);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(1, 47, 107, 0.20);
 }
 
 /* ===== TOAST ===== */
@@ -449,13 +524,126 @@ body {
 }
 
 /* ===== RESPONSIVE ===== */
-@media (max-width: 640px) {
-  .svc-page { padding: 2rem 1rem 4rem; }
-  .svc-grid { grid-template-columns: 1fr; }
-  .svc-card { padding: 1.4rem 1.2rem 1.2rem; }
-  .svc-card-icon { width: 48px; height: 48px; font-size: 1.4rem; }
-  .svc-direct-banner { flex-direction: column; align-items: flex-start; }
-  .svc-direct-banner a { width: 100%; justify-content: center; }
+@media (max-width: 768px) {
+  .svc-page { 
+    padding: 2rem 1rem 4rem; 
+  }
+  
+  .svc-grid { 
+    grid-template-columns: 1fr; 
+    gap: 1.25rem;
+  }
+  
+  .svc-card { 
+    padding: 1.5rem 1.2rem 1.3rem; 
+    min-height: auto;
+  }
+  
+  .svc-card-icon { 
+    width: 56px; 
+    height: 56px; 
+    font-size: 1.6rem; 
+  }
+  
+  .svc-card-title {
+    font-size: 1.15rem;
+  }
+  
+  .svc-card-tagline {
+    font-size: 0.88rem;
+  }
+  
+  .svc-card-description {
+    font-size: 0.9rem;
+  }
+  
+  .svc-feature-item {
+    font-size: 0.85rem;
+    padding: 0.45rem 0.7rem;
+  }
+  
+  .svc-card-highlight {
+    font-size: 0.9rem;
+    padding: 0.75rem 0.9rem;
+  }
+  
+  .svc-btn {
+    padding: 0.65rem 1rem;
+    font-size: 0.84rem;
+  }
+  
+  .svc-direct-banner { 
+    flex-direction: column; 
+    align-items: flex-start; 
+    padding: 1rem 1.2rem;
+  }
+  
+  .svc-direct-banner a { 
+    width: 100%; 
+    justify-content: center; 
+  }
+}
+
+@media (max-width: 480px) {
+  .svc-page {
+    padding: 1.5rem 0.75rem 3rem;
+  }
+  
+  .svc-card {
+    padding: 1.3rem 1rem 1.1rem;
+    border-radius: 20px;
+  }
+  
+  .svc-card-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 1.4rem;
+  }
+  
+  .svc-card-title {
+    font-size: 1.1rem;
+  }
+  
+  .svc-card-tagline {
+    font-size: 0.85rem;
+  }
+  
+  .svc-card-description {
+    font-size: 0.88rem;
+  }
+  
+  .svc-feature-item {
+    font-size: 0.82rem;
+    padding: 0.4rem 0.6rem;
+    gap: 0.5rem;
+  }
+  
+  .svc-feature-item i {
+    width: 18px;
+    height: 18px;
+    font-size: 0.6rem;
+  }
+  
+  .svc-card-highlight {
+    font-size: 0.85rem;
+    padding: 0.7rem 0.8rem;
+    gap: 0.5rem;
+  }
+  
+  .svc-card-highlight i {
+    width: 20px;
+    height: 20px;
+    font-size: 0.7rem;
+  }
+  
+  .svc-btn {
+    padding: 0.6rem 0.9rem;
+    font-size: 0.82rem;
+  }
+  
+  .svc-card-actions {
+    gap: 0.5rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -494,8 +682,24 @@ body {
           <p class="svc-card-tagline"><?php echo htmlspecialchars(st($card['subtitle_key']), ENT_QUOTES, 'UTF-8'); ?></p>
         </div>
       </div>
+      
+      <?php if (!empty(st($card['description_key']))): ?>
+      <p class="svc-card-description"><?php echo htmlspecialchars(st($card['description_key']), ENT_QUOTES, 'UTF-8'); ?></p>
+      <?php endif; ?>
+      
+      <div class="svc-card-features">
+        <?php foreach ($card['point_keys'] as $pointKey): ?>
+          <?php if (!empty(st($pointKey))): ?>
+            <div class="svc-feature-item">
+              <i class="fas fa-check" aria-hidden="true"></i>
+              <span><?php echo htmlspecialchars(st($pointKey), ENT_QUOTES, 'UTF-8'); ?></span>
+            </div>
+          <?php endif; ?>
+        <?php endforeach; ?>
+      </div>
+      
       <p class="svc-card-highlight">
-        <i class="fas fa-check" aria-hidden="true"></i>
+        <i class="fas fa-star" aria-hidden="true"></i>
         <?php echo htmlspecialchars(st($card['highlight_key']), ENT_QUOTES, 'UTF-8'); ?>
       </p>
       <div class="svc-card-actions">
