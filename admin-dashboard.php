@@ -1,5 +1,12 @@
 <?php
 session_start();
+
+// Prevent browsers from serving a stale cached copy of the sidebar/dashboard
+// (so menu changes — like new Marketing country folders — show up on reload).
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+
 // Main database (e.g. student_applications)
 require_once 'db.php';
 
@@ -465,6 +472,10 @@ if (strtolower($role) !== 'catholic university of america') {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <!-- Build marker: BUILD_2026_05_22_MKT_v4 (applySubmenuAccess strips ?query for marketing links) -->
   <title>Admin Dashboard | Xander Global Scholars</title>
   
   <!-- Xander Global Scholars Color Scheme -->
@@ -671,6 +682,89 @@ if (strtolower($role) !== 'catholic university of america') {
       font-size: 0.8rem;
       margin-right: 8px;
       width: 16px;
+    }
+
+    /* ========== Nested folder rows inside a submenu (country folders) ========== */
+    .sidebar-folder {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 20px 11px 40px;
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      border-left: 4px solid transparent;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+      user-select: none;
+    }
+    .sidebar-folder:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      border-left-color: var(--gold);
+    }
+    .sidebar-folder .flag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      min-width: 26px;
+      padding: 2px 6px;
+      text-align: center;
+      line-height: 1;
+      color: var(--gold);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+    }
+    .sidebar-folder .folder-label { flex: 1; }
+    .sidebar-folder .folder-arrow {
+      font-size: 0.7rem;
+      opacity: 0.7;
+      transition: transform 0.2s ease;
+    }
+    .sidebar-folder.open .folder-arrow {
+      transform: rotate(180deg);
+    }
+    .sidebar-folder-body {
+      display: none;
+      background: rgba(0, 0, 0, 0.18);
+      animation: fadeIn 0.25s ease;
+    }
+    .sidebar-folder.open + .sidebar-folder-body { display: block; }
+    .sidebar-folder-body a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 20px 9px 72px;
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 0.83rem;
+      text-decoration: none;
+      border-left: 4px solid transparent;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .sidebar-folder-body a:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: #fff;
+      border-left-color: var(--gold);
+      padding-left: 76px;
+    }
+    .sidebar-folder-body a::before {
+      content: '';
+      position: absolute;
+      left: 56px;
+      top: 50%;
+      width: 4px;
+      height: 4px;
+      background: var(--gold);
+      border-radius: 50%;
+      transform: translateY(-50%);
+      opacity: 0.55;
+    }
+    .sidebar-folder-body a i {
+      font-size: 0.78rem;
+      width: 14px;
     }
 
     /* ========== MAIN CONTENT ========== */
@@ -1567,21 +1661,83 @@ if (strtolower($role) !== 'catholic university of america') {
       <?php endif; ?>
       
       <?php if (adm_menu('marketing')): ?>
-      <!-- Marketing Materials -->
+      <!-- Marketing Materials (organized by country) -->
       <a href="#marketing" class="sidebar-link" onclick="toggleSidebarMenu('marketing')">
         <i class="bi bi-megaphone"></i>
         <span>Marketing Materials</span>
         <i class="bi bi-chevron-down arrow"></i>
       </a>
       <div class="sidebar-submenu" id="submenu_marketing">
-        <a href="#" onclick="loadInFrame('upload-materials.php', 'Upload Marketing Materials')">
-          <i class="bi bi-upload"></i>
-          Upload Marketing materials
-        </a>
-        <a href="#" onclick="loadInFrame('get-materials.php', 'Get Marketing Materials')">
-          <i class="bi bi-download"></i>
-          Get Marketing materials
-        </a>
+        <!-- Rwanda -->
+        <div class="sidebar-folder" onclick="toggleMarketingCountry('rwanda')">
+          <span class="flag">RW</span>
+          <span class="folder-label">Rwanda</span>
+          <i class="bi bi-chevron-down folder-arrow"></i>
+        </div>
+        <div class="sidebar-folder-body" id="mkt_country_rwanda">
+          <a href="#" onclick="loadInFrame('upload-materials.php?country=rwanda', 'Upload Marketing Materials - Rwanda')">
+            <i class="bi bi-upload"></i> Upload
+          </a>
+          <a href="#" onclick="loadInFrame('get-materials.php?country=rwanda', 'Get Marketing Materials - Rwanda')">
+            <i class="bi bi-download"></i> Get
+          </a>
+        </div>
+        <!-- Burundi -->
+        <div class="sidebar-folder" onclick="toggleMarketingCountry('burundi')">
+          <span class="flag">BI</span>
+          <span class="folder-label">Burundi</span>
+          <i class="bi bi-chevron-down folder-arrow"></i>
+        </div>
+        <div class="sidebar-folder-body" id="mkt_country_burundi">
+          <a href="#" onclick="loadInFrame('upload-materials.php?country=burundi', 'Upload Marketing Materials - Burundi')">
+            <i class="bi bi-upload"></i> Upload
+          </a>
+          <a href="#" onclick="loadInFrame('get-materials.php?country=burundi', 'Get Marketing Materials - Burundi')">
+            <i class="bi bi-download"></i> Get
+          </a>
+        </div>
+        <!-- Goma, DRC -->
+        <div class="sidebar-folder" onclick="toggleMarketingCountry('goma')">
+          <span class="flag">CD</span>
+          <span class="folder-label">Goma, DRC</span>
+          <i class="bi bi-chevron-down folder-arrow"></i>
+        </div>
+        <div class="sidebar-folder-body" id="mkt_country_goma">
+          <a href="#" onclick="loadInFrame('upload-materials.php?country=goma', 'Upload Marketing Materials - Goma, DRC')">
+            <i class="bi bi-upload"></i> Upload
+          </a>
+          <a href="#" onclick="loadInFrame('get-materials.php?country=goma', 'Get Marketing Materials - Goma, DRC')">
+            <i class="bi bi-download"></i> Get
+          </a>
+        </div>
+        <!-- Kampala, Uganda -->
+        <div class="sidebar-folder" onclick="toggleMarketingCountry('kampala')">
+          <span class="flag">UG</span>
+          <span class="folder-label">Kampala, Uganda</span>
+          <i class="bi bi-chevron-down folder-arrow"></i>
+        </div>
+        <div class="sidebar-folder-body" id="mkt_country_kampala">
+          <a href="#" onclick="loadInFrame('upload-materials.php?country=kampala', 'Upload Marketing Materials - Kampala, Uganda')">
+            <i class="bi bi-upload"></i> Upload
+          </a>
+          <a href="#" onclick="loadInFrame('get-materials.php?country=kampala', 'Get Marketing Materials - Kampala, Uganda')">
+            <i class="bi bi-download"></i> Get
+          </a>
+        </div>
+        <!-- Nairobi, Kenya -->
+        <div class="sidebar-folder" onclick="toggleMarketingCountry('nairobi')">
+          <span class="flag">KE</span>
+          <span class="folder-label">Nairobi, Kenya</span>
+          <i class="bi bi-chevron-down folder-arrow"></i>
+        </div>
+        <div class="sidebar-folder-body" id="mkt_country_nairobi">
+          <a href="#" onclick="loadInFrame('upload-materials.php?country=nairobi', 'Upload Marketing Materials - Nairobi, Kenya')">
+            <i class="bi bi-upload"></i> Upload
+          </a>
+          <a href="#" onclick="loadInFrame('get-materials.php?country=nairobi', 'Get Marketing Materials - Nairobi, Kenya')">
+            <i class="bi bi-download"></i> Get
+          </a>
+        </div>
       </div>
       <?php endif; ?>
       
@@ -2543,7 +2699,7 @@ if (strtolower($role) !== 'catholic university of america') {
       const link = document.querySelector(`[href="#${menuId}"]`);
       const submenu = document.getElementById(`submenu_${menuId}`);
       
-      // Close other submenus
+      // Close other top-level submenus (but ignore nested country folders)
       document.querySelectorAll('.sidebar-submenu').forEach(menu => {
         if (menu.id !== `submenu_${menuId}`) {
           menu.style.display = 'none';
@@ -2568,6 +2724,24 @@ if (strtolower($role) !== 'catholic university of america') {
         const arrow = link.querySelector('.arrow');
         if (arrow) arrow.style.transform = 'rotate(180deg)';
       }
+    }
+
+    // Nested country folders inside the Marketing Materials submenu.
+    // Acts like an accordion within the parent — opening one country closes
+    // the others, but does not affect the parent Marketing submenu.
+    function toggleMarketingCountry(countryKey) {
+      const folders = document.querySelectorAll('#submenu_marketing .sidebar-folder');
+      folders.forEach(folder => {
+        const target = folder.getAttribute('onclick') || '';
+        const isThis = target.indexOf(`'${countryKey}'`) !== -1;
+        if (!isThis) {
+          folder.classList.remove('open');
+        }
+      });
+      const clicked = Array.from(folders).find(f =>
+        (f.getAttribute('onclick') || '').indexOf(`'${countryKey}'`) !== -1
+      );
+      if (clicked) clicked.classList.toggle('open');
     }
     
     // Show dashboard view
@@ -3456,7 +3630,8 @@ if (strtolower($role) !== 'catholic university of america') {
         let visibleCount = 0;
         sub.querySelectorAll('a[onclick]').forEach((link) => {
           const match = (link.getAttribute('onclick') || '').match(/loadInFrame\('([^']+)'/);
-          const file = match ? match[1] : '';
+          // Strip ?country=… so country-specific marketing links still match registry paths
+          const file = match ? match[1].split('?')[0] : '';
           if (file && allowed.indexOf(file) === -1) {
             link.style.display = 'none';
           } else {

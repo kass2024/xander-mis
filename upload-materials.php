@@ -7,9 +7,25 @@ $TEST_FOLDER_ID = 30592893924;
 
 // Country folder mappings
 $COUNTRY_FOLDERS = [
-    'rwanda' => 30592893924,
-    'burundi' => '31502860318'
+    'rwanda'  => 30592893924,
+    'burundi' => '31502860318',
+    'goma'    => 31569571029, // Goma, DRC
+    'kampala' => 31569568775, // Kampala, Uganda
+    'nairobi' => 31569623770, // Nairobi, Kenya
 ];
+
+// Display metadata for the country picker (label + flag emoji)
+$COUNTRY_META = [
+    'rwanda'  => ['label' => 'Rwanda',          'flag' => '🇷🇼'],
+    'burundi' => ['label' => 'Burundi',         'flag' => '🇧🇮'],
+    'goma'    => ['label' => 'Goma, DRC',       'flag' => '🇨🇩'],
+    'kampala' => ['label' => 'Kampala, Uganda', 'flag' => '🇺🇬'],
+    'nairobi' => ['label' => 'Nairobi, Kenya',  'flag' => '🇰🇪'],
+];
+
+// Initial country: ?country=xxx takes precedence, fallback to rwanda
+$requestedCountry = strtolower(trim((string) ($_GET['country'] ?? '')));
+$initialCountry = isset($COUNTRY_FOLDERS[$requestedCountry]) ? $requestedCountry : 'rwanda';
 
 $admin_id = $_SESSION['id'] ?? null;
 if (!$admin_id || !isset($_SESSION['role'])) {
@@ -35,6 +51,7 @@ $canDeleteMarketing = ($role === 'superadmin');
     <title>Xander · File Manager</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
@@ -384,6 +401,65 @@ $canDeleteMarketing = ($role === 'superadmin');
             background: var(--surface);
             color: var(--deep-navy);
             box-shadow: var(--shadow-sm);
+        }
+
+        /* ---------- Select2 country dropdown ---------- */
+        .country-select-wrap { min-width: 240px; }
+        .country-select-wrap .select2-container { width: 100% !important; }
+        .country-select-wrap .select2-container--default .select2-selection--single {
+            height: 42px;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            transition: all .2s ease;
+        }
+        .country-select-wrap .select2-container--default .select2-selection--single:hover {
+            border-color: var(--border-strong);
+        }
+        .country-select-wrap .select2-container--default.select2-container--focus .select2-selection--single,
+        .country-select-wrap .select2-container--default.select2-container--open .select2-selection--single {
+            border-color: var(--deep-navy);
+            box-shadow: 0 0 0 3px rgba(0, 47, 107, 0.12);
+        }
+        .country-select-wrap .select2-selection__rendered {
+            line-height: 1.2 !important;
+            color: var(--deep-navy) !important;
+            font-weight: 600;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: center;
+            gap: 8px;
+        }
+        .country-select-wrap .select2-selection__arrow {
+            height: 40px !important;
+            right: 6px !important;
+        }
+        .country-option {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+        .country-option .country-flag { font-size: 1.05rem; line-height: 1; }
+        .select2-dropdown {
+            border: 1.5px solid var(--border) !important;
+            border-radius: 12px !important;
+            overflow: hidden;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, .12) !important;
+        }
+        .select2-results__option--highlighted[aria-selected],
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background: var(--deep-navy) !important;
+            color: #fff !important;
+        }
+        .select2-search--dropdown .select2-search__field {
+            border: 1.5px solid var(--border) !important;
+            border-radius: 8px !important;
+            padding: 8px 10px !important;
         }
 
         .btn-icon {
@@ -1349,7 +1425,7 @@ $canDeleteMarketing = ($role === 'superadmin');
             <div class="stat-card folder">
                 <div class="icon"><i class="bi bi-folder-fill"></i></div>
                 <div class="label">Current Folder</div>
-                <div class="value" id="currentFolderLabel">🇷🇼 Rwanda</div>
+                <div class="value" id="currentFolderLabel"><?= htmlspecialchars(($COUNTRY_META[$initialCountry]['flag'] ?? '') . ' ' . ($COUNTRY_META[$initialCountry]['label'] ?? ucfirst($initialCountry)), ENT_QUOTES, 'UTF-8') ?></div>
             </div>
             <div class="stat-card total">
                 <div class="icon"><i class="bi bi-collection"></i></div>
@@ -1372,13 +1448,22 @@ $canDeleteMarketing = ($role === 'superadmin');
     <!-- Controls -->
     <div class="controls">
         <div class="controls-left">
-            <div class="country-wrap" role="tablist" aria-label="Country">
-                <button class="country-btn active" data-country="rwanda" type="button">
-                    <span>🇷🇼</span> Rwanda
-                </button>
-                <button class="country-btn" data-country="burundi" type="button">
-                    <span>🇧🇮</span> Burundi
-                </button>
+            <div class="country-select-wrap" aria-label="Destination country">
+                <select id="countrySelect" name="country" aria-label="Destination country">
+                    <?php foreach ($COUNTRY_FOLDERS as $cKey => $cFid):
+                        $cMeta  = $COUNTRY_META[$cKey] ?? ['label' => ucfirst($cKey), 'flag' => ''];
+                        $cFlag  = $cMeta['flag'];
+                        $cLabel = $cMeta['label'];
+                    ?>
+                        <option
+                            value="<?= htmlspecialchars($cKey, ENT_QUOTES, 'UTF-8') ?>"
+                            data-flag="<?= htmlspecialchars($cFlag, ENT_QUOTES, 'UTF-8') ?>"
+                            data-label="<?= htmlspecialchars($cLabel, ENT_QUOTES, 'UTF-8') ?>"
+                            <?= $cKey === $initialCountry ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($cFlag . '  ' . $cLabel, ENT_QUOTES, 'UTF-8') ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
             </div>
         </div>
         <div class="controls-right">
@@ -1478,9 +1563,12 @@ $canDeleteMarketing = ($role === 'superadmin');
     </div>
 </main>
 
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 const COUNTRY_FOLDERS = <?= json_encode($COUNTRY_FOLDERS) ?>;
-let currentCountry = 'rwanda';
+const COUNTRY_META    = <?= json_encode($COUNTRY_META) ?>;
+let currentCountry = <?= json_encode($initialCountry) ?>;
 let currentFolderId = COUNTRY_FOLDERS[currentCountry];
 const ACCESS_TOKEN = "kqNT7Z8BpwhA0d4MFZVgju0kZbR12PpsX93VWhpTOL5i4jVefcDdX";
 const CAN_DELETE_MARKETING = <?= $canDeleteMarketing ? 'true' : 'false' ?>;
@@ -1500,18 +1588,37 @@ const totalFilesCount = document.getElementById("totalFilesCount");
 const queueCount = document.getElementById("queueCount");
 const fileSearchInput = document.getElementById("fileSearchInput");
 
-// ===== COUNTRY BUTTONS =====
-document.querySelectorAll('.country-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        if (btn.classList.contains('active')) return;
-        document.querySelectorAll('.country-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentCountry = btn.dataset.country;
+// ===== COUNTRY SELECT2 DROPDOWN =====
+function formatCountryOption(opt) {
+    if (!opt.id) return opt.text;
+    const meta = COUNTRY_META[opt.id] || {};
+    const flag  = meta.flag  || '';
+    const label = meta.label || opt.text;
+    return $(
+        '<span class="country-option"><span class="country-flag">' +
+        flag + '</span><span>' + label + '</span></span>'
+    );
+}
+
+jQuery(function ($) {
+    const $sel = $('#countrySelect');
+    $sel.select2({
+        minimumResultsForSearch: 4,
+        width: '100%',
+        templateResult: formatCountryOption,
+        templateSelection: formatCountryOption,
+    });
+
+    $sel.on('change', function () {
+        const newKey = $(this).val();
+        if (newKey === currentCountry) return;
+        currentCountry = newKey;
         currentFolderId = COUNTRY_FOLDERS[currentCountry];
 
-        const countryName = currentCountry === 'rwanda' ? 'Rwanda' : 'Burundi';
-        const countryFlag = currentCountry === 'rwanda' ? '🇷🇼' : '🇧🇮';
-        currentFolderLabel.textContent = `${countryFlag} ${countryName}`;
+        const meta = COUNTRY_META[currentCountry] || {};
+        const countryName = meta.label || currentCountry;
+        const countryFlag = meta.flag  || '';
+        currentFolderLabel.textContent = `${countryFlag} ${countryName}`.trim();
 
         uploadQueue = [];
         renderQueue();
