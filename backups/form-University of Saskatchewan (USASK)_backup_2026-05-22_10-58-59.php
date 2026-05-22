@@ -24,7 +24,8 @@ if (!isset($_SESSION['user_id'])) {
 $userId = $_SESSION['user_id'];
 
 // Define accepted agent IDs
-$agent_ids = [1, 2, 10,12,13,14,15,17,18,27,28,34,35,54,55,56,57,58,62];
+$agent_ids = [1, 2, 10,12,13,14,15,17,18,27,28,34,35,54,55,56,57,58,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100];
+
 
 // Query agents from admins table
 $agent_query = "SELECT id, first_name, last_name, email FROM admins WHERE id IN (" . implode(',', $agent_ids) . ")";
@@ -122,6 +123,7 @@ function isChecked($field, $value) {
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@17.0.19/build/css/intlTelInput.css" />
+
 
   <style>
   body {
@@ -322,6 +324,131 @@ function isChecked($field, $value) {
   font-weight: 500;
   color: #333;
 }
+/* Chat Bubble */
+#chat-bubble {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+
+#chat-bubble button {
+  background-color: #0c3c78;
+  color: white;
+  padding: 14px 20px;
+  border-radius: 50px;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  transition: background-color 0.3s ease;
+  position: relative;
+}
+
+#chat-bubble button:hover {
+  background-color: #092a5c;
+}
+
+#chat-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: red;
+  color: white;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 50%;
+}
+
+/* Chat Window */
+#chat-window {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 320px;
+  max-height: 500px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+#chat-window .chat-header {
+  background-color: #0c3c78;
+  color: white;
+  padding: 12px 16px;
+  font-size: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#chat-window .chat-messages {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  background: #f9f9f9;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Chat message bubbles */
+.chat-message {
+  background: #e0f0ff;
+  color: #333;
+  padding: 8px 12px;
+  margin: 6px 0;
+  border-radius: 10px;
+  max-width: 80%;
+  word-wrap: break-word;
+  animation: fadeIn 0.3s ease-in;
+  align-self: flex-start;
+}
+
+.chat-message.user {
+  background: #dcf8c6;
+  align-self: flex-end;
+}
+
+/* Typing indicator — FIX: aligned left */
+.typing-indicator {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  margin: 4px 0 4px 10px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: #f1f0f0;
+  width: auto;
+}
+
+.typing-indicator span {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 2px;
+  background: #999;
+  border-radius: 50%;
+  animation: blink 1.4s infinite both;
+}
+
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes blink {
+  0% { opacity: 0.2; }
+  20% { opacity: 1; }
+  100% { opacity: 0.2; }
+}
+
+#chat-window .chat-input {
+  display: flex;
+  border-top: 1px solid #ddd;
+}
 
 #chat_message_input {
   flex: 1;
@@ -333,6 +460,7 @@ function isChecked($field, $value) {
 
 #chat_message_input:focus {
   outline: none;
+}
 
 #chat-send-btn {
   padding: 10px 15px;
@@ -345,6 +473,7 @@ function isChecked($field, $value) {
 
 #chat-send-btn:hover {
   background: #092a5c;
+}
 
 /* Chat Login Form */
 #chat-login-form {
@@ -365,12 +494,14 @@ function isChecked($field, $value) {
   color: #0c3c78;
   margin-bottom: 14px;
   font-size: 16px;
+}
 
 #chat-login-form label {
   display: block;
   margin-bottom: 6px;
   font-weight: 500;
   color: #333;
+}
 
 #chat-login-form input[type="email"],
 #chat-login-form input[type="tel"] {
@@ -387,6 +518,7 @@ function isChecked($field, $value) {
 #chat-login-form input[type="tel"]:focus {
   border-color: #0c3c78;
   outline: none;
+}
 
 #chat-login-form button {
   width: 100%;
@@ -402,246 +534,17 @@ function isChecked($field, $value) {
 
 #chat-login-form button:hover {
   background: #092a5c;
+}
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
 
 </style>
 
-<style>
-/* ===== MODERN FLOATING WHATSAPP BUTTON ===== */
-.xander-whatsapp-float {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 64px;
-    height: 64px;
-    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 
-        0 8px 32px rgba(37, 211, 102, 0.3),
-        0 4px 16px rgba(0, 0, 0, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    cursor: pointer;
-    text-decoration: none;
-    z-index: 9999;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    animation: xanderFloat 3s ease-in-out infinite, xanderPulse 2s ease-in-out infinite;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-@keyframes xanderFloat {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-8px); }
-}
-
-@keyframes xanderPulse {
-    0%, 100% { 
-        box-shadow: 
-            0 8px 32px rgba(37, 211, 102, 0.3),
-            0 4px 16px rgba(0, 0, 0, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2),
-            0 0 0 0 rgba(37, 211, 102, 0.4);
-    }
-    50% { 
-        box-shadow: 
-            0 12px 40px rgba(37, 211, 102, 0.4),
-            0 6px 20px rgba(0, 0, 0, 0.15),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3),
-            0 0 0 8px rgba(37, 211, 102, 0);
-    }
-}
-
-.xander-whatsapp-float:hover {
-    transform: scale(1.1) translateY(-4px);
-    box-shadow: 
-        0 12px 40px rgba(37, 211, 102, 0.4),
-        0 6px 20px rgba(0, 0, 0, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    background: linear-gradient(135deg, #128C7E 0%, #075E54 100%);
-    animation: none;
-}
-
-.xander-whatsapp-float svg {
-    width: 32px;
-    height: 32px;
-    color: white;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-    transition: transform 0.3s ease;
-}
-
-.xander-whatsapp-float:hover svg {
-    transform: scale(1.1);
-}
-
-
-/* ===== ENHANCED WHATSAPP TOOLTIP - ALWAYS VISIBLE ===== */
-.xander-whatsapp-tooltip {
-    position: absolute;
-    bottom: 80px;
-    right: 0;
-    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-    color: white;
-    padding: 16px 24px;
-    border-radius: 20px;
-    font-size: 15px;
-    font-weight: 600;
-    white-space: nowrap;
-    box-shadow: 
-        0 12px 40px rgba(37, 211, 102, 0.4),
-        0 6px 20px rgba(0, 0, 0, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    pointer-events: none;
-    animation: xanderTooltipFloat 3s ease-in-out infinite;
-    z-index: 10000;
-}
-
-.xander-whatsapp-tooltip::before {
-    content: "👉";
-    margin-right: 8px;
-    font-size: 18px;
-    animation: xanderPointingFinger 1.5s ease-in-out infinite;
-}
-
-@keyframes xanderTooltipFloat {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-5px); }
-}
-
-@keyframes xanderPointingFinger {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-}
-
-.xander-whatsapp-tooltip::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    right: 24px;
-    border: 10px solid transparent;
-    border-top-color: #128C7E;
-    transform: translateX(50%);
-}
-
-/* Enhanced hover effect */
-.xander-whatsapp-float:hover .xander-whatsapp-tooltip {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 
-        0 16px 50px rgba(37, 211, 102, 0.5),
-        0 8px 25px rgba(0, 0, 0, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.4);
-    background: linear-gradient(135deg, #128C7E 0%, #075E54 100%);
-}
-
-/* Mobile Responsive */
-@media (max-width: 768px) {
-    .xander-whatsapp-tooltip {
-        bottom: 70px;
-        right: -80px;
-        font-size: 14px;
-        padding: 12px 18px;
-        max-width: 200px;
-        white-space: normal;
-        text-align: center;
-        line-height: 1.4;
-    }
-    
-    .xander-whatsapp-tooltip::after {
-        right: 90px;
-    }
-}
-
-@media (max-width: 480px) {
-    .xander-whatsapp-tooltip {
-        bottom: 65px;
-        right: -70px;
-        font-size: 13px;
-        padding: 10px 16px;
-        max-width: 180px;
-    }
-    
-    .xander-whatsapp-tooltip::after {
-        right: 80px;
-    }
-}
-
-/* Mobile Responsive */
-@media (max-width: 768px) {
-    .xander-whatsapp-float {
-        width: 56px;
-        height: 56px;
-        bottom: 20px;
-        right: 20px;
-    }
-    
-    .xander-whatsapp-float svg {
-        width: 28px;
-        height: 28px;
-    }
-    
-    .xander-whatsapp-tooltip {
-        bottom: 70px;
-        right: -60px;
-        font-size: 13px;
-        padding: 10px 16px;
-    }
-    
-    .xander-whatsapp-tooltip::after {
-        right: 70px;
-    }
-}
-
-@media (max-width: 480px) {
-    .xander-whatsapp-float {
-        width: 52px;
-        height: 52px;
-        bottom: 16px;
-        right: 16px;
-    }
-    
-    .xander-whatsapp-float svg {
-        width: 26px;
-        height: 26px;
-    }
-    
-    .xander-whatsapp-tooltip {
-        display: none;
-    }
-}
-
-/* Entrance Animation */
-@keyframes xanderEntrance {
-    0% {
-        opacity: 0;
-        transform: scale(0) translateY(100px);
-    }
-    50% {
-        opacity: 0;
-        transform: scale(0.5) translateY(50px);
-    }
-    100% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-.xander-whatsapp-float {
-    animation: xanderEntrance 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards, 
-               xanderFloat 3s ease-in-out 2s infinite, 
-               xanderPulse 2s ease-in-out 2s infinite;
-}
-</style></head>
+</head>
 
 <body>
 <div class="form-container">
@@ -766,60 +669,111 @@ function isChecked($field, $value) {
   <label>Bachelor Program</label>
   <select name="bachelor_program" class="select2" style="width:100%;">
     <option value="">Please Select</option>
-    <option value="Accounting, B.S.">Accounting, B.S.</option>
-    <option value="Aerospace Engineering, B.S.">Aerospace Engineering, B.S.</option>
-    <option value="Biology, B.S.">Biology, B.S.</option>
-    <option value="Biomedical Engineering, B.S.">Biomedical Engineering, B.S.</option>
-    <option value="Business Administration, B.S.">Business Administration, B.S.</option>
-    <option value="Civil Engineering, B.S.">Civil Engineering, B.S.</option>
-    <option value="Computer Science, B.S.">Computer Science, B.S.</option>
-    <option value="Criminal Justice, B.A.">Criminal Justice, B.A.</option>
-    <option value="Electrical Engineering, B.S.">Electrical Engineering, B.S.</option>
-    <option value="English, B.A.">English, B.A.</option>
-    <option value="Finance, B.S.">Finance, B.S.</option>
-    <option value="History, B.A.">History, B.A.</option>
-    <option value="Information Systems, B.S.">Information Systems, B.S.</option>
-    <option value="International Relations, B.A.">International Relations, B.A.</option>
-    <option value="Marketing, B.S.">Marketing, B.S.</option>
-    <option value="Mathematics, B.S.">Mathematics, B.S.</option>
-    <option value="Mechanical Engineering, B.S.">Mechanical Engineering, B.S.</option>
-    <option value="Nursing, B.S.">Nursing, B.S.</option>
-    <option value="Political Science, B.A.">Political Science, B.A.</option>
-    <option value="Psychology, B.A.">Psychology, B.A.</option>
-    <option value="Public Health, B.S.">Public Health, B.S.</option>
-    <option value="Sociology, B.A.">Sociology, B.A.</option>
+    
   </select>
 </div>
     <div>
   <label>Masters Program</label>
   <select name="masters_program" class="select2" style="width:100%;">
     <option value="">Please Select</option>
-    <option value="Accounting, M.Acc.">Accounting, M.Acc.</option>
-    <option value="Applied Psychology, M.A.">Applied Psychology, M.A.</option>
-    <option value="Biomedical Engineering, M.S.">Biomedical Engineering, M.S.</option>
-    <option value="Business Administration, M.B.A.">Business Administration, M.B.A.</option>
-    <option value="Civil Engineering, M.S.">Civil Engineering, M.S.</option>
-    <option value="Computer Science, M.S.">Computer Science, M.S.</option>
-    <option value="Criminal Justice, M.A.">Criminal Justice, M.A.</option>
-    <option value="Data Analytics, M.S.">Data Analytics, M.S.</option>
-    <option value="Economics, M.A.">Economics, M.A.</option>
-    <option value="Education, M.Ed.">Education, M.Ed.</option>
-    <option value="Electrical Engineering, M.S.">Electrical Engineering, M.S.</option>
-    <option value="English, M.A.">English, M.A.</option>
-    <option value="Finance, M.S.">Finance, M.S.</option>
-    <option value="Health Administration, M.H.A.">Health Administration, M.H.A.</option>
-    <option value="History, M.A.">History, M.A.</option>
-    <option value="Information Systems, M.S.">Information Systems, M.S.</option>
-    <option value="International Business, M.I.B.">International Business, M.I.B.</option>
-    <option value="Law, LL.M.">Law, LL.M.</option>
-    <option value="Marketing, M.S.">Marketing, M.S.</option>
-    <option value="Mechanical Engineering, M.S.">Mechanical Engineering, M.S.</option>
-    <option value="Nursing, M.S.">Nursing, M.S.</option>
-    <option value="Political Science, M.A.">Political Science, M.A.</option>
-    <option value="Public Health, M.P.H.">Public Health, M.P.H.</option>
-    <option value="Social Work, M.S.W.">Social Work, M.S.W.</option>
-    <option value="Software Engineering, M.S.">Software Engineering, M.S.</option>
-    <option value="Supply Chain Management, M.S.">Supply Chain Management, M.S.</option>
+    <option>Accounting – M.P.Acc.</option>
+    <option>Agricultural Economics – M.Sc.</option>
+    <option>Anatomy, Physiology, and Pharmacology – M.Sc.</option>
+    <option>Animal and Poultry Science – M.Sc.</option>
+    <option>Anthropology – M.A.</option>
+    <option>Applied Computing – M.Sc.</option>
+    <option>Applied Microbiology – M.Agr.</option>
+    <option>Applied Microbiology – M.Sc.</option>
+    <option>Archaeology – M.A.</option>
+    <option>Biochemistry, Microbiology and Immunology – M.Sc.</option>
+    <option>Biological Engineering – M.Sc.</option>
+    <option>Biology – M.Sc.</option>
+    <option>Biological Psychiatry – M.Sc.</option>
+    <option>Biomedical Engineering – M.Eng.</option>
+    <option>Biomedical Engineering – M.Sc.</option>
+    <option>Biostatistics – M.Sc.</option>
+    <option>Business Administration – M.B.A.</option>
+    <option>Chemical Engineering – M.Eng.</option>
+    <option>Chemical Engineering – M.Sc.</option>
+    <option>Chemical Risk Assessment – M.R.A.</option>
+    <option>Chemistry – M.Sc.</option>
+    <option>Civil Engineering – M.Eng.</option>
+    <option>Civil Engineering – M.Sc.</option>
+    <option>Clinical Pharmacy – M.C.P.</option>
+    <option>Community and Population Health Sciences – M.Sc.</option>
+    <option>Computer Science – M.Sc.</option>
+    <option>Curriculum Studies – M.Ed.</option>
+    <option>Economics – M.A.</option>
+    <option>Educational Administration – M.Ed.</option>
+    <option>Educational Foundations – M.Ed.</option>
+    <option>Educational Leadership – Ed.D.</option>
+    <option>Educational Psychology and Special Education – M.Ed.</option>
+    <option>Educational Technology and Design – M.Ed.</option>
+    <option>Electrical Engineering – M.Eng.</option>
+    <option>Electrical Engineering – M.Sc.</option>
+    <option>English – M.A.</option>
+    <option>Environment and Sustainability – M.E.S.</option>
+    <option>Field Epidemiology – M.Sc.</option>
+    <option>Food Science – M.Agr.</option>
+    <option>Food Science – M.Sc.</option>
+    <option>French – M.A.</option>
+    <option>Geography – M.A.</option>
+    <option>Geography – M.Sc.</option>
+    <option>Geological Sciences – M.Sc.</option>
+    <option>Health Professions Education – M.Ed.</option>
+    <option>Health Sciences – M.Sc.</option>
+    <option>History – M.A.</option>
+    <option>Indigenous Land-Based Education – M.I.L.B.E.</option>
+    <option>Indigenous Studies – M.A.</option>
+    <option>Interdisciplinary Studies – M.A.</option>
+    <option>Interdisciplinary Studies – M.Sc.</option>
+    <option>Kinesiology – M.Sc.</option>
+    <option>Large Animal Clinical Sciences – M.Sc.</option>
+    <option>Law – LLM</option>
+    <option>Leadership in Post-Secondary Education – M.Ed.</option>
+    <option>Linguistics – M.A.</option>
+    <option>Management – M.Sc.</option>
+    <option>Mathematics – M.Math.</option>
+    <option>Mathematics – M.Sc.</option>
+    <option>Mechanical Engineering – M.Eng.</option>
+    <option>Mechanical Engineering – M.Sc.</option>
+    <option>Music – M.Mus.</option>
+    <option>Music – M.A.</option>
+    <option>Music Education – M.Mus.</option>
+    <option>Nursing – M.N.</option>
+    <option>Nursing – M.P.H.N.</option>
+    <option>Nutrition – M.Sc.</option>
+    <option>Occupational Therapy – M.O.T.</option>
+    <option>Pharmacy – M.Sc.</option>
+    <option>Philosophy – M.A.</option>
+    <option>Physical Therapy – M.P.T.</option>
+    <option>Physician Assistant Studies – M.P.A.S.</option>
+    <option>Physics and Engineering Physics – M.Sc.</option>
+    <option>Plant Sciences – M.Sc.</option>
+    <option>Political Studies – M.A.</option>
+    <option>Precision Oral and Systemic Health – M.Sc.</option>
+    <option>Psychology – M.A.</option>
+    <option>Public Administration – M.P.A.</option>
+    <option>Public Health – M.P.H.</option>
+    <option>Public Policy – M.P.P.</option>
+    <option>Religion and Culture – M.A.</option>
+    <option>Scholarship of Teaching and Learning – MSoTL</option>
+    <option>Small Animal Clinical Sciences – M.Sc.</option>
+    <option>Sociology – M.A.</option>
+    <option>Soil Science – M.Sc.</option>
+    <option>Speech-Language Pathology – M.S.L.P.</option>
+    <option>Statistics – M.Sc.</option>
+    <option>Studio Art – M.F.A.</option>
+    <option>Sustainability – M.Ss.</option>
+    <option>Teaching English to Speakers of Other Languages (TESOL) – M.A.</option>
+    <option>Toxicology – M.Sc.</option>
+    <option>Vaccinology & Immunotherapeutics – M.Sc.</option>
+    <option>Veterinary Biomedical Sciences – M.Sc.</option>
+    <option>Veterinary Microbiology – M.Sc.</option>
+    <option>Veterinary Pathology – M.Sc.</option>
+    <option>Water Security – M.W.S.</option>
+    <option>Women’s, Gender, and Sexualities Studies – M.A.</option>
+    <option>Writing – M.F.A.</option>
   </select>
 </div>
 
@@ -827,41 +781,57 @@ function isChecked($field, $value) {
   <label>PhD Program</label>
   <select name="phd_program" class="select2" style="width:100%;">
     <option value="">Please Select</option>
-    <option value="Anatomy, Ph.D.">Anatomy, Ph.D.</option>
-    <option value="Biochemistry, Ph.D.">Biochemistry, Ph.D.</option>
-    <option value="Biomedical Engineering, Ph.D.">Biomedical Engineering, Ph.D.</option>
-    <option value="Biology, Ph.D.">Biology, Ph.D.</option>
-    <option value="Business Administration, Ph.D.">Business Administration, Ph.D.</option>
-    <option value="Chemistry, Ph.D.">Chemistry, Ph.D.</option>
-    <option value="Clinical Psychology, Ph.D.">Clinical Psychology, Ph.D.</option>
-    <option value="Computer Science, Ph.D.">Computer Science, Ph.D.</option>
-    <option value="Criminology, Ph.D.">Criminology, Ph.D.</option>
-    <option value="Curriculum and Instruction, Ph.D.">Curriculum and Instruction, Ph.D.</option>
-    <option value="Data Science, Ph.D.">Data Science, Ph.D.</option>
-    <option value="Educational Leadership, Ph.D.">Educational Leadership, Ph.D.</option>
-    <option value="Engineering, Ph.D.">Engineering, Ph.D.</option>
-    <option value="English, Ph.D.">English, Ph.D.</option>
-    <option value="Environmental Science, Ph.D.">Environmental Science, Ph.D.</option>
-    <option value="Finance, Ph.D.">Finance, Ph.D.</option>
-    <option value="Geoscience, Ph.D.">Geoscience, Ph.D.</option>
-    <option value="Health Outcomes Research, Ph.D.">Health Outcomes Research, Ph.D.</option>
-    <option value="History, Ph.D.">History, Ph.D.</option>
-    <option value="Industrial-Organizational Psychology, Ph.D.">Industrial-Organizational Psychology, Ph.D.</option>
-    <option value="Information Systems, Ph.D.">Information Systems, Ph.D.</option>
-    <option value="Law, J.D.">Law, J.D.</option>
-    <option value="Mathematics, Ph.D.">Mathematics, Ph.D.</option>
-    <option value="Mechanical Engineering, Ph.D.">Mechanical Engineering, Ph.D.</option>
-    <option value="Nursing, Ph.D.">Nursing, Ph.D.</option>
-    <option value="Philosophy, Ph.D.">Philosophy, Ph.D.</option>
-    <option value="Physics, Ph.D.">Physics, Ph.D.</option>
-    <option value="Political Science, Ph.D.">Political Science, Ph.D.</option>
-    <option value="Psychology, Ph.D.">Psychology, Ph.D.</option>
-    <option value="Public Health, Ph.D.">Public Health, Ph.D.</option>
-    <option value="Social Work, Ph.D.">Social Work, Ph.D.</option>
-    <option value="Sociology, Ph.D.">Sociology, Ph.D.</option>
-    <option value="Software Engineering, Ph.D.">Software Engineering, Ph.D.</option>
-    <option value="Supply Chain Management, Ph.D.">Supply Chain Management, Ph.D.</option>
-    <option value="Theological Studies, Ph.D.">Theological Studies, Ph.D.</option>
+        <option>Agricultural Economics – Ph.D.</option>
+    <option>Anatomy, Physiology, and Pharmacology – Ph.D.</option>
+    <option>Animal and Poultry Science – Ph.D.</option>
+    <option>Applied Computing – Ph.D.</option>
+    <option>Applied Economics – Ph.D.</option>
+    <option>Applied Microbiology – Ph.D.</option>
+    <option>Biochemistry, Microbiology and Immunology – Ph.D.</option>
+    <option>Biological Engineering – Ph.D.</option>
+    <option>Biology – Ph.D.</option>
+    <option>Biological Psychiatry – Ph.D.</option>
+    <option>Biomedical Engineering – Ph.D.</option>
+    <option>Biostatistics – Ph.D.</option>
+    <option>Chemical Engineering – Ph.D.</option>
+    <option>Chemistry – Ph.D.</option>
+    <option>Civil Engineering – Ph.D.</option>
+    <option>Community and Population Health Sciences – Ph.D.</option>
+    <option>Computer Science – Ph.D.</option>
+    <option>Education, Cross-Departmental – Ph.D.</option>
+    <option>Educational Administration – Ph.D.</option>
+    <option>Electrical Engineering – Ph.D.</option>
+    <option>English – Ph.D.</option>
+    <option>Environment and Sustainability – Ph.D.</option>
+    <option>Epidemiology – Ph.D.</option>
+    <option>Food Science – Ph.D.</option>
+    <option>Geography – Ph.D.</option>
+    <option>Geological Sciences – Ph.D.</option>
+    <option>Health Sciences – Ph.D.</option>
+    <option>History – Ph.D.</option>
+    <option>Indigenous Studies – Ph.D.</option>
+    <option>Interdisciplinary Studies – Ph.D.</option>
+    <option>Kinesiology – Ph.D.</option>
+    <option>Large Animal Clinical Sciences – Ph.D.</option>
+    <option>Mathematics – Ph.D.</option>
+    <option>Mechanical Engineering – Ph.D.</option>
+    <option>Nursing – Ph.D.</option>
+    <option>Nutrition – Ph.D.</option>
+    <option>Pharmacy – Ph.D.</option>
+    <option>Physics and Engineering Physics – Ph.D.</option>
+    <option>Plant Sciences – Ph.D.</option>
+    <option>Precision Oral and Systemic Health – Ph.D.</option>
+    <option>Psychology – Ph.D.</option>
+    <option>Public Health – Ph.D.</option>
+    <option>Public Policy – Ph.D.</option>
+    <option>Sociology – Ph.D.</option>
+    <option>Soil Science – Ph.D.</option>
+    <option>Statistics – Ph.D.</option>
+    <option>Toxicology – Ph.D.</option>
+    <option>Vaccinology & Immunotherapeutics – Ph.D.</option>
+    <option>Veterinary Biomedical Sciences – Ph.D.</option>
+    <option>Veterinary Microbiology – Ph.D.</option>
+    <option>Veterinary Pathology – Ph.D.</option>
   </select>
 </div>
 
@@ -950,6 +920,8 @@ function isChecked($field, $value) {
     <button type="button" class="next-btn" data-next="4">Save & Next</button>
   </div>
 </div>
+
+
 
  <!-- Step 4: Emergency Contact & Previous Institution -->
 <div class="form-step" id="step4">
@@ -1079,7 +1051,7 @@ function isChecked($field, $value) {
 
   <!-- Valid Passport -->
   <label>Valid Passport</label>
-  <input type="file" id="valid_passport_file" Required>
+  <input type="file" id="valid_passport_file" required>
   <input type="hidden" name="valid_passport" value="<?= htmlspecialchars($studentData['valid_passport'] ?? '') ?>">
   <div id="valid_passport_view">
     <?php if (!empty($studentData['valid_passport'])): ?>
@@ -1128,7 +1100,7 @@ function isChecked($field, $value) {
 
   <!-- English Certificate -->
   <label>English Certificate</label>
-  <input type="file" id="english_certificate_file">
+  <input type="file" id="english_certificate_file" >
   <input type="hidden" name="english_certificate" value="<?= htmlspecialchars($studentData['english_certificate'] ?? '') ?>">
   <div id="english_certificate_view">
     <?php if (!empty($studentData['english_certificate'])): ?>
@@ -1149,7 +1121,7 @@ function isChecked($field, $value) {
 
   <!-- Payment Proof -->
   <label>Payment Proof</label>
-  <input type="file" id="payment_proof_file">
+  <input type="file" id="payment_proof_file" >
   <input type="hidden" name="payment_proof" value="<?= htmlspecialchars($studentData['payment_proof'] ?? '') ?>">
   <div id="payment_proof_view">
     <?php if (!empty($studentData['payment_proof'])): ?>
@@ -1200,9 +1172,187 @@ function isChecked($field, $value) {
 
   </form>
 </div>
-
+<!-- Live Chat Bubble -->
+<div id="chat-bubble">
+  <button type="button">💬 Chat with us</button>
+  <div id="chat-badge" style="display:none;">1</div>
 </div>
 
+<!-- Live Chat Login Form -->
+<div id="chat-login-form" style="display:none;">
+  <h4>Start Chat</h4>
+  <label>Email</label>
+  <input type="email" id="chat_user_email">
+  <label>WhatsApp Number</label>
+  <input type="tel" id="chat_user_phone">
+  <button type="button" onclick="saveChatUserInfo()">Start Chat</button>
+</div>
+
+<!-- Live Chat Window -->
+<div id="chat-window" style="display:none;">
+  <div class="chat-header">
+    Live Chat
+    <button type="button" onclick="$('#chat-window').hide()">✖</button>
+  </div>
+
+  <!-- Chat Messages -->
+  <div id="chat-messages" class="chat-messages"></div>
+
+  <!-- Typing Indicator (move OUTSIDE of messages!) -->
+  <div id="typing-indicator" class="typing-indicator" style="display:none;">
+    <span></span><span></span><span></span>
+  </div>
+
+  <!-- Chat Input -->
+  <div class="chat-input">
+    <textarea id="chat_message_input" placeholder="Type your message..."></textarea>
+    <button id="chat-send-btn">Send</button>
+  </div>
+</div>
+<!-- Optional: Only include script.js if you need its content -->
+<script src="script.js"></script> 
+
+<!-- Flatpickr Date Picker -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    flatpickr("input[type='date']", {
+      dateFormat: "Y-m-d",
+      altInput: true,
+      altFormat: "F j, Y",
+      maxDate: "today",
+      defaultDate: null, // ✅ No default prefilled date
+      allowInput: true
+    });
+  });
+</script>
+<!-- intl-tel-input JS + Utils -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/intlTelInput.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.min.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const phoneInput = document.querySelector("#phone_number");
+  const areaCodeInput = document.querySelector("#area_code");
+  const nationalInput = document.querySelector("#phone_number_cleaned");
+
+  if (!phoneInput) return;
+
+  const iti = window.intlTelInput(phoneInput, {
+    initialCountry: "auto",
+    separateDialCode: true, // ✅ Show +code outside of input
+    preferredCountries: ["rw", "ke", "ug", "us"],
+    geoIpLookup: function (callback) {
+      fetch("https://ipapi.co/json")
+        .then((res) => res.json())
+        .then((data) => callback(data.country_code || "rw"))
+        .catch(() => callback("rw"));
+    },
+    utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@17.0.19/build/js/utils.js"
+  });
+
+  function updatePhoneFields() {
+    if (iti && typeof intlTelInputUtils !== "undefined" && iti.isValidNumber()) {
+      const fullNumber = iti.getNumber();
+      const countryData = iti.getSelectedCountryData();
+      areaCodeInput.value = `+${countryData.dialCode}`;
+      nationalInput.value = fullNumber.replace(`+${countryData.dialCode}`, '').trim();
+    }
+  }
+
+  phoneInput.addEventListener("blur", updatePhoneFields);
+  phoneInput.addEventListener("change", updatePhoneFields);
+  phoneInput.addEventListener("keyup", updatePhoneFields);
+
+  const form = phoneInput.closest("form");
+  if (form) {
+    form.addEventListener("submit", function () {
+      updatePhoneFields();
+    });
+  }
+
+  setTimeout(updatePhoneFields, 500);
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const emergencyPhoneInput = document.querySelector("#emergency_phone_number_input");
+  const emergencyAreaCode = document.querySelector("#emergency_area_code");
+  const emergencyPhoneClean = document.querySelector("#emergency_phone_number");
+
+  if (!emergencyPhoneInput) return;
+
+  const itiEmergency = window.intlTelInput(emergencyPhoneInput, {
+    initialCountry: "auto",
+    separateDialCode: true,
+    preferredCountries: ["rw", "ke", "ug", "us"],
+    geoIpLookup: function (callback) {
+      fetch("https://ipapi.co/json")
+        .then((res) => res.json())
+        .then((data) => callback(data.country_code || "rw"))
+        .catch(() => callback("rw"));
+    },
+    utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@17.0.19/build/js/utils.js"
+  });
+
+  function updateEmergencyPhoneFields() {
+    if (itiEmergency && typeof intlTelInputUtils !== "undefined" && itiEmergency.isValidNumber()) {
+      const fullNumber = itiEmergency.getNumber();
+      const countryData = itiEmergency.getSelectedCountryData();
+      emergencyAreaCode.value = `+${countryData.dialCode}`;
+      emergencyPhoneClean.value = fullNumber.replace(`+${countryData.dialCode}`, '').trim();
+    }
+  }
+
+  emergencyPhoneInput.addEventListener("blur", updateEmergencyPhoneFields);
+  emergencyPhoneInput.addEventListener("change", updateEmergencyPhoneFields);
+  emergencyPhoneInput.addEventListener("keyup", updateEmergencyPhoneFields);
+
+  const form = emergencyPhoneInput.closest("form");
+  if (form) {
+    form.addEventListener("submit", function () {
+      updateEmergencyPhoneFields();
+    });
+  }
+
+  setTimeout(updateEmergencyPhoneFields, 500);
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const agentSelect = document.getElementById('agent_select');
+  const agentFirstName = document.getElementById('agent_first_name');
+  const agentLastName = document.getElementById('agent_last_name');
+  const agentEmail = document.getElementById('agent_email');
+
+  if (agentSelect) {
+    agentSelect.addEventListener('change', function() {
+      const parts = this.value.split('|');
+      agentFirstName.value = parts[0] || '';
+      agentLastName.value = parts[1] || '';
+      agentEmail.value = parts[2] || '';
+    });
+  }
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  function setupLiveUpload(fieldName) {
+  const fileInput = document.querySelector(`#${fieldName}_file`);
+  const hiddenInput = document.querySelector(`input[name="${fieldName}"]`);
+  const viewLink = document.getElementById(`${fieldName}_view`);
+  if (!fileInput || !hiddenInput) return;
+
+  // 🔧 Create global spinner overlay once
+  if (!document.getElementById("ai-spinner-overlay")) {
+    const spinner = document.createElement("div");
+    spinner.id = "ai-spinner-overlay";
+    spinner.innerHTML = `
+      <div class="ai-spinner-bg">
+        <div class="ai-spinner-box">
+          <div class="ai-loader"></div>
           <div class="ai-progress">
             <div class="ai-bar"></div>
           </div>
@@ -1294,6 +1444,7 @@ function isChecked($field, $value) {
   });
 }
 
+
   // STEP 5 uploads
   setupLiveUpload('degree_transcripts');
   setupLiveUpload('high_school_degree');
@@ -1346,6 +1497,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 
+
 <script>
 $(document).ready(function() {
     $('select[name="bachelor_program"], select[name="masters_program"], select[name="phd_program"]').select2({
@@ -1357,22 +1509,36 @@ $(document).ready(function() {
 </script>
 
 <script>
-$(');
+$('#chat-bubble button').on('click', function() {
+  $('#chat-window').toggle();
+  $('#chat-badge').hide();
+  loadChatMessages();
+});
 
-, function(data) {
-    let oldContent = 
-    
-    if (
+function loadChatMessages() {
+  $.get('load_chat.php', { user_id: '<?= htmlspecialchars($userId) ?>' }, function(data) {
+    let oldContent = $('#chat-messages').html();
+    $('#chat-messages').html(data);
+    if ($('#chat-messages').html() != oldContent && !$('#chat-window').is(':visible')) {
+      $('#chat-badge').show();
+    }
+    $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
   });
 }
 
-, function(response) {
-    
+function sendChatMessage() {
+  var message = $('#chat-input').val().trim();
+  if (!message) return;
+
+  $.post('send_chat.php', { user_id: '<?= htmlspecialchars($userId) ?>', message: message }, function(response) {
+    $('#chat-input').val('');
+    loadChatMessages();
   });
 }
 
 // Auto-refresh every 5 seconds
 setInterval(function() {
+  loadChatMessages();
 }, 5000);
 </script>
 <script>
@@ -1781,24 +1947,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 
-<!-- Modern Floating WhatsApp Button -->
-<div class="xander-whatsapp-container">
-    <a href="https://wa.me/14389009784" 
-       target="_blank" 
-       rel="noopener noreferrer"
-       class="xander-whatsapp-float"
-       aria-label="👉 Chat with us on WhatsApp!"
-       title="👉 Chat with us on WhatsApp!">
-        
-        <!-- WhatsApp SVG Icon -->
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.149-.67.149-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414-.074-.123-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-        </svg>
-        
-        <!-- Tooltip -->
-        <div class="xander-whatsapp-tooltip">
-            👉 Chat with us on WhatsApp!
-        </div>
-    </a>
-</div></body>
+</body>
 </html>
+
+

@@ -1619,242 +1619,7 @@ $chat_session_id = $_SESSION['chat_session_id'];
         75% { transform: translateX(5px); }
     }
     </style>
-
-<style>
-/* ===== MODERN FLOATING WHATSAPP BUTTON ===== */
-.xander-whatsapp-float {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 64px;
-    height: 64px;
-    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 
-        0 8px 32px rgba(37, 211, 102, 0.3),
-        0 4px 16px rgba(0, 0, 0, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    cursor: pointer;
-    text-decoration: none;
-    z-index: 9999;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    animation: xanderFloat 3s ease-in-out infinite, xanderPulse 2s ease-in-out infinite;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-@keyframes xanderFloat {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-8px); }
-}
-
-@keyframes xanderPulse {
-    0%, 100% { 
-        box-shadow: 
-            0 8px 32px rgba(37, 211, 102, 0.3),
-            0 4px 16px rgba(0, 0, 0, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2),
-            0 0 0 0 rgba(37, 211, 102, 0.4);
-    }
-    50% { 
-        box-shadow: 
-            0 12px 40px rgba(37, 211, 102, 0.4),
-            0 6px 20px rgba(0, 0, 0, 0.15),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3),
-            0 0 0 8px rgba(37, 211, 102, 0);
-    }
-}
-
-.xander-whatsapp-float:hover {
-    transform: scale(1.1) translateY(-4px);
-    box-shadow: 
-        0 12px 40px rgba(37, 211, 102, 0.4),
-        0 6px 20px rgba(0, 0, 0, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    background: linear-gradient(135deg, #128C7E 0%, #075E54 100%);
-    animation: none;
-}
-
-.xander-whatsapp-float svg {
-    width: 32px;
-    height: 32px;
-    color: white;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-    transition: transform 0.3s ease;
-}
-
-.xander-whatsapp-float:hover svg {
-    transform: scale(1.1);
-}
-
-
-/* ===== ENHANCED WHATSAPP TOOLTIP - ALWAYS VISIBLE ===== */
-.xander-whatsapp-tooltip {
-    position: absolute;
-    bottom: 80px;
-    right: 0;
-    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-    color: white;
-    padding: 16px 24px;
-    border-radius: 20px;
-    font-size: 15px;
-    font-weight: 600;
-    white-space: nowrap;
-    box-shadow: 
-        0 12px 40px rgba(37, 211, 102, 0.4),
-        0 6px 20px rgba(0, 0, 0, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    pointer-events: none;
-    animation: xanderTooltipFloat 3s ease-in-out infinite;
-    z-index: 10000;
-}
-
-.xander-whatsapp-tooltip::before {
-    content: "👉";
-    margin-right: 8px;
-    font-size: 18px;
-    animation: xanderPointingFinger 1.5s ease-in-out infinite;
-}
-
-@keyframes xanderTooltipFloat {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-5px); }
-}
-
-@keyframes xanderPointingFinger {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-}
-
-.xander-whatsapp-tooltip::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    right: 24px;
-    border: 10px solid transparent;
-    border-top-color: #128C7E;
-    transform: translateX(50%);
-}
-
-/* Enhanced hover effect */
-.xander-whatsapp-float:hover .xander-whatsapp-tooltip {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 
-        0 16px 50px rgba(37, 211, 102, 0.5),
-        0 8px 25px rgba(0, 0, 0, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.4);
-    background: linear-gradient(135deg, #128C7E 0%, #075E54 100%);
-}
-
-/* Mobile Responsive */
-@media (max-width: 768px) {
-    .xander-whatsapp-tooltip {
-        bottom: 70px;
-        right: -80px;
-        font-size: 14px;
-        padding: 12px 18px;
-        max-width: 200px;
-        white-space: normal;
-        text-align: center;
-        line-height: 1.4;
-    }
-    
-    .xander-whatsapp-tooltip::after {
-        right: 90px;
-    }
-}
-
-@media (max-width: 480px) {
-    .xander-whatsapp-tooltip {
-        bottom: 65px;
-        right: -70px;
-        font-size: 13px;
-        padding: 10px 16px;
-        max-width: 180px;
-    }
-    
-    .xander-whatsapp-tooltip::after {
-        right: 80px;
-    }
-}
-
-/* Mobile Responsive */
-@media (max-width: 768px) {
-    .xander-whatsapp-float {
-        width: 56px;
-        height: 56px;
-        bottom: 20px;
-        right: 20px;
-    }
-    
-    .xander-whatsapp-float svg {
-        width: 28px;
-        height: 28px;
-    }
-    
-    .xander-whatsapp-tooltip {
-        bottom: 70px;
-        right: -60px;
-        font-size: 13px;
-        padding: 10px 16px;
-    }
-    
-    .xander-whatsapp-tooltip::after {
-        right: 70px;
-    }
-}
-
-@media (max-width: 480px) {
-    .xander-whatsapp-float {
-        width: 52px;
-        height: 52px;
-        bottom: 16px;
-        right: 16px;
-    }
-    
-    .xander-whatsapp-float svg {
-        width: 26px;
-        height: 26px;
-    }
-    
-    .xander-whatsapp-tooltip {
-        display: none;
-    }
-}
-
-/* Entrance Animation */
-@keyframes xanderEntrance {
-    0% {
-        opacity: 0;
-        transform: scale(0) translateY(100px);
-    }
-    50% {
-        opacity: 0;
-        transform: scale(0.5) translateY(50px);
-    }
-    100% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-.xander-whatsapp-float {
-    animation: xanderEntrance 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards, 
-               xanderFloat 3s ease-in-out 2s infinite, 
-               xanderPulse 2s ease-in-out 2s infinite;
-}
-</style></head>
+</head>
 <body>
     <!-- ================= FOOTER SECTION ================= -->
     <footer class="footer-main">
@@ -2015,10 +1780,83 @@ $chat_session_id = $_SESSION['chat_session_id'];
         </div>
     </footer>
     
-    
+    <?php if ($chat_enabled): ?>
+    <!-- ================= MODERN CHAT SYSTEM ================= -->
+    <div class="footer-chat-system">
+        <!-- Animated Chat Button with Image -->
+        <div class="footer-chat-image-btn" id="footerChatToggle" aria-label="Live Chat">
+            <div class="footer-chat-status-badge"></div>
+            <img src="assets/chat/live-chat.webp" alt="XGS Live Support" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjAgMkg0QzIuOSAyIDIgMi45IDIgNHYxNmMwIDEuMS45IDIgMiAyaDE2YzEuMSAwIDItLjkgMi0yVjRjMC0xLjEtLjktMi0yLTJ6TTggMThINGwtMi0yVjRoMTZ2MTJsLTIgMkg4eiIgZmlsbD0iIzY2N0VFQSIvPjxwYXRoIGQ9Ik0xMiAxMmMtMS4xIDAtMi0uOS0yLTJzLjktMiAyLTIgMiAuOSAyIDItLjkgMi0yIDJ6IiBmaWxsPSIjNzY0QkEyIi8+PC9zdmc+'">
+        </div>
+        
+        <!-- Modern Chat Window -->
+        <div class="footer-chat-window" id="footerChatWindow" hidden>
+            <div class="footer-chat-header">
+                <div class="footer-chat-title">
+                    <div class="footer-chat-title-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div>
+                        <div>Xander AI Assistant</div>
+                        <div class="footer-chat-status">
+                            <div class="footer-chat-status-dot"></div>
+                            <span><?php echo ft('chat_online'); ?></span>
+                        </div>
+                    </div>
+                </div>
+                <button class="footer-chat-close" id="footerCloseChat" aria-label="Close chat">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="footer-chat-body" id="footerChatBody">
+                <!-- Welcome Message -->
+                <div class="footer-chat-message footer-message-bot">
+                    <?php echo ft('welcome_message'); ?>
+                </div>
+                
+                <!-- Quick Questions -->
+                <div class="footer-quick-replies" id="quickReplies">
+                    <div class="footer-quick-reply" data-question="<?php echo ft('quick_question1'); ?>">
+                        <?php echo ft('quick_question1'); ?>
+                    </div>
+                    <div class="footer-quick-reply" data-question="<?php echo ft('quick_question2'); ?>">
+                        <?php echo ft('quick_question2'); ?>
+                    </div>
+                    <div class="footer-quick-reply" data-question="<?php echo ft('quick_question3'); ?>">
+                        <?php echo ft('quick_question3'); ?>
+                    </div>
+                    <div class="footer-quick-reply" data-question="<?php echo ft('quick_question4'); ?>">
+                        <?php echo ft('quick_question4'); ?>
+                    </div>
+                </div>
+                
+                <!-- Typing Indicator -->
+                <div class="footer-typing-indicator" id="typingIndicator">
+                    <div class="footer-typing-dots">
+                        <div class="footer-typing-dot"></div>
+                        <div class="footer-typing-dot"></div>
+                        <div class="footer-typing-dot"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat Input -->
+            <div class="footer-chat-input">
+                <input type="text" 
+                       id="footerChatInput" 
+                       placeholder="<?php echo ft('chat_placeholder'); ?>" 
+                       aria-label="<?php echo ft('type_message'); ?>"
+                       maxlength="500"
+                       autocomplete="off">
+                <button class="footer-chat-send" id="footerSendChat" aria-label="<?php echo ft('send'); ?>">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 
-
-<!-- Leaflet JS -->
+   <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
@@ -2072,35 +1910,221 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /* =========================
+       MODERN CHAT INITIALIZATION
+       Using your chat-api.php backend
+    ========================= */
+    function initChat() {
+        const chatToggle = document.getElementById('footerChatToggle');
+        const chatWindow = document.getElementById('footerChatWindow');
+        const closeChat  = document.getElementById('footerCloseChat');
+        const chatInput  = document.getElementById('footerChatInput');
+        const sendChat   = document.getElementById('footerSendChat');
+        const chatBody   = document.getElementById('footerChatBody');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const quickReplies = document.getElementById('quickReplies');
+
+        // Session ID for chat (from PHP)
+        const sessionId = '<?php echo $chat_session_id; ?>';
+        let isChatOpen = false;
+
+        // OPEN CHAT
+        chatToggle.addEventListener('click', function () {
+            if (!isChatOpen) {
+                chatWindow.style.display = 'flex';
+                chatWindow.hidden = false;
+                isChatOpen = true;
+                
+                // Add entrance animation
+                chatWindow.style.animation = 'none';
+                setTimeout(() => {
+                    chatWindow.style.animation = 'slideUpWindow 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+                }, 10);
+                
+                chatInput.focus();
+                chatBody.scrollTop = chatBody.scrollHeight;
+                
+                // Hide quick replies after first interaction
+                if (quickReplies && localStorage.getItem('xgsHasChatted') === 'true') {
+                    quickReplies.style.display = 'none';
+                }
+            } else {
+                closeChatWindow();
+            }
+        });
+
+        // CLOSE CHAT
+        closeChat.addEventListener('click', closeChatWindow);
+
+        function closeChatWindow() {
+            chatWindow.style.display = 'none';
+            isChatOpen = false;
+        }
+
+        // TYPING INDICATOR
+        function showTyping() {
+            typingIndicator.style.display = 'block';
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        function hideTyping() {
+            typingIndicator.style.display = 'none';
+        }
+
+        // QUICK REPLIES
+        if (quickReplies) {
+            quickReplies.addEventListener('click', function (e) {
+                if (e.target.classList.contains('footer-quick-reply')) {
+                    const question = e.target.getAttribute('data-question');
+                    if (question) {
+                        chatInput.value = question;
+                        sendMessage();
+                        
+                        // Hide quick replies after use
+                        quickReplies.style.display = 'none';
+                        localStorage.setItem('xgsHasChatted', 'true');
+                    }
+                }
+            });
+        }
+
+        // SEND MESSAGE TO AI BACKEND (chat-api.php)
+        async function sendMessageToAI(message) {
+            try {
+                showTyping();
+                
+                const response = await fetch('chat-api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        session: sessionId,
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+                hideTyping();
+
+                if (data.reply) {
+                    return data.reply;
+                } else {
+                    throw new Error('No reply from AI');
+                }
+            } catch (error) {
+                console.error('Chat error:', error);
+                hideTyping();
+                return "<?php echo ft('chat_error'); ?>";
+            }
+        }
+
+        // ADD MESSAGE TO CHAT
+        function addMessage(text, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `footer-chat-message ${isUser ? 'footer-message-user' : 'footer-message-bot'}`;
+            messageDiv.innerHTML = text;
+            
+            chatBody.appendChild(messageDiv);
+            
+            // Add animation
+            messageDiv.style.animation = 'messageSlide 0.3s ease-out';
+            
+            chatBody.scrollTop = chatBody.scrollHeight;
+            return messageDiv;
+        }
+
+        // SEND MESSAGE FUNCTION
+        async function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+
+            // Add user message
+            addMessage(text, true);
+            
+            // Clear input
+            chatInput.value = '';
+            
+            // Save to localStorage that user has chatted
+            localStorage.setItem('xgsHasChatted', 'true');
+            
+            // Hide quick replies on first message
+            if (quickReplies && !localStorage.getItem('xgsQuickRepliesHidden')) {
+                quickReplies.style.animation = 'fadeOut 0.3s ease-out';
+                setTimeout(() => {
+                    quickReplies.style.display = 'none';
+                    localStorage.setItem('xgsQuickRepliesHidden', 'true');
+                }, 300);
+            }
+
+            try {
+                // Get AI response from your backend
+                const aiReply = await sendMessageToAI(text);
+                
+                // Add AI response with slight delay for natural feel
+                setTimeout(() => {
+                    addMessage(aiReply, false);
+                }, 500);
+                
+            } catch (error) {
+                console.error('Chat error:', error);
+                addMessage("<?php echo ft('chat_error'); ?>", false);
+            }
+        }
+
+        // EVENT LISTENERS
+        sendChat.addEventListener('click', sendMessage);
+
+        chatInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Input auto-resize for multiline
+        chatInput.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+        });
+
+        // Click outside to close
+        document.addEventListener('click', function (e) {
+            if (isChatOpen && 
+                !chatWindow.contains(e.target) && 
+                !chatToggle.contains(e.target)) {
+                closeChatWindow();
+            }
+        });
+
+        // Escape key to close
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && isChatOpen) {
+                closeChatWindow();
+            }
+        });
+
+        // Initialize chat state
+        if (localStorage.getItem('xgsHasChatted') === 'true') {
+            if (quickReplies) {
+                quickReplies.style.display = 'none';
+            }
+        }
+    }
+
+    /* =========================
        INIT EVERYTHING
     ========================= */
     initMap();
+    initChat();
 
     // Reinitialize safely (language change, ajax reload, etc.)
     window.reinitializeFooter = function () {
         initMap();
+        initChat();
     };
 });
 </script>
 
-<!-- Modern Floating WhatsApp Button -->
-<div class="xander-whatsapp-container">
-    <a href="https://wa.me/14389009784" 
-       target="_blank" 
-       rel="noopener noreferrer"
-       class="xander-whatsapp-float"
-       aria-label="👉 Chat with us on WhatsApp!"
-       title="👉 Chat with us on WhatsApp!">
-        
-        <!-- WhatsApp SVG Icon -->
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.149-.67.149-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414-.074-.123-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-        </svg>
-        
-        <!-- Tooltip -->
-        <div class="xander-whatsapp-tooltip">
-            👉 Chat with us on WhatsApp!
-        </div>
-    </a>
-</div></body>
+    <?php endif; ?>
+</body>
 </html>

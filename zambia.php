@@ -1,4 +1,239 @@
-<?php
+
+<style>
+/* ===== MODERN FLOATING WHATSAPP BUTTON ===== */
+.xander-whatsapp-float {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 
+        0 8px 32px rgba(37, 211, 102, 0.3),
+        0 4px 16px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    text-decoration: none;
+    z-index: 9999;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: xanderFloat 3s ease-in-out infinite, xanderPulse 2s ease-in-out infinite;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes xanderFloat {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+}
+
+@keyframes xanderPulse {
+    0%, 100% { 
+        box-shadow: 
+            0 8px 32px rgba(37, 211, 102, 0.3),
+            0 4px 16px rgba(0, 0, 0, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2),
+            0 0 0 0 rgba(37, 211, 102, 0.4);
+    }
+    50% { 
+        box-shadow: 
+            0 12px 40px rgba(37, 211, 102, 0.4),
+            0 6px 20px rgba(0, 0, 0, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3),
+            0 0 0 8px rgba(37, 211, 102, 0);
+    }
+}
+
+.xander-whatsapp-float:hover {
+    transform: scale(1.1) translateY(-4px);
+    box-shadow: 
+        0 12px 40px rgba(37, 211, 102, 0.4),
+        0 6px 20px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    background: linear-gradient(135deg, #128C7E 0%, #075E54 100%);
+    animation: none;
+}
+
+.xander-whatsapp-float svg {
+    width: 32px;
+    height: 32px;
+    color: white;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    transition: transform 0.3s ease;
+}
+
+.xander-whatsapp-float:hover svg {
+    transform: scale(1.1);
+}
+
+
+/* ===== ENHANCED WHATSAPP TOOLTIP - ALWAYS VISIBLE ===== */
+.xander-whatsapp-tooltip {
+    position: absolute;
+    bottom: 80px;
+    right: 0;
+    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 20px;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: 
+        0 12px 40px rgba(37, 211, 102, 0.4),
+        0 6px 20px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    pointer-events: none;
+    animation: xanderTooltipFloat 3s ease-in-out infinite;
+    z-index: 10000;
+}
+
+.xander-whatsapp-tooltip::before {
+    content: "👉";
+    margin-right: 8px;
+    font-size: 18px;
+    animation: xanderPointingFinger 1.5s ease-in-out infinite;
+}
+
+@keyframes xanderTooltipFloat {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-5px); }
+}
+
+@keyframes xanderPointingFinger {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+.xander-whatsapp-tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    right: 24px;
+    border: 10px solid transparent;
+    border-top-color: #128C7E;
+    transform: translateX(50%);
+}
+
+/* Enhanced hover effect */
+.xander-whatsapp-float:hover .xander-whatsapp-tooltip {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 
+        0 16px 50px rgba(37, 211, 102, 0.5),
+        0 8px 25px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    background: linear-gradient(135deg, #128C7E 0%, #075E54 100%);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .xander-whatsapp-tooltip {
+        bottom: 70px;
+        right: -80px;
+        font-size: 14px;
+        padding: 12px 18px;
+        max-width: 200px;
+        white-space: normal;
+        text-align: center;
+        line-height: 1.4;
+    }
+    
+    .xander-whatsapp-tooltip::after {
+        right: 90px;
+    }
+}
+
+@media (max-width: 480px) {
+    .xander-whatsapp-tooltip {
+        bottom: 65px;
+        right: -70px;
+        font-size: 13px;
+        padding: 10px 16px;
+        max-width: 180px;
+    }
+    
+    .xander-whatsapp-tooltip::after {
+        right: 80px;
+    }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .xander-whatsapp-float {
+        width: 56px;
+        height: 56px;
+        bottom: 20px;
+        right: 20px;
+    }
+    
+    .xander-whatsapp-float svg {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .xander-whatsapp-tooltip {
+        bottom: 70px;
+        right: -60px;
+        font-size: 13px;
+        padding: 10px 16px;
+    }
+    
+    .xander-whatsapp-tooltip::after {
+        right: 70px;
+    }
+}
+
+@media (max-width: 480px) {
+    .xander-whatsapp-float {
+        width: 52px;
+        height: 52px;
+        bottom: 16px;
+        right: 16px;
+    }
+    
+    .xander-whatsapp-float svg {
+        width: 26px;
+        height: 26px;
+    }
+    
+    .xander-whatsapp-tooltip {
+        display: none;
+    }
+}
+
+/* Entrance Animation */
+@keyframes xanderEntrance {
+    0% {
+        opacity: 0;
+        transform: scale(0) translateY(100px);
+    }
+    50% {
+        opacity: 0;
+        transform: scale(0.5) translateY(50px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.xander-whatsapp-float {
+    animation: xanderEntrance 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards, 
+               xanderFloat 3s ease-in-out 2s infinite, 
+               xanderPulse 2s ease-in-out 2s infinite;
+}
+</style><?php
 session_start();
 require_once 'db.php';
 
@@ -122,7 +357,6 @@ function isChecked($field, $value) {
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@17.0.19/build/css/intlTelInput.css" />
-
 
   <style>
   body {
@@ -321,798 +555,6 @@ function isChecked($field, $value) {
   font-weight: 500;
   color: #333;
 }
-/* Chat Bubble */
-#chat-bubble {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 9999;
-}
-
-#chat-bubble button {
-  padding: 12px 16px;
-  background-color: #0c3c78;
-  color: #fff;
-  border: none;
-  border-radius: 50px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-  cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.3s ease;
-  position: relative;
-}
-
-#chat-bubble button:hover {
-  background-color: #092a5c;
-}
-
-#chat-badge {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  background: red;
-  color: #fff;
-  font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 50%;
-}
-
-/* Chat Window */
-#chat-window {
-  display: none;
-  position: fixed;
-  bottom: 80px;
-  right: 20px;
-  width: 320px;
-  max-height: 450px;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 6px 15px rgba(0,0,0,0.3);
-  z-index: 9999;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-#chat-window .chat-header {
-  background-color:rgb(12, 120, 41);
-  color: #fff;
-  padding: 12px 15px;
-  font-weight: bold;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-#chat-window .chat-messages {
-  flex: 1;
-  padding: 10px;
-  overflow-y: auto;
-  font-size: 14px;
-}
-
-#chat-window .chat-input {
-  display: flex;
-  border-top: 1px solid #ddd;
-}
-
-#chat-window .chat-input textarea {
-  flex: 1;
-  padding: 10px;
-  border: none;
-  resize: none;
-  font-size: 14px;
-}
-
-#chat-window .chat-input button {
-  padding: 10px 15px;
-  border: none;
-  background: #0c3c78;
-  color: #fff;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-#chat-window .chat-input button:hover {
-  background: #092a5c;
-}
-
-</style>
-
-</head>
-
-<body>
-<div class="form-container">
-  <h2>Student Application  - University of Zambia </h2>
-<form id="applicationForm" method="POST" enctype="multipart/form-data" data-save="save_partial.php">
-
-    <input type="hidden" name="user_id" value="<?= htmlspecialchars($userId) ?>">
-<input type="hidden" name="university_id" value="<?= htmlspecialchars($universityId) ?>">
-<input type="hidden" name="region_id" value="<?= htmlspecialchars($regionId) ?>">
-
-    <!-- Step 1 -->
-    <div class="form-step active" id="step1">
-      <h3>Step 1: Personal Information</h3>
-      <label>Student Name  </label>
-      <div class="inline-inputs">
-        <input type="text" name="first_name" placeholder="First Name" required value="<?php echo htmlspecialchars($studentData['first_name'] ?? ''); ?>">
-        <input type="text" name="last_name" placeholder="Last Name" required value="<?php echo htmlspecialchars($studentData['last_name'] ?? ''); ?>">
-      </div>
-      <label>Student Email  </label>
-      <input type="email" name="email" required value="<?php echo htmlspecialchars($studentData['email'] ?? ''); ?>">
-     <!-- Phone Number -->
-<?php
-// Combine area code + phone number for display
-$valuePhone = (!empty($studentData['area_code']) && !empty($studentData['phone_number']))
-    ? $studentData['area_code'] . $studentData['phone_number']
-    : ($studentData['phone_number'] ?? '');
-?>
-
-<div class="form-group" style="margin-bottom: 20px;">
-  <label for="phone_number" class="form-label">Phone Number</label>
-  <input
-    type="tel"
-    id="phone_number"
-    name="phone_number_display"
-    class="form-control phone-input"
-    autocomplete="tel"
-    required
-    value="<?= htmlspecialchars($valuePhone) ?>"
-  />
-  <input type="hidden" id="area_code" name="area_code" value="<?= htmlspecialchars($studentData['area_code'] ?? '') ?>" required />
-  <input type="hidden" id="phone_number_cleaned" name="phone_number" value="<?= htmlspecialchars($studentData['phone_number'] ?? '') ?>" required />
-</div>
-
-
-
-
-      <label>Gender  </label>
-      <div class="radio-group">
-        <label><input type="radio" name="gender" value="Male" <?php echo checked('gender', 'Male'); ?>> Male</label>
-        <label><input type="radio" name="gender" value="Female" <?php echo checked('gender', 'Female'); ?>> Female</label>
-      </div>
-      <label>Country of Birth  </label>
-<select name="country_of_birth" class="select2-country" required>
-  <option value="">Select Country</option>
-  <?php
-  $countryQuery = $conn->query("SELECT name FROM countries ORDER BY name ASC");
-  while ($row = $countryQuery->fetch_assoc()) {
-      $name = htmlspecialchars($row['name']);
-      $selected = ($studentData['country_of_birth'] ?? '') === $name ? 'selected' : '';
-      echo "<option value=\"$name\" $selected>$name</option>";
-  }
-  ?>
-</select>
-
-<select name="nationality" class="select2-country" required>
-  <option value="">Select Country</option>
-  <?php
-  $countryQuery = $conn->query("SELECT name FROM countries ORDER BY name ASC");
-  while ($row = $countryQuery->fetch_assoc()) {
-      $name = htmlspecialchars($row['name']);
-      $selected = ($studentData['nationality'] ?? '') === $name ? 'selected' : '';
-      echo "<option value=\"$name\" $selected>$name</option>";
-  }
-  ?>
-</select>
-
-</select>
-      <label>Second Nationality</label>
-      <input type="text" name="second_nationality" value="<?php echo htmlspecialchars($studentData['second_nationality'] ?? ''); ?>">
-      <label>City of Birth  </label>
-      <input type="text" name="city_of_birth" required value="<?php echo htmlspecialchars($studentData['city_of_birth'] ?? ''); ?>">
-      <label>Date of Birth  </label>
-      <input type="date" name="dob" required value="<?php echo htmlspecialchars($studentData['dob'] ?? ''); ?>">
-      <label>Address  </label>
-      <input type="text" name="address_line1" required placeholder="Street Address" value="<?php echo htmlspecialchars($studentData['address_line1'] ?? ''); ?>">
-      <input type="text" name="address_line2" placeholder="Street Address Line 2" value="<?php echo htmlspecialchars($studentData['address_line2'] ?? ''); ?>">
-      <div class="inline-inputs">
-        <input type="text" name="city" placeholder="City" required value="<?php echo htmlspecialchars($studentData['city'] ?? ''); ?>">
-        <input type="text" name="state_province" placeholder="State/Province" required value="<?php echo htmlspecialchars($studentData['state_province'] ?? ''); ?>">
-      </div>
-      <input type="text" name="postal_code" placeholder="Postal/Zip Code" required value="<?php echo htmlspecialchars($studentData['postal_code'] ?? ''); ?>">
-      <label>Application Date  </label>
-      <input type="date" name="application_date" required value="<?php echo htmlspecialchars($studentData['application_date'] ?? ''); ?>">
-      <div class="form-buttons">
-        <button type="button" class="next-btn" data-next="2">Save & Next</button>
-      </div>
-    </div>
-
-    <!-- Step 2 -->
-    <div class="form-step" id="step2">
-  <h3>Step 2: Program and Destination</h3>
-
-  <div class="inline-inputs">
-    <div>
-  <label for="bachelor_program">Bachelor Program</label>
-  <select name="bachelor_program" id="bachelor_program">
-    <option value="">Please Select</option>
-    <option value="Bachelor of Agricultural Sciences (Animal Science)" <?php echo selected('bachelor_program', 'Bachelor of Agricultural Sciences (Animal Science)'); ?>>Bachelor of Agricultural Sciences (Animal Science)</option>
-    <option value="Bachelor of Agricultural Sciences (Land Management)" <?php echo selected('bachelor_program', 'Bachelor of Agricultural Sciences (Land Management)'); ?>>Bachelor of Agricultural Sciences (Land Management)</option>
-    <option value="Bachelor of Agricultural Sciences (Plant Science)" <?php echo selected('bachelor_program', 'Bachelor of Agricultural Sciences (Plant Science)'); ?>>Bachelor of Agricultural Sciences (Plant Science)</option>
-    <option value="Bachelor of Food Science and Technology" <?php echo selected('bachelor_program', 'Bachelor of Food Science and Technology'); ?>>Bachelor of Food Science and Technology</option>
-    <option value="Bachelor of Science in Agricultural Economics" <?php echo selected('bachelor_program', 'Bachelor of Science in Agricultural Economics'); ?>>Bachelor of Science in Agricultural Economics</option>
-    <option value="Bachelor of Science in Agricultural Extension" <?php echo selected('bachelor_program', 'Bachelor of Science in Agricultural Extension'); ?>>Bachelor of Science in Agricultural Extension</option>
-    <option value="Bachelor of Science in Agronomy" <?php echo selected('bachelor_program', 'Bachelor of Science in Agronomy'); ?>>Bachelor of Science in Agronomy</option>
-    <option value="Bachelor of Science in Human Nutrition" <?php echo selected('bachelor_program', 'Bachelor of Science in Human Nutrition'); ?>>Bachelor of Science in Human Nutrition</option>
-    <option value="Bachelor of Adult Education" <?php echo selected('bachelor_program', 'Bachelor of Adult Education'); ?>>Bachelor of Adult Education</option>
-    <option value="Bachelor of Agricultural Science with Education" <?php echo selected('bachelor_program', 'Bachelor of Agricultural Science with Education'); ?>>Bachelor of Agricultural Science with Education</option>
-    <option value="Bachelor of Arts in Records and Archives Management" <?php echo selected('bachelor_program', 'Bachelor of Arts in Records and Archives Management'); ?>>Bachelor of Arts in Records and Archives Management</option>
-    <option value="Bachelor of Arts with Education" <?php echo selected('bachelor_program', 'Bachelor of Arts with Education'); ?>>Bachelor of Arts with Education</option>
-    <option value="Bachelor of Arts with Library and information Studies" <?php echo selected('bachelor_program', 'Bachelor of Arts with Library and information Studies'); ?>>Bachelor of Arts with Library and information Studies</option>
-    <option value="Bachelor of Community Education" <?php echo selected('bachelor_program', 'Bachelor of Community Education'); ?>>Bachelor of Community Education</option>
-    <option value="Bachelor of Cultural Studies" <?php echo selected('bachelor_program', 'Bachelor of Cultural Studies'); ?>>Bachelor of Cultural Studies</option>
-    <option value="Bachelor of Education (Early Childhood Education)" <?php echo selected('bachelor_program', 'Bachelor of Education (Early Childhood Education)'); ?>>Bachelor of Education (Early Childhood Education)</option>
-    <option value="Bachelor of Education (Educational Administration and Management)" <?php echo selected('bachelor_program', 'Bachelor of Education (Educational Administration and Management)'); ?>>Bachelor of Education (Educational Administration and Management)</option>
-    <option value="Bachelor of Education (Educational Psychology)" <?php echo selected('bachelor_program', 'Bachelor of Education (Educational Psychology)'); ?>>Bachelor of Education (Educational Psychology)</option>
-    <option value="Bachelor of Education (Environmental Education and Management)" <?php echo selected('bachelor_program', 'Bachelor of Education (Environmental Education and Management)'); ?>>Bachelor of Education (Environmental Education and Management)</option>
-    <option value="Bachelor of Education (Guidance and Counselling)" <?php echo selected('bachelor_program', 'Bachelor of Education (Guidance and Counselling)'); ?>>Bachelor of Education (Guidance and Counselling)</option>
-    <option value="Bachelor of Education (Literacy and Language)" <?php echo selected('bachelor_program', 'Bachelor of Education (Literacy and Language)'); ?>>Bachelor of Education (Literacy and Language)</option>
-    <option value="Bachelor of Education-Secondary (Mathematics and Science)" <?php echo selected('bachelor_program', 'Bachelor of Education-Secondary (Mathematics and Science)'); ?>>Bachelor of Education-Secondary (Mathematics and Science)</option>
-    <option value="Bachelor of Education (Primary Education)" <?php echo selected('bachelor_program', 'Bachelor of Education (Primary Education)'); ?>>Bachelor of Education (Primary Education)</option>
-    <option value="Bachelor of Education (Sociology of Education)" <?php echo selected('bachelor_program', 'Bachelor of Education (Sociology of Education)'); ?>>Bachelor of Education (Sociology of Education)</option>
-    <option value="Bachelor of Education (Special Education)" <?php echo selected('bachelor_program', 'Bachelor of Education (Special Education)'); ?>>Bachelor of Education (Special Education)</option>
-    <option value="Bachelor of Education in Chinese Language Teaching" <?php echo selected('bachelor_program', 'Bachelor of Education in Chinese Language Teaching'); ?>>Bachelor of Education in Chinese Language Teaching</option>
-    <option value="Bachelor of Education in Commerce and Entrepreneurship" <?php echo selected('bachelor_program', 'Bachelor of Education in Commerce and Entrepreneurship'); ?>>Bachelor of Education in Commerce and Entrepreneurship</option>
-    <option value="Bachelor of Information and Communication Technologies in Education" <?php echo selected('bachelor_program', 'Bachelor of Information and Communication Technologies in Education'); ?>>Bachelor of Information and Communication Technologies in Education</option>
-    <option value="Bachelor of Science with Education" <?php echo selected('bachelor_program', 'Bachelor of Science with Education'); ?>>Bachelor of Science with Education</option>
-    <option value="Bachelor of Youth Development and Leadership" <?php echo selected('bachelor_program', 'Bachelor of Youth Development and Leadership'); ?>>Bachelor of Youth Development and Leadership</option>
-    <option value="Diploma in Information and Communication Technologies (ICTS) (Fast Track)" <?php echo selected('bachelor_program', 'Diploma in Information and Communication Technologies (ICTS) (Fast Track)'); ?>>Diploma in Information and Communication Technologies (ICTS) (Fast Track)</option>
-    <!-- ... rest continues ... -->
-         <option value="Bachelor of Engineering (Agricultural Engineering)" <?php echo selected('bachelor_program', 'Bachelor of Engineering (Agricultural Engineering)'); ?>>Bachelor of Engineering (Agricultural Engineering)</option>
-    <option value="Bachelor of Engineering (Civil and Environmental Engineering)" <?php echo selected('bachelor_program', 'Bachelor of Engineering (Civil and Environmental Engineering)'); ?>>Bachelor of Engineering (Civil and Environmental Engineering)</option>
-    <option value="Bachelor of Engineering (Electrical and Electronic Engineering)" <?php echo selected('bachelor_program', 'Bachelor of Engineering (Electrical and Electronic Engineering)'); ?>>Bachelor of Engineering (Electrical and Electronic Engineering)</option>
-    <option value="Bachelor of Engineering (Geomatic Engineering)" <?php echo selected('bachelor_program', 'Bachelor of Engineering (Geomatic Engineering)'); ?>>Bachelor of Engineering (Geomatic Engineering)</option>
-    <option value="Bachelor of Engineering (Mechanical Engineering)" <?php echo selected('bachelor_program', 'Bachelor of Engineering (Mechanical Engineering)'); ?>>Bachelor of Engineering (Mechanical Engineering)</option>
-    <option value="Bachelor of Science in Accounting and Finance (Fulltime and Evening)" <?php echo selected('bachelor_program', 'Bachelor of Science in Accounting and Finance (Fulltime and Evening)'); ?>>Bachelor of Science in Accounting and Finance (Fulltime and Evening)</option>
-    ...
-    <option value="Bachelor of Veterinary Medicine" <?php echo selected('bachelor_program', 'Bachelor of Veterinary Medicine'); ?>>Bachelor of Veterinary Medicine</option>
-
-  </select>
-</div>
-
-<div>
-  <label>Masters Program</label>
-  <select name="masters_program">
-    <option value="">Please Select</option>
-    <?php
-    $masters_programs = [
-      "Master of Applied Economics",
-      "Master of Applied Physics and Nanotechnology",
-      "Master of Applied Space Weather Research",
-      "Master of Architecture (M.Arch) - 2 Year",
-      "Master of Architecture (M.Arch) - 3 Year",
-      "Master of Architecture / Net Zero Design (MArch / MSNZD) - 2 Year",
-      "Master of Architecture / Net Zero Design (MArch / MSNZD) - 3 Year",
-      "Master of Arts in Biblical Studies",
-      "Master of Arts in Church History",
-      "Master of Arts in English / Master of Library & Information Science",
-      "Master of Arts in Evangelization & Culture",
-      "Master of Arts in History",
-      "Master of Arts in History / Juris Doctor in Law",
-      "Master of Arts in History / Juris Doctor in Law (Evening)",
-      "Master of Arts in Human Rights",
-      "Master of Arts in Interdisciplinary Studies",
-      "Master of Arts in Liturgical Studies and Sacramental Theology",
-      "Master of Arts in Moral Theology & Ethics",
-      "Master of Arts in Philosophy",
-      "Master of Arts in Philosophy / Juris Doctor in Law",
-      "Master of Arts in Politics / Juris Doctor in Law",
-      "Master of Arts in Politics / Juris Doctor in Law (Evening)",
-      "Master of Arts in Psychology",
-      "Master of Arts in Psychology / Juris Doctor in Law",
-      "Master of Arts in Psychology / Juris Doctor in Law (Evening)",
-      "Master of Mechanical Engineering",
-      "Master of Medieval & Byzantine Studies",
-      "Master of Music",
-      "Master of Music in Sacred Music",
-      "Master of Physics",
-      "Master of Political Theory",
-      "Master of Politics: American Government",
-      "Master of Public Policy",
-      "Master of Science in Artificial Intelligence",
-      "Master of Science in Biology and Library and Information Science",
-      "Master of Science in Business",
-      "Master of Science in Data Analytics",
-      "Master of Science in Ecclesial Administration and Management",
-      "Master of Science in Library & Information Science - Online",
-      "Master of Science in Management",
-      "Master of Science in Management (Online)",
-      "Master of Semitic and Egyptian Languages",
-      "Master of Social Work",
-      "Master of Social Work / Juris Doctor in Law",
-      "Master of Social Work / Juris Doctor in Law (Evening)",
-      "Master of Sociology",
-      "Master of World Politics",
-      "Philosophy - PhL - School of Philosophy",
-      "Master of Science in Computer Science",
-      "Master of Science in Biomedical Engineering",
-      "Master of Science in Civil Engineering",
-      "Master of Science in Mechanical Engineering",
-      "Master of Science in Engineering Management",
-      "Master of Science in Environmental Engineering",
-      "Master of Science in Electrical Engineering",
-      "Master of Science in Material Science & Engineering",
-      "Master of Science in Information System",
-      "Master of Science in Physics",
-      "Master of Science in Biology",
-      "Master of Science in Mathematics",
-      "Master of Science in Psychology",
-      "Master of Science in Public Policy",
-      "Master of Science in Health Administration",
-      "Master of Science in Business"
-    ];
-
-    foreach ($masters_programs as $prog) {
-      $selected = selected('masters_program', $prog);
-      echo "<option value=\"$prog\" $selected>$prog</option>";
-    }
-    ?>
-  </select>
-</div>
-
-<div>
-  <label>PhD Program</label>
-  <select name="phd_program">
-    <option value="">Please Select</option>
-    <?php
-    $phd_programs = [
-      "Doctor of Canon Law",
-      "Doctor of Ministry",
-      "Doctor of Musical Arts",
-      "Doctor of Philosophy",
-      "Doctor of Philosophy in Applied Physics & Nanotechnology",
-      "Doctor of Philosophy in Biblical Studies",
-      "Doctor of Philosophy in Biology",
-      "Doctor of Philosophy in Biomedical Engineering",
-      "Doctor of Philosophy in Catechetics",
-      "Doctor of Philosophy in Church History",
-      "Doctor of Philosophy in Civil Engineering",
-      "Doctor of Philosophy in Computer Science",
-      "Doctor of Philosophy in Early Christian Studies",
-      "Doctor of Philosophy in Electrical Engineering",
-      "Doctor of Philosophy in English Language and Literature",
-      "Doctor of Philosophy in Environmental Engineering",
-      "Doctor of Philosophy in Greek & Latin",
-      "Doctor of Philosophy in Historical Theology",
-      "Doctor of Philosophy in History",
-      "Doctor of Philosophy in Liturgical Studies",
-      "Doctor of Philosophy in Materials Science & Engineering",
-      "Doctor of Philosophy in Mechanical Engineering",
-      "Doctor of Philosophy in Moral Theology & Ethics",
-      "Doctor of Philosophy in Nursing",
-      "Doctor of Philosophy in Physics",
-      "Doctor of Philosophy in Politics",
-      "Doctor of Philosophy in Psychology",
-      "Doctor of Philosophy in Sacramental Theology",
-      "Doctor of Philosophy in Semitic and Egyptian Languages and Literatures",
-      "Doctor of Philosophy in Social Work",
-      "Doctor of Philosophy in Systematic Theology",
-      "Doctor of Sacred Theology in Biblical Studies",
-      "Doctor of Sacred Theology in Church History",
-      "Doctor of Sacred Theology in Historical Theology",
-      "Doctor of Sacred Theology in Liturgical Studies",
-      "Doctor of Sacred Theology in Moral Theology & Ethics",
-      "Doctor of Sacred Theology in Systematic Theology"
-    ];
-
-    foreach ($phd_programs as $prog) {
-      $selected = selected('phd_program', $prog);
-      echo "<option value=\"$prog\" $selected>$prog</option>";
-    }
-    ?>
-  </select>
-</div>
-  </div>
-      <label>Select Destination  </label>
-      <div class="checkbox-group">
-        <label><input type="checkbox" name="destination[]" value="USA" <?php echo isChecked('destination', 'USA'); ?>> USA</label>
-        <label><input type="checkbox" name="destination[]" value="Canada" <?php echo isChecked('destination', 'Canada'); ?>> Canada</label>
-        <label><input type="checkbox" name="destination[]" value="Europe" <?php echo isChecked('destination', 'Europe'); ?>> Europe</label>
-        <label><input type="checkbox" name="destination[]" value="Asia" <?php echo isChecked('destination', 'Europe'); ?>> Asia</label>
-      </div>
-      <label>If other, please specify:</label>
-      <textarea name="other_destination"><?php echo htmlspecialchars($studentData['other_destination'] ?? ''); ?></textarea>
-      <div class="form-buttons">
-        <button type="button" class="prev-btn" data-prev="1">Previous</button>
-        <button type="button" class="next-btn" data-next="3">Save & Next</button>
-      </div>
-    </div>
-<!-- Step 3 -->
-<div class="form-step" id="step3">
-  <h3>Step 3: Financial & Background</h3>
-
-  <label>Select Destination  </label>
-  <div class="checkbox-group">
-    <label><input type="checkbox" name="destination_loan[]" value="USA WHERE LOAN COVER TUITION FEES AND LIVING ALLOWANCE" <?php echo isChecked('destination_loan', 'USA WHERE LOAN COVER TUITION FEES AND LIVING ALLOWANCE'); ?>> USA WHERE LOAN COVER TUITION FEES AND LIVING ALLOWANCE</label>
-    <label><input type="checkbox" name="destination_loan[]" value="CANADA WHERE LOAN COVER TUITION FEES" <?php echo isChecked('destination_loan', 'CANADA WHERE LOAN COVER TUITION FEES'); ?>> CANADA WHERE LOAN COVER TUITION FEES</label>
-    <label><input type="checkbox" name="destination_loan[]" value="EUROPE WHERE LOAN COVER TUITION FEES" <?php echo isChecked('destination_loan', 'EUROPE WHERE LOAN COVER TUITION FEES'); ?>> EUROPE WHERE LOAN COVER TUITION FEES</label>
-    <label><input type="checkbox" name="destination_loan[]" value="ASIA SOUTH KOREA" <?php echo isChecked('destination_loan', 'EUROPE WHERE LOAN COVER TUITION FEES'); ?>> ASIA SOUTH KOREA</label>
-  </div>
-
-  <label>If you select other, please specify:</label>
-  <textarea name="other_destination_loan"><?php echo htmlspecialchars($studentData['other_destination_loan'] ?? ''); ?></textarea>
-
-  <label>Who will be paying the tuition fees?  </label>
-  <select name="paying_tuition_fees" required>
-    <option value="">Please Select</option>
-    <option <?php echo selected('paying_tuition_fees', 'Self'); ?>>Self</option>
-    <option <?php echo selected('paying_tuition_fees', 'Family'); ?>>Family</option>
-    <option <?php echo selected('paying_tuition_fees', 'Sponsor'); ?>>Sponsor</option>
-    <option <?php echo selected('paying_tuition_fees', 'Loan'); ?>>Loan</option>
-  </select>
-
-  <label>Who will be paying the cost of living?  </label>
-  <select name="paying_cost_living" required>
-    <option value="">Please Select</option>
-    <option <?php echo selected('paying_cost_living', 'Self'); ?>>Self</option>
-    <option <?php echo selected('paying_cost_living', 'Family'); ?>>Family</option>
-    <option <?php echo selected('paying_cost_living', 'Sponsor'); ?>>Sponsor</option>
-    <option <?php echo selected('paying_cost_living', 'Loan'); ?>>Loan</option>
-  </select>
-
-  <label>Who will be paying travel expenses?  </label>
-  <select name="paying_travel_expenses" required>
-    <option value="">Please Select</option>
-    <option <?php echo selected('paying_travel_expenses', 'Self'); ?>>Self</option>
-    <option <?php echo selected('paying_travel_expenses', 'Family'); ?>>Family</option>
-    <option <?php echo selected('paying_travel_expenses', 'Sponsor'); ?>>Sponsor</option>
-    <option <?php echo selected('paying_travel_expenses', 'Loan'); ?>>Loan</option>
-  </select>
-
-  <label>Do you have any suspended/criminal history?  </label>
-  <div class="radio-group">
-    <label><input type="radio" name="criminal_history" value="Yes" required <?php echo checked('criminal_history', 'Yes'); ?>> Yes</label>
-    <label><input type="radio" name="criminal_history" value="No" required <?php echo checked('criminal_history', 'No'); ?>> No</label>
-  </div>
-
-  <label>Do you have any disability?  </label>
-  <div class="radio-group">
-    <label><input type="radio" name="disability" value="Yes" required <?php echo checked('disability', 'Yes'); ?>> Yes</label>
-    <label><input type="radio" name="disability" value="No" required <?php echo checked('disability', 'No'); ?>> No</label>
-  </div>
-
-  <label>Names of Emergency Contact  </label>
-  <div class="inline-inputs">
-    <input type="text" name="emergency_first_name" placeholder="First Name" required value="<?php echo htmlspecialchars($studentData['emergency_first_name'] ?? ''); ?>">
-    <input type="text" name="emergency_last_name" placeholder="Last Name" required value="<?php echo htmlspecialchars($studentData['emergency_last_name'] ?? ''); ?>">
-  </div>
-
-  <label>Email of Emergency Contact  </label>
-  <input type="email" name="emergency_email" placeholder="example@example.com" required value="<?php echo htmlspecialchars($studentData['emergency_email'] ?? ''); ?>">
-
-  <div class="form-buttons">
-    <button type="button" class="prev-btn" data-prev="2">Previous</button>
-    <button type="button" class="next-btn" data-next="4">Save & Next</button>
-  </div>
-</div>
-
- <!-- Step 4: Emergency Contact & Previous Institution -->
-<div class="form-step" id="step4">
-  <h3>Step 4: Emergency Contact & Previous Institution</h3>
-
-  <div class="form-group" style="margin-bottom: 20px;">
-  <label for="emergency_phone_number_input">Phone Number of Emergency Contact</label>
-  <div class="inline-inputs">
-    <input
-      type="tel"
-      id="emergency_phone_number_input"
-      class="form-control"
-      placeholder="Emergency Contact"
-      autocomplete="tel"
-      style="max-width: 300px;"
-      value="<?php echo htmlspecialchars($studentData['emergency_full_phone'] ?? ''); ?>"
-    />
-    <input type="hidden" id="emergency_area_code" name="emergency_area_code" value="<?php echo htmlspecialchars($studentData['emergency_area_code'] ?? ''); ?>">
-    <input type="hidden" id="emergency_phone_number" name="emergency_phone_number" value="<?php echo htmlspecialchars($studentData['emergency_phone_number'] ?? ''); ?>">
-  </div>
-</div>
-
-  <label>Relationship  </label>
-  <input type="text" name="emergency_relationship" required value="<?php echo htmlspecialchars($studentData['emergency_relationship'] ?? ''); ?>">
-
-  <label>Is the emergency contact address the same as the applicant?  </label>
-  <div class="radio-group">
-    <label><input type="radio" name="emergency_same_address" value="Yes" required <?php echo checked('emergency_same_address', 'Yes'); ?>> Yes</label>
-    <label><input type="radio" name="emergency_same_address" value="No" required <?php echo checked('emergency_same_address', 'No'); ?>> No</label>
-  </div>
-
-  <label>Intended Study Level/What educational level are you aiming for?  </label>
-  <div class="checkbox-group">
-    <label><input type="checkbox" name="intended_study_level[]" value="PhD" <?php echo isChecked('intended_study_level', 'PhD'); ?>> PhD</label>
-    <label><input type="checkbox" name="intended_study_level[]" value="Masters" <?php echo isChecked('intended_study_level', 'Masters'); ?>> Masters</label>
-    <label><input type="checkbox" name="intended_study_level[]" value="Bachelor" <?php echo isChecked('intended_study_level', 'Bachelor'); ?>> Bachelor</label>
-  </div>
-
-  <label>Previous Institution Details/Name of Institution  </label>
-  <input type="text" name="previous_institution_name" required value="<?php echo htmlspecialchars($studentData['previous_institution_name'] ?? ''); ?>">
-
-  <label>Street of Institution  </label>
-  <input type="text" name="previous_institution_street" required value="<?php echo htmlspecialchars($studentData['previous_institution_street'] ?? ''); ?>">
-
-  <label>City of Institution  </label>
-  <input type="text" name="previous_institution_city" required value="<?php echo htmlspecialchars($studentData['previous_institution_city'] ?? ''); ?>">
-
-  <label>Province of Institution  </label>
-  <input type="text" name="previous_institution_province" required value="<?php echo htmlspecialchars($studentData['previous_institution_province'] ?? ''); ?>">
-
-  <label>Country of Institution  </label>
-  <input type="text" name="previous_institution_country" required value="<?php echo htmlspecialchars($studentData['previous_institution_country'] ?? ''); ?>">
-
-  <label>Post Code</label>
-  <input type="text" name="previous_institution_post_code" value="<?php echo htmlspecialchars($studentData['previous_institution_post_code'] ?? ''); ?>">
-
-  <label>Language of Instruction  </label>
-  <div class="radio-group">
-    <label><input type="radio" name="language_of_instruction" value="English" required <?php echo checked('language_of_instruction', 'English'); ?>> ENGLISH</label>
-    <label><input type="radio" name="language_of_instruction" value="French" required <?php echo checked('language_of_instruction', 'French'); ?>> FRENCH</label>
-  </div>
-
-  <div class="form-buttons">
-    <button type="button" class="prev-btn" data-prev="3">Previous</button>
-    <button type="button" class="next-btn" data-next="5">Save & Next</button>
-  </div>
-</div>
-<!-- Step 5: Previous Studies & Documents -->
-<div class="form-step" id="step5">
-  <h3>Step 5: Previous Studies & Documents</h3>
-
-  <label>When did the applicant start previous studies?</label>
-  <input type="date" name="previous_study_start" required value="<?= htmlspecialchars($studentData['previous_study_start'] ?? '') ?>">
-
-  <label>When did the applicant graduate from previous studies?</label>
-  <input type="date" name="previous_study_graduation" required value="<?= htmlspecialchars($studentData['previous_study_graduation'] ?? '') ?>">
-
-  <label>Additional secondary school attendance?</label>
-  <div class="radio-group">
-    <label><input type="radio" name="additional_secondary_school" value="Yes" required <?= checked('additional_secondary_school', 'Yes') ?>> Yes</label>
-    <label><input type="radio" name="additional_secondary_school" value="No" required <?= checked('additional_secondary_school', 'No') ?>> No</label>
-  </div>
-
-  <label>Study Gap – Is there a gap of 3 months or more?</label>
-  <div class="radio-group">
-    <label><input type="radio" name="study_gap" value="Yes" required <?= checked('study_gap', 'Yes') ?>> Yes</label>
-    <label><input type="radio" name="study_gap" value="No" required <?= checked('study_gap', 'No') ?>> No</label>
-  </div>
-
-  <label>Has the student attended any post-secondary institutions?</label>
-  <div class="radio-group">
-    <label><input type="radio" name="post_secondary" value="Yes" required <?= checked('post_secondary', 'Yes') ?>> Yes</label>
-    <label><input type="radio" name="post_secondary" value="No" required <?= checked('post_secondary', 'No') ?>> No</label>
-  </div>
-
-  <label>Do you have a passport?</label>
-  <div class="radio-group">
-    <label><input type="radio" name="passport" value="Yes" required <?= checked('passport', 'Yes') ?>> Yes</label>
-    <label><input type="radio" name="passport" value="No" required <?= checked('passport', 'No') ?>> No</label>
-  </div>
-
-  <label>Have you ever had a visa rejection?</label>
-  <div class="radio-group">
-    <label><input type="radio" name="visa_rejection" value="Yes" required <?= checked('visa_rejection', 'Yes') ?>> Yes</label>
-    <label><input type="radio" name="visa_rejection" value="No" required <?= checked('visa_rejection', 'No') ?>> No</label>
-  </div>
-
-  <!-- Degree and Transcripts -->
-  <label>Degree and Transcripts</label>
-  <input type="file" id="degree_transcripts_file">
-  <input type="hidden" name="degree_transcripts" value="<?= htmlspecialchars($studentData['degree_transcripts'] ?? '') ?>">
-  <div id="degree_transcripts_view">
-    <?php if (!empty($studentData['degree_transcripts'])): ?>
-      <a href="<?= htmlspecialchars($studentData['degree_transcripts']) ?>" target="_blank">View File</a>
-    <?php endif; ?>
-  </div>
-
-  <!-- High School Degree -->
-  <label>High School Degree</label>
-  <input type="file" id="high_school_degree_file">
-  <input type="hidden" name="high_school_degree" value="<?= htmlspecialchars($studentData['high_school_degree'] ?? '') ?>">
-  <div id="high_school_degree_view">
-    <?php if (!empty($studentData['high_school_degree'])): ?>
-      <a href="<?= htmlspecialchars($studentData['high_school_degree']) ?>" target="_blank">View File</a>
-    <?php endif; ?>
-  </div>
-
-  <!-- Valid Passport -->
-  <label>Valid Passport</label>
-  <input type="file" id="valid_passport_file">
-  <input type="hidden" name="valid_passport" value="<?= htmlspecialchars($studentData['valid_passport'] ?? '') ?>">
-  <div id="valid_passport_view">
-    <?php if (!empty($studentData['valid_passport'])): ?>
-      <a href="<?= htmlspecialchars($studentData['valid_passport']) ?>" target="_blank">View File</a>
-    <?php endif; ?>
-  </div>
-
-  <div class="form-buttons">
-    <button type="button" class="prev-btn" data-prev="4">Previous</button>
-    <button type="button" class="next-btn" data-next="6">Save & Next</button>
-  </div>
-</div>
-<!-- Step 6: Uploads & Additional Details -->
-<div class="form-step" id="step6">
-  <h3>Step 6: Uploads & Additional Details</h3>
-
-  <!-- Recommendation Letters -->
-  <label>Recommendation Letters</label>
-  <input type="file" id="recommendation_letters_file">
-  <input type="hidden" name="recommendation_letters" value="<?= htmlspecialchars($studentData['recommendation_letters'] ?? '') ?>">
-  <div id="recommendation_letters_view">
-    <?php if (!empty($studentData['recommendation_letters'])): ?>
-      <a href="<?= htmlspecialchars($studentData['recommendation_letters']) ?>" target="_blank">View File</a>
-    <?php endif; ?>
-  </div>
-
-  <!-- Personal Statement -->
-  <label>Personal Statement</label>
-  <input type="file" id="personal_statement_file">
-  <input type="hidden" name="personal_statement" value="<?= htmlspecialchars($studentData['personal_statement'] ?? '') ?>">
-  <div id="personal_statement_view">
-    <?php if (!empty($studentData['personal_statement'])): ?>
-      <a href="<?= htmlspecialchars($studentData['personal_statement']) ?>" target="_blank">View File</a>
-    <?php endif; ?>
-  </div>
-
-  <!-- CV / Resume -->
-  <label>CV / Resume</label>
-  <input type="file" id="cv_resume_file" required>
-  <input type="hidden" name="cv_resume" value="<?= htmlspecialchars($studentData['cv_resume'] ?? '') ?>">
-  <div id="cv_resume_view">
-    <?php if (!empty($studentData['cv_resume'])): ?>
-      <a href="<?= htmlspecialchars($studentData['cv_resume']) ?>" target="_blank">View File</a>
-    <?php endif; ?>
-  </div>
-
-  <!-- English Certificate -->
-  <label>English Certificate</label>
-  <input type="file" id="english_certificate_file" required>
-  <input type="hidden" name="english_certificate" value="<?= htmlspecialchars($studentData['english_certificate'] ?? '') ?>">
-  <div id="english_certificate_view">
-    <?php if (!empty($studentData['english_certificate'])): ?>
-      <a href="<?= htmlspecialchars($studentData['english_certificate']) ?>" target="_blank">View File</a>
-      <small style="display:block; margin-bottom:10px;">The one from University is acceptable</small>
-    <?php endif; ?>
-  </div>
-
-  <!-- Birth Certificate / National ID -->
-  <label>Birth Certificate or National ID</label>
-  <input type="file" id="birth_certificate_file" required>
-  <input type="hidden" name="birth_certificate" value="<?= htmlspecialchars($studentData['birth_certificate'] ?? '') ?>">
-  <div id="birth_certificate_view">
-    <?php if (!empty($studentData['birth_certificate'])): ?>
-      <a href="<?= htmlspecialchars($studentData['birth_certificate']) ?>" target="_blank">View File</a>
-    <?php endif; ?>
-  </div>
-
-  <!-- Payment Proof -->
-  <label>Payment Proof</label>
-  <input type="file" id="payment_proof_file" required>
-  <input type="hidden" name="payment_proof" value="<?= htmlspecialchars($studentData['payment_proof'] ?? '') ?>">
-  <div id="payment_proof_view">
-    <?php if (!empty($studentData['payment_proof'])): ?>
-      <a href="<?= htmlspecialchars($studentData['payment_proof']) ?>" target="_blank">View File</a>
-      <small style="display:block; margin-bottom:10px;">150$ in USA, 450 CAD in Canada, 250$ in Europe</small>
-    <?php endif; ?>
-  </div>
-
-  <!-- Dynamic agents -->
-  <label>Agent (Select)</label>
-  <select id="agent_select" class="select2-country">
-    <option value="">-- Select Agent --</option>
-    <?php foreach ($agents as $agent): ?>
-      <option 
-        value="<?= htmlspecialchars($agent['first_name']) ?>|<?= htmlspecialchars($agent['last_name']) ?>|<?= htmlspecialchars($agent['email']) ?>"
-        <?= (isset($studentData['agent_email']) && $studentData['agent_email'] == $agent['email']) ? 'selected' : '' ?>>
-        <?= htmlspecialchars($agent['first_name'] . ' ' . $agent['last_name']) ?> (<?= htmlspecialchars($agent['email']) ?>)
-      </option>
-    <?php endforeach; ?>
-  </select>
-
-  <label>Agent Names</label>
-  <div class="inline-inputs">
-    <input type="text" id="agent_first_name" name="agent_first_name" placeholder="First Name" value="<?= htmlspecialchars($studentData['agent_first_name'] ?? '') ?>">
-    <input type="text" id="agent_last_name" name="agent_last_name" placeholder="Last Name" value="<?= htmlspecialchars($studentData['agent_last_name'] ?? '') ?>">
-  </div>
-
-  <label>Agent Email</label>
-  <input type="email" id="agent_email" name="agent_email" placeholder="example@example.com" value="<?= htmlspecialchars($studentData['agent_email'] ?? '') ?>">
-
-  <label>Comments</label>
-  <textarea name="comments" placeholder="Add any additional information..."><?= htmlspecialchars($studentData['comments'] ?? '') ?></textarea>
-
-  <!-- Progress Bar (shown during final submit) -->
-  <div id="progress-wrapper" style="display:none; margin-top:20px;">
-    <label>Uploading... Please wait</label>
-    <div style="background:#ddd; border-radius:5px; height:20px; overflow:hidden;">
-      <div id="progress-bar" style="background:#0c3c78; width:0%; height:100%; transition: width 0.4s;"></div>
-    </div>
-  </div>
-
-  <!-- Final Navigation Buttons -->
-  <div class="form-buttons" style="margin-top:20px;">
-    <button type="button" class="prev-btn" data-prev="5">Previous</button>
-    <button type="submit" class="submit-btn">Submit Application</button>
-  </div>
-</div> <!-- end of step6 -->
-
-  </form>
-</div>
-<!-- Chat Bubble -->
-<div id="chat-bubble">
-  <button onclick="openChatWindow()">💬 Chat with Us</button>
-</div>
-
-<!-- Chat Bubble -->
-<div id="chat-bubble">
-  <button>
-    💬 Chat with Us <span id="chat-badge" style="display:none;">1</span>
-  </button>
-</div>
-
-<!-- Chat Window -->
-<div id="chat-window">
-  <div class="chat-header">
-    Chat Support
-    <span style="cursor:pointer;" onclick="$('#chat-window').hide();">✖</span>
-  </div>
-  <div class="chat-messages" id="chat-messages">
-    <!-- Chat messages will appear here -->
-  </div>
-  <div class="chat-input">
-    <textarea id="chat-input" placeholder="Type your message..."></textarea>
-    <button onclick="sendChatMessage();">Send</button>
-  </div>
-</div>
-
-<!-- Optional: Only include script.js if you need its content -->
-<script src="script.js"></script> 
-
-<!-- Flatpickr Date Picker -->
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    flatpickr("input[type='date']", {
-      dateFormat: "Y-m-d",
-      altInput: true,
-      altFormat: "F j, Y",
-      maxDate: "today",
-      defaultDate: null, // ✅ No default prefilled date
-      allowInput: true
-    });
-  });
-</script>
-<!-- intl-tel-input JS + Utils -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/intlTelInput.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.min.js"></script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  const phoneInput = document.querySelector("#phone_number");
-  const areaCodeInput = document.querySelector("#area_code");
-  const nationalInput = document.querySelector("#phone_number_cleaned");
-
-  if (!phoneInput) return;
-
-  const iti = window.intlTelInput(phoneInput, {
-    initialCountry: "auto",
-    separateDialCode: true, // ✅ Show +code outside of input
-    preferredCountries: ["rw", "ke", "ug", "us"],
-    geoIpLookup: function (callback) {
-      fetch("https://ipapi.co/json")
-        .then((res) => res.json())
-        .then((data) => callback(data.country_code || "rw"))
-        .catch(() => callback("rw"));
-    },
-    utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@17.0.19/build/js/utils.js"
-  });
-
-  function updatePhoneFields() {
-    if (iti && typeof intlTelInputUtils !== "undefined" && iti.isValidNumber()) {
-      const fullNumber = iti.getNumber();
-      const countryData = iti.getSelectedCountryData();
-      areaCodeInput.value = `+${countryData.dialCode}`;
-      nationalInput.value = fullNumber.replace(`+${countryData.dialCode}`, '').trim();
-    }
-  }
 
   phoneInput.addEventListener("blur", updatePhoneFields);
   phoneInput.addEventListener("change", updatePhoneFields);
@@ -1270,37 +712,43 @@ $(document).ready(function() {
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script>
-$('#chat-bubble button').on('click', function() {
-  $('#chat-window').toggle();
-  $('#chat-badge').hide();
-  loadChatMessages();
-});
+$(');
 
-function loadChatMessages() {
-  $.get('load_chat.php', { user_id: '<?= htmlspecialchars($userId) ?>' }, function(data) {
-    let oldContent = $('#chat-messages').html();
-    $('#chat-messages').html(data);
-    if ($('#chat-messages').html() != oldContent && !$('#chat-window').is(':visible')) {
-      $('#chat-badge').show();
-    }
-    $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
+, function(data) {
+    let oldContent = 
+    
+    if (
   });
 }
 
-function sendChatMessage() {
-  var message = $('#chat-input').val().trim();
-  if (!message) return;
-
-  $.post('send_chat.php', { user_id: '<?= htmlspecialchars($userId) ?>', message: message }, function(response) {
-    $('#chat-input').val('');
-    loadChatMessages();
+, function(response) {
+    
   });
 }
 
 // Auto-refresh every 5 seconds
 setInterval(function() {
-  loadChatMessages();
 }, 5000);
 </script>
-</body>
+
+<!-- Modern Floating WhatsApp Button -->
+<div class="xander-whatsapp-container">
+    <a href="https://wa.me/14389009784" 
+       target="_blank" 
+       rel="noopener noreferrer"
+       class="xander-whatsapp-float"
+       aria-label="👉 Chat with us on WhatsApp!"
+       title="👉 Chat with us on WhatsApp!">
+        
+        <!-- WhatsApp SVG Icon -->
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.149-.67.149-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414-.074-.123-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+        </svg>
+        
+        <!-- Tooltip -->
+        <div class="xander-whatsapp-tooltip">
+            👉 Chat with us on WhatsApp!
+        </div>
+    </a>
+</div></body>
 </html>

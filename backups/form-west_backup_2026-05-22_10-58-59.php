@@ -123,6 +123,7 @@ function isChecked($field, $value) {
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@17.0.19/build/css/intlTelInput.css" />
 
+
   <style>
   body {
     font-family: 'Segoe UI', sans-serif;
@@ -322,6 +323,131 @@ function isChecked($field, $value) {
   font-weight: 500;
   color: #333;
 }
+/* Chat Bubble */
+#chat-bubble {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+
+#chat-bubble button {
+  background-color: #0c3c78;
+  color: white;
+  padding: 14px 20px;
+  border-radius: 50px;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  transition: background-color 0.3s ease;
+  position: relative;
+}
+
+#chat-bubble button:hover {
+  background-color: #092a5c;
+}
+
+#chat-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: red;
+  color: white;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 50%;
+}
+
+/* Chat Window */
+#chat-window {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 320px;
+  max-height: 500px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+#chat-window .chat-header {
+  background-color: #0c3c78;
+  color: white;
+  padding: 12px 16px;
+  font-size: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#chat-window .chat-messages {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  background: #f9f9f9;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Chat message bubbles */
+.chat-message {
+  background: #e0f0ff;
+  color: #333;
+  padding: 8px 12px;
+  margin: 6px 0;
+  border-radius: 10px;
+  max-width: 80%;
+  word-wrap: break-word;
+  animation: fadeIn 0.3s ease-in;
+  align-self: flex-start;
+}
+
+.chat-message.user {
+  background: #dcf8c6;
+  align-self: flex-end;
+}
+
+/* Typing indicator — FIX: aligned left */
+.typing-indicator {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  margin: 4px 0 4px 10px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: #f1f0f0;
+  width: auto;
+}
+
+.typing-indicator span {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 2px;
+  background: #999;
+  border-radius: 50%;
+  animation: blink 1.4s infinite both;
+}
+
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes blink {
+  0% { opacity: 0.2; }
+  20% { opacity: 1; }
+  100% { opacity: 0.2; }
+}
+
+#chat-window .chat-input {
+  display: flex;
+  border-top: 1px solid #ddd;
+}
 
 #chat_message_input {
   flex: 1;
@@ -333,6 +459,7 @@ function isChecked($field, $value) {
 
 #chat_message_input:focus {
   outline: none;
+}
 
 #chat-send-btn {
   padding: 10px 15px;
@@ -345,6 +472,7 @@ function isChecked($field, $value) {
 
 #chat-send-btn:hover {
   background: #092a5c;
+}
 
 /* Chat Login Form */
 #chat-login-form {
@@ -365,12 +493,14 @@ function isChecked($field, $value) {
   color: #0c3c78;
   margin-bottom: 14px;
   font-size: 16px;
+}
 
 #chat-login-form label {
   display: block;
   margin-bottom: 6px;
   font-weight: 500;
   color: #333;
+}
 
 #chat-login-form input[type="email"],
 #chat-login-form input[type="tel"] {
@@ -387,6 +517,7 @@ function isChecked($field, $value) {
 #chat-login-form input[type="tel"]:focus {
   border-color: #0c3c78;
   outline: none;
+}
 
 #chat-login-form button {
   width: 100%;
@@ -402,251 +533,22 @@ function isChecked($field, $value) {
 
 #chat-login-form button:hover {
   background: #092a5c;
+}
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
 
 </style>
 
-<style>
-/* ===== MODERN FLOATING WHATSAPP BUTTON ===== */
-.xander-whatsapp-float {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 64px;
-    height: 64px;
-    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 
-        0 8px 32px rgba(37, 211, 102, 0.3),
-        0 4px 16px rgba(0, 0, 0, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    cursor: pointer;
-    text-decoration: none;
-    z-index: 9999;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    animation: xanderFloat 3s ease-in-out infinite, xanderPulse 2s ease-in-out infinite;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-@keyframes xanderFloat {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-8px); }
-}
-
-@keyframes xanderPulse {
-    0%, 100% { 
-        box-shadow: 
-            0 8px 32px rgba(37, 211, 102, 0.3),
-            0 4px 16px rgba(0, 0, 0, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2),
-            0 0 0 0 rgba(37, 211, 102, 0.4);
-    }
-    50% { 
-        box-shadow: 
-            0 12px 40px rgba(37, 211, 102, 0.4),
-            0 6px 20px rgba(0, 0, 0, 0.15),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3),
-            0 0 0 8px rgba(37, 211, 102, 0);
-    }
-}
-
-.xander-whatsapp-float:hover {
-    transform: scale(1.1) translateY(-4px);
-    box-shadow: 
-        0 12px 40px rgba(37, 211, 102, 0.4),
-        0 6px 20px rgba(0, 0, 0, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    background: linear-gradient(135deg, #128C7E 0%, #075E54 100%);
-    animation: none;
-}
-
-.xander-whatsapp-float svg {
-    width: 32px;
-    height: 32px;
-    color: white;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-    transition: transform 0.3s ease;
-}
-
-.xander-whatsapp-float:hover svg {
-    transform: scale(1.1);
-}
-
-
-/* ===== ENHANCED WHATSAPP TOOLTIP - ALWAYS VISIBLE ===== */
-.xander-whatsapp-tooltip {
-    position: absolute;
-    bottom: 80px;
-    right: 0;
-    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-    color: white;
-    padding: 16px 24px;
-    border-radius: 20px;
-    font-size: 15px;
-    font-weight: 600;
-    white-space: nowrap;
-    box-shadow: 
-        0 12px 40px rgba(37, 211, 102, 0.4),
-        0 6px 20px rgba(0, 0, 0, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    pointer-events: none;
-    animation: xanderTooltipFloat 3s ease-in-out infinite;
-    z-index: 10000;
-}
-
-.xander-whatsapp-tooltip::before {
-    content: "👉";
-    margin-right: 8px;
-    font-size: 18px;
-    animation: xanderPointingFinger 1.5s ease-in-out infinite;
-}
-
-@keyframes xanderTooltipFloat {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-5px); }
-}
-
-@keyframes xanderPointingFinger {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-}
-
-.xander-whatsapp-tooltip::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    right: 24px;
-    border: 10px solid transparent;
-    border-top-color: #128C7E;
-    transform: translateX(50%);
-}
-
-/* Enhanced hover effect */
-.xander-whatsapp-float:hover .xander-whatsapp-tooltip {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 
-        0 16px 50px rgba(37, 211, 102, 0.5),
-        0 8px 25px rgba(0, 0, 0, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.4);
-    background: linear-gradient(135deg, #128C7E 0%, #075E54 100%);
-}
-
-/* Mobile Responsive */
-@media (max-width: 768px) {
-    .xander-whatsapp-tooltip {
-        bottom: 70px;
-        right: -80px;
-        font-size: 14px;
-        padding: 12px 18px;
-        max-width: 200px;
-        white-space: normal;
-        text-align: center;
-        line-height: 1.4;
-    }
-    
-    .xander-whatsapp-tooltip::after {
-        right: 90px;
-    }
-}
-
-@media (max-width: 480px) {
-    .xander-whatsapp-tooltip {
-        bottom: 65px;
-        right: -70px;
-        font-size: 13px;
-        padding: 10px 16px;
-        max-width: 180px;
-    }
-    
-    .xander-whatsapp-tooltip::after {
-        right: 80px;
-    }
-}
-
-/* Mobile Responsive */
-@media (max-width: 768px) {
-    .xander-whatsapp-float {
-        width: 56px;
-        height: 56px;
-        bottom: 20px;
-        right: 20px;
-    }
-    
-    .xander-whatsapp-float svg {
-        width: 28px;
-        height: 28px;
-    }
-    
-    .xander-whatsapp-tooltip {
-        bottom: 70px;
-        right: -60px;
-        font-size: 13px;
-        padding: 10px 16px;
-    }
-    
-    .xander-whatsapp-tooltip::after {
-        right: 70px;
-    }
-}
-
-@media (max-width: 480px) {
-    .xander-whatsapp-float {
-        width: 52px;
-        height: 52px;
-        bottom: 16px;
-        right: 16px;
-    }
-    
-    .xander-whatsapp-float svg {
-        width: 26px;
-        height: 26px;
-    }
-    
-    .xander-whatsapp-tooltip {
-        display: none;
-    }
-}
-
-/* Entrance Animation */
-@keyframes xanderEntrance {
-    0% {
-        opacity: 0;
-        transform: scale(0) translateY(100px);
-    }
-    50% {
-        opacity: 0;
-        transform: scale(0.5) translateY(50px);
-    }
-    100% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-.xander-whatsapp-float {
-    animation: xanderEntrance 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards, 
-               xanderFloat 3s ease-in-out 2s infinite, 
-               xanderPulse 2s ease-in-out 2s infinite;
-}
-</style></head>
+</head>
 
 <body>
 <div class="form-container">
   <h2>Student Application Form – <?= htmlspecialchars($universityName) ?></h2>
-<form id="applicationForm" method="POST" enctype="multipart/form-data" data-save="save_partial.php">
+<form id="applicationForm" method="POST" enctype="multipart/form-data" data-save="save-form-canada.php">
 
     <input type="hidden" name="user_id" value="<?= htmlspecialchars($userId) ?>">
 <input type="hidden" name="university_id" value="<?= htmlspecialchars($universityId) ?>">
@@ -884,19 +786,18 @@ function isChecked($field, $value) {
 <div class="form-step" id="step3">
   <h3>Step 3: Financial & Background</h3>
 
-  <label>Select Destination  </label>
+<!-- Start: Loan-related fields (only shown for Master's applicants) -->
+<div id="loan-fields">
+  <label>Loan Destination</label>
   <div class="checkbox-group">
-    <label><input type="checkbox" name="destination_loan[]" value="USA WHERE LOAN COVER TUITION FEES AND LIVING ALLOWANCE" <?php echo isChecked('destination_loan', 'USA WHERE LOAN COVER TUITION FEES AND LIVING ALLOWANCE'); ?>> USA WHERE LOAN COVER TUITION FEES AND LIVING ALLOWANCE</label>
-    <label><input type="checkbox" name="destination_loan[]" value="CANADA WHERE LOAN COVER TUITION FEES" <?php echo isChecked('destination_loan', 'CANADA WHERE LOAN COVER TUITION FEES'); ?>> CANADA WHERE LOAN COVER TUITION FEES</label>
-    <label><input type="checkbox" name="destination_loan[]" value="EUROPE WHERE LOAN COVER TUITION FEES" <?php echo isChecked('destination_loan', 'EUROPE WHERE LOAN COVER TUITION FEES'); ?>> EUROPE WHERE LOAN COVER TUITION FEES</label>
-    <label><input type="checkbox" name="destination_loan[]" value="ASIA SOUTH KOREA" <?php echo isChecked('destination_loan', 'EUROPE WHERE LOAN COVER TUITION FEES'); ?>> ASIA SOUTH KOREA</label>
+    <label>
+      <input type="checkbox" name="destination_loan[]" value="CANADA WHERE LOAN COVER TUITION FEES" <?php echo isChecked('destination_loan', 'CANADA WHERE LOAN COVER TUITION FEES'); ?>>
+      CANADA WHERE LOAN COVER TUITION FEES
+    </label>
   </div>
 
-  <label>If you select other, please specify:</label>
-  <textarea name="other_destination_loan"><?php echo htmlspecialchars($studentData['other_destination_loan'] ?? ''); ?></textarea>
-
-  <label>Who will be paying the tuition fees?  </label>
-  <select name="paying_tuition_fees" required>
+  <label>Who will be paying the tuition fees?</label>
+  <select name="paying_tuition_fees" id="paying_tuition_fees">
     <option value="">Please Select</option>
     <option <?php echo selected('paying_tuition_fees', 'Self'); ?>>Self</option>
     <option <?php echo selected('paying_tuition_fees', 'Family'); ?>>Family</option>
@@ -904,8 +805,8 @@ function isChecked($field, $value) {
     <option <?php echo selected('paying_tuition_fees', 'Loan'); ?>>Loan</option>
   </select>
 
-  <label>Who will be paying the cost of living?  </label>
-  <select name="paying_cost_living" required>
+  <label>Who will be paying the cost of living?</label>
+  <select name="paying_cost_living" id="paying_cost_living">
     <option value="">Please Select</option>
     <option <?php echo selected('paying_cost_living', 'Self'); ?>>Self</option>
     <option <?php echo selected('paying_cost_living', 'Family'); ?>>Family</option>
@@ -913,34 +814,37 @@ function isChecked($field, $value) {
     <option <?php echo selected('paying_cost_living', 'Loan'); ?>>Loan</option>
   </select>
 
-  <label>Who will be paying travel expenses?  </label>
-  <select name="paying_travel_expenses" required>
+  <label>Who will be paying travel expenses?</label>
+  <select name="paying_travel_expenses" id="paying_travel_expenses">
     <option value="">Please Select</option>
     <option <?php echo selected('paying_travel_expenses', 'Self'); ?>>Self</option>
     <option <?php echo selected('paying_travel_expenses', 'Family'); ?>>Family</option>
     <option <?php echo selected('paying_travel_expenses', 'Sponsor'); ?>>Sponsor</option>
     <option <?php echo selected('paying_travel_expenses', 'Loan'); ?>>Loan</option>
   </select>
+</div>
 
-  <label>Do you have any suspended/criminal history?  </label>
+  <!-- End: Loan-related fields -->
+
+  <label>Do you have any suspended/criminal history?</label>
   <div class="radio-group">
     <label><input type="radio" name="criminal_history" value="Yes" required <?php echo checked('criminal_history', 'Yes'); ?>> Yes</label>
     <label><input type="radio" name="criminal_history" value="No" required <?php echo checked('criminal_history', 'No'); ?>> No</label>
   </div>
 
-  <label>Do you have any disability?  </label>
+  <label>Do you have any disability?</label>
   <div class="radio-group">
     <label><input type="radio" name="disability" value="Yes" required <?php echo checked('disability', 'Yes'); ?>> Yes</label>
     <label><input type="radio" name="disability" value="No" required <?php echo checked('disability', 'No'); ?>> No</label>
   </div>
 
-  <label>Names of Emergency Contact  </label>
+  <label>Names of Emergency Contact</label>
   <div class="inline-inputs">
     <input type="text" name="emergency_first_name" placeholder="First Name" required value="<?php echo htmlspecialchars($studentData['emergency_first_name'] ?? ''); ?>">
     <input type="text" name="emergency_last_name" placeholder="Last Name" required value="<?php echo htmlspecialchars($studentData['emergency_last_name'] ?? ''); ?>">
   </div>
 
-  <label>Email of Emergency Contact  </label>
+  <label>Email of Emergency Contact</label>
   <input type="email" name="emergency_email" placeholder="example@example.com" required value="<?php echo htmlspecialchars($studentData['emergency_email'] ?? ''); ?>">
 
   <div class="form-buttons">
@@ -948,6 +852,8 @@ function isChecked($field, $value) {
     <button type="button" class="next-btn" data-next="4">Save & Next</button>
   </div>
 </div>
+
+
 
  <!-- Step 4: Emergency Contact & Previous Institution -->
 <div class="form-step" id="step4">
@@ -1077,7 +983,7 @@ function isChecked($field, $value) {
 
   <!-- Valid Passport -->
   <label>Valid Passport</label>
-  <input type="file" id="valid_passport_file">
+  <input type="file" id="valid_passport_file" Required>
   <input type="hidden" name="valid_passport" value="<?= htmlspecialchars($studentData['valid_passport'] ?? '') ?>">
   <div id="valid_passport_view">
     <?php if (!empty($studentData['valid_passport'])): ?>
@@ -1126,7 +1032,7 @@ function isChecked($field, $value) {
 
   <!-- English Certificate -->
   <label>English Certificate</label>
-  <input type="file" id="english_certificate_file" required>
+  <input type="file" id="english_certificate_file">
   <input type="hidden" name="english_certificate" value="<?= htmlspecialchars($studentData['english_certificate'] ?? '') ?>">
   <div id="english_certificate_view">
     <?php if (!empty($studentData['english_certificate'])): ?>
@@ -1137,7 +1043,7 @@ function isChecked($field, $value) {
 
   <!-- Birth Certificate / National ID -->
   <label>Birth Certificate or National ID</label>
-  <input type="file" id="birth_certificate_file" required>
+  <input type="file" id="birth_certificate_file" >
   <input type="hidden" name="birth_certificate" value="<?= htmlspecialchars($studentData['birth_certificate'] ?? '') ?>">
   <div id="birth_certificate_view">
     <?php if (!empty($studentData['birth_certificate'])): ?>
@@ -1147,7 +1053,7 @@ function isChecked($field, $value) {
 
   <!-- Payment Proof -->
   <label>Payment Proof</label>
-  <input type="file" id="payment_proof_file" required>
+  <input type="file" id="payment_proof_file">
   <input type="hidden" name="payment_proof" value="<?= htmlspecialchars($studentData['payment_proof'] ?? '') ?>">
   <div id="payment_proof_view">
     <?php if (!empty($studentData['payment_proof'])): ?>
@@ -1198,35 +1104,780 @@ function isChecked($field, $value) {
 
   </form>
 </div>
-
+<!-- Live Chat Bubble -->
+<div id="chat-bubble">
+  <button type="button">💬 Chat with us</button>
+  <div id="chat-badge" style="display:none;">1</div>
 </div>
 
-<div id="" style="display:none;">
-  <div class="">
+<!-- Live Chat Login Form -->
+<div id="chat-login-form" style="display:none;">
+  <h4>Start Chat</h4>
+  <label>Email</label>
+  <input type="email" id="chat_user_email">
+  <label>WhatsApp Number</label>
+  <input type="tel" id="chat_user_phone">
+  <button type="button" onclick="saveChatUserInfo()">Start Chat</button>
+</div>
+
+<!-- Live Chat Window -->
+<div id="chat-window" style="display:none;">
+  <div class="chat-header">
     Live Chat
-    <button type="button" onclick="$(');
+    <button type="button" onclick="$('#chat-window').hide()">✖</button>
+  </div>
+
+  <!-- Chat Messages -->
+  <div id="chat-messages" class="chat-messages"></div>
+
+  <!-- Typing Indicator (move OUTSIDE of messages!) -->
+  <div id="typing-indicator" class="typing-indicator" style="display:none;">
+    <span></span><span></span><span></span>
+  </div>
+
+  <!-- Chat Input -->
+  <div class="chat-input">
+    <textarea id="chat_message_input" placeholder="Type your message..."></textarea>
+    <button id="chat-send-btn">Send</button>
+  </div>
+</div>
+<!-- Optional: Only include script.js if you need its content -->
+<script src="script.js"></script> 
+
+<!-- Flatpickr Date Picker -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    flatpickr("input[type='date']", {
+      dateFormat: "Y-m-d",
+      altInput: true,
+      altFormat: "F j, Y",
+      maxDate: "today",
+      defaultDate: null, // ✅ No default prefilled date
+      allowInput: true
+    });
   });
 </script>
 <!-- intl-tel-input JS + Utils -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/intlTelInput.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/js/utils.min.js"></script>
 
-<!-- Modern Floating WhatsApp Button -->
-<div class="xander-whatsapp-container">
-    <a href="https://wa.me/14389009784" 
-       target="_blank" 
-       rel="noopener noreferrer"
-       class="xander-whatsapp-float"
-       aria-label="👉 Chat with us on WhatsApp!"
-       title="👉 Chat with us on WhatsApp!">
-        
-        <!-- WhatsApp SVG Icon -->
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.149-.67.149-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414-.074-.123-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-        </svg>
-        
-        <!-- Tooltip -->
-        <div class="xander-whatsapp-tooltip">
-            👉 Chat with us on WhatsApp!
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const phoneInput = document.querySelector("#phone_number");
+  const areaCodeInput = document.querySelector("#area_code");
+  const nationalInput = document.querySelector("#phone_number_cleaned");
+
+  if (!phoneInput) return;
+
+  const iti = window.intlTelInput(phoneInput, {
+    initialCountry: "auto",
+    separateDialCode: true, // ✅ Show +code outside of input
+    preferredCountries: ["rw", "ke", "ug", "us"],
+    geoIpLookup: function (callback) {
+      fetch("https://ipapi.co/json")
+        .then((res) => res.json())
+        .then((data) => callback(data.country_code || "rw"))
+        .catch(() => callback("rw"));
+    },
+    utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@17.0.19/build/js/utils.js"
+  });
+
+  function updatePhoneFields() {
+    if (iti && typeof intlTelInputUtils !== "undefined" && iti.isValidNumber()) {
+      const fullNumber = iti.getNumber();
+      const countryData = iti.getSelectedCountryData();
+      areaCodeInput.value = `+${countryData.dialCode}`;
+      nationalInput.value = fullNumber.replace(`+${countryData.dialCode}`, '').trim();
+    }
+  }
+
+  phoneInput.addEventListener("blur", updatePhoneFields);
+  phoneInput.addEventListener("change", updatePhoneFields);
+  phoneInput.addEventListener("keyup", updatePhoneFields);
+
+  const form = phoneInput.closest("form");
+  if (form) {
+    form.addEventListener("submit", function () {
+      updatePhoneFields();
+    });
+  }
+
+  setTimeout(updatePhoneFields, 500);
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const emergencyPhoneInput = document.querySelector("#emergency_phone_number_input");
+  const emergencyAreaCode = document.querySelector("#emergency_area_code");
+  const emergencyPhoneClean = document.querySelector("#emergency_phone_number");
+
+  if (!emergencyPhoneInput) return;
+
+  const itiEmergency = window.intlTelInput(emergencyPhoneInput, {
+    initialCountry: "auto",
+    separateDialCode: true,
+    preferredCountries: ["rw", "ke", "ug", "us"],
+    geoIpLookup: function (callback) {
+      fetch("https://ipapi.co/json")
+        .then((res) => res.json())
+        .then((data) => callback(data.country_code || "rw"))
+        .catch(() => callback("rw"));
+    },
+    utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@17.0.19/build/js/utils.js"
+  });
+
+  function updateEmergencyPhoneFields() {
+    if (itiEmergency && typeof intlTelInputUtils !== "undefined" && itiEmergency.isValidNumber()) {
+      const fullNumber = itiEmergency.getNumber();
+      const countryData = itiEmergency.getSelectedCountryData();
+      emergencyAreaCode.value = `+${countryData.dialCode}`;
+      emergencyPhoneClean.value = fullNumber.replace(`+${countryData.dialCode}`, '').trim();
+    }
+  }
+
+  emergencyPhoneInput.addEventListener("blur", updateEmergencyPhoneFields);
+  emergencyPhoneInput.addEventListener("change", updateEmergencyPhoneFields);
+  emergencyPhoneInput.addEventListener("keyup", updateEmergencyPhoneFields);
+
+  const form = emergencyPhoneInput.closest("form");
+  if (form) {
+    form.addEventListener("submit", function () {
+      updateEmergencyPhoneFields();
+    });
+  }
+
+  setTimeout(updateEmergencyPhoneFields, 500);
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const agentSelect = document.getElementById('agent_select');
+  const agentFirstName = document.getElementById('agent_first_name');
+  const agentLastName = document.getElementById('agent_last_name');
+  const agentEmail = document.getElementById('agent_email');
+
+  if (agentSelect) {
+    agentSelect.addEventListener('change', function() {
+      const parts = this.value.split('|');
+      agentFirstName.value = parts[0] || '';
+      agentLastName.value = parts[1] || '';
+      agentEmail.value = parts[2] || '';
+    });
+  }
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  function setupLiveUpload(fieldName) {
+  const fileInput = document.querySelector(`#${fieldName}_file`);
+  const hiddenInput = document.querySelector(`input[name="${fieldName}"]`);
+  const viewLink = document.getElementById(`${fieldName}_view`);
+  if (!fileInput || !hiddenInput) return;
+
+  // 🔧 Create global spinner overlay once
+  if (!document.getElementById("ai-spinner-overlay")) {
+    const spinner = document.createElement("div");
+    spinner.id = "ai-spinner-overlay";
+    spinner.innerHTML = `
+      <div class="ai-spinner-bg">
+        <div class="ai-spinner-box">
+          <div class="ai-loader"></div>
+          <div class="ai-progress">
+            <div class="ai-bar"></div>
+          </div>
+          <p>Validating document with AI... please wait</p>
         </div>
-    </a>
-</div></body>
+      </div>`;
+    document.body.appendChild(spinner);
+
+    const style = document.createElement("style");
+    style.textContent = `
+      #ai-spinner-overlay { display: none; }
+      .ai-spinner-bg {
+        position: fixed; inset: 0; background: rgba(255,255,255,0.85);
+        z-index: 9999; display: flex; align-items: center; justify-content: center;
+        backdrop-filter: blur(3px);
+      }
+      .ai-spinner-box { text-align:center; width:260px; }
+      .ai-loader {
+        width:60px; height:60px; border:6px solid #ccc; border-top-color:#0c3c78;
+        border-radius:50%; animation: spin 1s linear infinite; margin:auto;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .ai-progress { width:100%; background:#eee; height:6px; border-radius:3px; margin-top:12px; overflow:hidden; }
+      .ai-bar { width:0%; height:100%; background:#0c3c78; transition: width 0.3s; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const overlay = document.getElementById("ai-spinner-overlay");
+  const progressBar = overlay.querySelector(".ai-bar");
+  function showSpinner() {
+    overlay.style.display = "flex";
+    progressBar.style.width = "0%";
+    let p = 0;
+    const sim = setInterval(() => {
+      if (p < 90) { p += 5; progressBar.style.width = p + "%"; }
+    }, 400);
+    overlay._sim = sim;
+  }
+  function hideSpinner() {
+    clearInterval(overlay._sim);
+    progressBar.style.width = "100%";
+    setTimeout(() => overlay.style.display = "none", 400);
+  }
+
+  // 🚀 Upload event
+  fileInput.addEventListener("change", async function () {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    const firstName = document.querySelector('input[name="first_name"]')?.value?.trim() || "";
+    const lastName  = document.querySelector('input[name="last_name"]')?.value?.trim() || "";
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("field", fieldName);
+    formData.append("first_name", firstName);
+    formData.append("last_name", lastName);
+
+    fileInput.disabled = true;
+    fileInput.style.opacity = "0.6";
+    showSpinner();
+
+    try {
+      const res = await fetch("upload_file.php", { method: "POST", body: formData });
+      const data = await res.json();
+      hideSpinner();
+      fileInput.disabled = false;
+      fileInput.style.opacity = "1";
+
+      if (data.status === "success") {
+        hiddenInput.value = data.file_path;
+        if (viewLink)
+          viewLink.innerHTML = `<a href="${data.file_path}" target="_blank">View File</a>`;
+        (window.toastr ? toastr.success(data.message || "✅ File validated successfully!") : alert(data.message || "✅ File validated successfully!"));
+      } else {
+        (window.toastr ? toastr.error(data.message || "❌ Validation failed.") : alert(data.message || "❌ Validation failed."));
+        fileInput.value = "";
+        hiddenInput.value = "";
+        if (viewLink) viewLink.innerHTML = "";
+      }
+    } catch (err) {
+      hideSpinner();
+      fileInput.disabled = false;
+      fileInput.style.opacity = "1";
+      fileInput.value = "";
+      (window.toastr ? toastr.error("Upload error: " + err.message) : alert("Upload error: " + err.message));
+    }
+  });
+}
+
+
+  // STEP 5 uploads
+  setupLiveUpload('degree_transcripts');
+  setupLiveUpload('high_school_degree');
+  setupLiveUpload('valid_passport');
+
+  // STEP 6 uploads
+  setupLiveUpload('recommendation_letters');
+  setupLiveUpload('personal_statement');
+  setupLiveUpload('cv_resume');
+  setupLiveUpload('english_certificate');
+  setupLiveUpload('birth_certificate');
+  setupLiveUpload('payment_proof');
+
+});
+</script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("applicationForm");
+  if (!form) return;
+
+  // 🔒 Fully disable browser validation
+  form.setAttribute("novalidate", "true");
+  form.noValidate = true;
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    return false; // blocks native popup
+  });
+
+  // 🧹 Remove all unnecessary "required" attributes (except core backend ones)
+  document.querySelectorAll("input[required]").forEach(input => {
+    const id = input.id;
+    if (!["degree_transcripts_file", "valid_passport_file", "cv_resume_file"].includes(id)) {
+      input.removeAttribute("required");
+    }
+  });
+
+  // 🧹 Clean optional uploads
+  [
+    "high_school_degree_file",
+    "recommendation_letters_file",
+    "personal_statement_file",
+    "english_certificate_file",
+    "birth_certificate_file",
+    "payment_proof_file"
+  ].forEach(id => document.getElementById(id)?.removeAttribute("required"));
+
+  console.log("✅ Native HTML5 validation disabled (browser popups gone).");
+});
+</script>
+
+
+<script>
+$(document).ready(function() {
+    $('select[name="bachelor_program"], select[name="masters_program"], select[name="phd_program"]').select2({
+    placeholder: "Please Select Program",
+    width: '100%'
+});
+
+});
+</script>
+
+<script>
+$('#chat-bubble button').on('click', function() {
+  $('#chat-window').toggle();
+  $('#chat-badge').hide();
+  loadChatMessages();
+});
+
+function loadChatMessages() {
+  $.get('load_chat.php', { user_id: '<?= htmlspecialchars($userId) ?>' }, function(data) {
+    let oldContent = $('#chat-messages').html();
+    $('#chat-messages').html(data);
+    if ($('#chat-messages').html() != oldContent && !$('#chat-window').is(':visible')) {
+      $('#chat-badge').show();
+    }
+    $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
+  });
+}
+
+function sendChatMessage() {
+  var message = $('#chat-input').val().trim();
+  if (!message) return;
+
+  $.post('send_chat.php', { user_id: '<?= htmlspecialchars($userId) ?>', message: message }, function(response) {
+    $('#chat-input').val('');
+    loadChatMessages();
+  });
+}
+
+// Auto-refresh every 5 seconds
+setInterval(function() {
+  loadChatMessages();
+}, 5000);
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const highSchoolFile = document.getElementById("high_school_degree_file");
+  const studyLevelCheckboxes = document.querySelectorAll('input[name="intended_study_level[]"]');
+
+  function updateRequirement() {
+    const wantsBachelor = Array.from(studyLevelCheckboxes).some(cb => cb.checked && cb.value === "Bachelor");
+    const label = highSchoolFile.closest("label");
+
+    if (wantsBachelor) {
+      highSchoolFile.required = true;
+      highSchoolFile.classList.remove("optional"); // clear optional class
+      label.innerHTML = "High School Degree <span style='color:red;'>*</span>";
+      highSchoolFile.style.border = ""; // ensure normal border
+    } else {
+      highSchoolFile.required = false;
+      highSchoolFile.classList.add("optional"); // for custom styling
+      label.innerHTML = "High School Degree (optional)";
+      highSchoolFile.setCustomValidity(""); // reset any validity cache
+      highSchoolFile.style.border = ""; // remove red outline
+    }
+  }
+
+  // Run on load + on change
+  studyLevelCheckboxes.forEach(cb => cb.addEventListener("change", updateRequirement));
+  updateRequirement();
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("applicationForm");
+
+  /* ---------- STEP NAVIGATION HANDLER ---------- */
+  document.querySelectorAll(".next-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const nextStep = btn.dataset.next;
+      const saveAs = btn.dataset.saveStep || nextStep;
+      const formData = new FormData(form);
+
+      // For backend compatibility
+      formData.append("step", nextStep);
+      if (saveAs !== nextStep) formData.append("save_as", saveAs);
+
+      try {
+        const res = await fetch("save-form-canada.php", { method: "POST", body: formData });
+        const data = await res.json();
+
+        if (data.status === "success") {
+          console.log(`✅ Step ${saveAs} saved successfully, moving to step ${nextStep}`);
+          document.querySelectorAll(".form-step").forEach(step => step.classList.remove("active"));
+          const nextDiv = document.getElementById(`step${nextStep}`);
+          if (nextDiv) nextDiv.classList.add("active");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+          alert("❌ Save failed: " + data.message);
+        }
+      } catch (err) {
+        alert("⚠️ Network error: " + err.message);
+      }
+    });
+  });
+
+  /* ---------- FINAL SUBMISSION (STEP 6) ---------- */
+const submitBtn = document.querySelector(".submit-btn");
+
+if (submitBtn) {
+  submitBtn.addEventListener("click", async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(form);
+    formData.append("step", "6");
+    formData.append("save_as", "final");   // ✅ tells backend it’s final
+    formData.append("submitted", "1");
+
+    // UI feedback
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = "Submitting...";
+    const progressWrapper = document.getElementById("progress-wrapper");
+    if (progressWrapper) progressWrapper.style.display = "block";
+
+    try {
+      const response = await fetch("save-form-canada.php", {
+        method: "POST",
+        body: formData
+      });
+      const data = await response.json();
+
+      if (progressWrapper) progressWrapper.style.display = "none";
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = "Submit Application";
+
+      // ✅ SUCCESS
+      if (data.status === "success") {
+        if (window.toastr) {
+          toastr.success("✅ Application submitted successfully!");
+        } else {
+          alert("✅ Application submitted successfully!");
+        }
+
+        // Optional redirect after 2 s
+        setTimeout(() => {
+          window.location.href = "thank_you.php";
+        }, 2000);
+        return;
+      }
+
+      // ⚠️ VALIDATION ERRORS (e.g., missing docs)
+      if (data.missing && Array.isArray(data.missing)) {
+        const list = data.missing.join(", ");
+        const msg = `Please upload all required documents before submitting:\n${list}`;
+        if (window.toastr) toastr.warning(msg); else alert(msg);
+        return;
+      }
+
+      // ❌ OTHER FAILURES
+      const msg = data.message || "Submission failed.";
+      if (window.toastr) toastr.error(msg); else alert("❌ " + msg);
+
+    } catch (err) {
+      // 🔥 Network or parsing error
+      if (progressWrapper) progressWrapper.style.display = "none";
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = "Submit Application";
+      const msg = "⚠️ Network or server error: " + err.message;
+      if (window.toastr) toastr.error(msg); else alert(msg);
+    }
+  });
+}
+
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // --- Detect region info ---
+  const regionInput = document.querySelector('input[name="region_id"]');
+  const regionNamePHP = "<?= strtoupper(trim($regionName ?? '')) ?>";
+  const regionId = regionInput ? regionInput.value.trim() : "";
+  const regionName = regionNamePHP.toUpperCase();
+
+  console.log("🌍 Region detected:", regionName, "ID:", regionId);
+
+  // --- Region keyword map ---
+  const regionKeywords = {
+    "AFRICA": "AFRICA",
+    "ASIA": "ASIA",
+    "AUSTRALIA": "AUSTRALIA",
+    "CANADA": "CANADA",
+    "CYPRUS": "CYPRUS",
+    "EUROPE": "EUROPE",
+    "USA": "USA"
+  };
+
+  const keyword = regionKeywords[regionName] || "";
+  if (!keyword) {
+    console.warn("⚠️ Region keyword not recognized:", regionName);
+    return;
+  }
+
+  // --- Step 2 + Step 3 checkbox groups ---
+  const step2Boxes = document.querySelectorAll('#step2 input[name="destination[]"]');
+  const step3Boxes = document.querySelectorAll('#step3 input[name="destination_loan[]"]');
+
+  // Utility: hide entire checkbox line safely
+  function hideCheckboxLine(cb, hide) {
+    const line = cb.closest("label") || cb.parentElement;
+    if (line) line.style.display = hide ? "none" : "inline-flex";
+  }
+
+  function showOnlyMatching(group, keyword) {
+    let matched = false;
+    group.forEach(cb => {
+      const value = cb.value.toUpperCase();
+      const match = value.includes(keyword);
+
+      if (match) {
+        cb.checked = true;
+        hideCheckboxLine(cb, false);
+        matched = true;
+      } else {
+        cb.checked = false;
+        hideCheckboxLine(cb, true);
+      }
+    });
+    return matched;
+  }
+
+  // --- Apply to both steps ---
+  const s2 = showOnlyMatching(step2Boxes, keyword);
+  const s3 = showOnlyMatching(step3Boxes, keyword);
+
+  console.log(`✅ Region "${keyword}" applied | Step2: ${s2} | Step3: ${s3}`);
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const bachelorSelect = document.querySelector('select[name="bachelor_program"]');
+  const step3LoanDestinations = document.querySelectorAll('#step3 input[name="destination_loan[]"]');
+  const step3DestinationSection = document.querySelector('#step3 .checkbox-group'); // Select Destination section
+  const step3DestinationLabel = document.querySelector('#step3 label:first-of-type'); // "Select Destination" label
+  const step3DestinationTextarea = document.querySelector('#step3 textarea[name="other_destination_loan"]');
+  const paymentSelects = document.querySelectorAll('#step3 select[name^="paying_"]'); // tuition, living, travel
+
+  if (!bachelorSelect) return;
+
+  // Hide or show loan-related and destination sections dynamically
+  function updateLoanVisibility() {
+    const selectedBachelor = bachelorSelect.value.trim().toUpperCase();
+    const isBachelor = selectedBachelor !== "" && selectedBachelor.includes("BACCALAUREATE");
+
+    if (isBachelor) {
+      // 🟡 Hide entire loan/destination sections
+      if (step3DestinationSection) step3DestinationSection.style.display = "none";
+      if (step3DestinationLabel) step3DestinationLabel.style.display = "none";
+      if (step3DestinationTextarea) step3DestinationTextarea.closest('label')?.remove(); // remove label and textarea
+      
+      step3LoanDestinations.forEach(cb => {
+        cb.checked = false;
+        cb.parentElement.style.display = "none";
+      });
+
+      // 🟡 Hide "Loan" options in payment dropdowns
+      paymentSelects.forEach(sel => {
+        Array.from(sel.options).forEach(opt => {
+          if (opt.text.toUpperCase().includes("LOAN")) opt.style.display = "none";
+        });
+        if (sel.value.toUpperCase().includes("LOAN")) sel.value = "";
+      });
+
+      console.log("🎓 Bachelor program → all loan/destination parts removed");
+    } else {
+      // 🔵 Show everything back for Master’s/PhD
+      if (step3DestinationSection) step3DestinationSection.style.display = "block";
+      if (step3DestinationLabel) step3DestinationLabel.style.display = "block";
+      if (step3DestinationTextarea) {
+        step3DestinationTextarea.style.display = "block";
+      }
+
+      step3LoanDestinations.forEach(cb => cb.parentElement.style.display = "inline-block");
+      paymentSelects.forEach(sel => {
+        Array.from(sel.options).forEach(opt => {
+          opt.style.display = "block";
+        });
+      });
+
+      console.log("🎓 Graduate program → all sections visible");
+    }
+  }
+
+  // Listen for changes
+  bachelorSelect.addEventListener("change", updateLoanVisibility);
+
+  // Run once on page load
+  updateLoanVisibility();
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // Step 3 checkbox group container
+  const step3Group = document.querySelector('#step3 .checkbox-group');
+  const allOptions = step3Group.querySelectorAll('label');
+
+  // Get region name (from PHP variable)
+  const regionName = "<?= strtoupper(trim($regionName ?? '')) ?>";
+
+  // Map regions to matching checkbox values
+  const regionMap = {
+    "USA": "USA WHERE LOAN COVER TUITION FEES AND LIVING ALLOWANCE",
+    "CANADA": "CANADA WHERE LOAN COVER TUITION FEES",
+    "EUROPE": "EUROPE WHERE LOAN COVER TUITION FEES",
+    "ASIA": "ASIA SOUTH KOREA"
+  };
+
+  // Find the value that matches current region
+  const matchValue = regionMap[regionName] || null;
+
+  allOptions.forEach(label => {
+    const checkbox = label.querySelector('input[type="checkbox"]');
+    if (!checkbox) return;
+
+    // Only show the matching region, hide all others
+    if (checkbox.value === matchValue) {
+      label.style.display = "block";
+      checkbox.checked = true;
+    } else {
+      label.style.display = "none";
+      checkbox.checked = false;
+    }
+  });
+
+  console.log(`✅ Step 3 updated to show only region: ${regionName}`);
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const bachelorSelect = document.querySelector('select[name="bachelor_program"]');
+  const otherSpecifyLabel = document.querySelector('#step3 label:has(+ textarea[name="other_destination_loan"])');
+  const otherSpecifyTextarea = document.querySelector('#step3 textarea[name="other_destination_loan"]');
+
+  if (!bachelorSelect || !otherSpecifyTextarea) return;
+
+  function toggleOtherField() {
+    const selected = bachelorSelect.value.trim().toUpperCase();
+    const isBachelor = selected !== "" && selected.includes("BACCALAUREATE");
+
+    if (isBachelor) {
+      // 🔒 Hide both label and textarea
+      if (otherSpecifyLabel) otherSpecifyLabel.style.display = "none";
+      otherSpecifyTextarea.style.display = "none";
+      otherSpecifyTextarea.value = ""; // Clear any existing text
+    } else {
+      // 🔓 Show them again
+      if (otherSpecifyLabel) otherSpecifyLabel.style.display = "block";
+      otherSpecifyTextarea.style.display = "block";
+    }
+  }
+
+  // Listen for changes
+  bachelorSelect.addEventListener("change", toggleOtherField);
+
+  // Run once on page load (in case a value is preselected)
+  toggleOtherField();
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // Listen for global fetch responses used in Step 6 submission
+  // This script adds a fallback in case missing_docs status is returned but not handled
+  const form = document.getElementById("applicationForm");
+
+  if (!form) return;
+
+  form.addEventListener("submit", async (e) => {
+    // Only handle when submitting final application
+    const isFinal = form.querySelector('input[name="save_as"][value="final"]');
+    if (!isFinal) return;
+
+    try {
+      // Hook into existing fetch completion
+      const observer = new MutationObserver(() => {
+        // Watch for a global variable set by backend response if needed later
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    } catch (err) {
+      console.error("Observer error:", err);
+    }
+  });
+
+  // --- Independent safety handler ---
+  window.addEventListener("backendMissingDocs", (e) => {
+    const data = e.detail || {};
+    const fields = data.missing_fields || [];
+    const msg = data.message || "Some required documents are missing.";
+
+    alert(msg);
+
+    // Scroll to Step 6 or highlight missing uploads
+    const step6 = document.getElementById("step6");
+    if (step6) {
+      document.querySelectorAll(".form-step").forEach(div => div.classList.remove("active"));
+      step6.classList.add("active");
+      step6.scrollIntoView({ behavior: "smooth" });
+    }
+
+    fields.forEach(f => {
+      const input = document.querySelector(`#${f}_file`);
+      if (input) {
+        input.style.border = "2px solid red";
+        setTimeout(() => input.style.border = "", 3000);
+      }
+    });
+  });
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const bachelorCheckbox = document.querySelector('input[name="intended_study_level[]"][value="Bachelor"]');
+  const degreeFile = document.getElementById("degree_transcripts_file");
+
+  if (!bachelorCheckbox || !degreeFile) return;
+
+  function toggleDegreeRequirement() {
+    const label = degreeFile.closest("label");
+
+    if (bachelorCheckbox.checked) {
+      // ✅ Make optional
+      degreeFile.required = false;
+      degreeFile.classList.add("optional");
+      degreeFile.style.border = "";
+      if (label) label.innerHTML = "Degree and Transcripts (optional)";
+    } else {
+      // 🔒 Make required again
+      degreeFile.required = true;
+      degreeFile.classList.remove("optional");
+      if (label) label.innerHTML = "Degree and Transcripts <span style='color:red;'>*</span>";
+    }
+  }
+
+  // Run once at load and when changed
+  bachelorCheckbox.addEventListener("change", toggleDegreeRequirement);
+  toggleDegreeRequirement();
+});
+</script>
+
+</body>
 </html>
