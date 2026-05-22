@@ -23,7 +23,13 @@ if (!file_exists($dataFile) || filesize($dataFile) === 0) {
                         'description' => 'Update all references from "Student Account" to "My Account" throughout the system',
                         'completed' => false,
                         'created_at' => date('Y-m-d H:i:s'),
-                        'completed_at' => null
+                        'completed_at' => null,
+                        'developer_verified' => false,
+                        'developer_verified_at' => null,
+                        'developer_comment' => '',
+                        'owner_verified' => false,
+                        'owner_verified_at' => null,
+                        'owner_comment' => ''
                     ],
                     [
                         'id' => 'mis_task_2',
@@ -31,7 +37,13 @@ if (!file_exists($dataFile) || filesize($dataFile) === 0) {
                         'description' => 'Add validation for email format and phone number to prevent fake admin accounts',
                         'completed' => false,
                         'created_at' => date('Y-m-d H:i:s'),
-                        'completed_at' => null
+                        'completed_at' => null,
+                        'developer_verified' => false,
+                        'developer_verified_at' => null,
+                        'developer_comment' => '',
+                        'owner_verified' => false,
+                        'owner_verified_at' => null,
+                        'owner_comment' => ''
                     ],
                     [
                         'id' => 'mis_task_3',
@@ -39,7 +51,13 @@ if (!file_exists($dataFile) || filesize($dataFile) === 0) {
                         'description' => 'Add Uganda, DRC, and Kenya (Coming Soon) to Marketing Tools and Contracts section',
                         'completed' => false,
                         'created_at' => date('Y-m-d H:i:s'),
-                        'completed_at' => null
+                        'completed_at' => null,
+                        'developer_verified' => false,
+                        'developer_verified_at' => null,
+                        'developer_comment' => '',
+                        'owner_verified' => false,
+                        'owner_verified_at' => null,
+                        'owner_comment' => ''
                     ],
                     [
                         'id' => 'mis_task_4',
@@ -47,7 +65,13 @@ if (!file_exists($dataFile) || filesize($dataFile) === 0) {
                         'description' => 'Implement currency selection dropdown in the Payments section for multi-currency support',
                         'completed' => false,
                         'created_at' => date('Y-m-d H:i:s'),
-                        'completed_at' => null
+                        'completed_at' => null,
+                        'developer_verified' => false,
+                        'developer_verified_at' => null,
+                        'developer_comment' => '',
+                        'owner_verified' => false,
+                        'owner_verified_at' => null,
+                        'owner_comment' => ''
                     ],
                     [
                         'id' => 'mis_task_5',
@@ -55,7 +79,13 @@ if (!file_exists($dataFile) || filesize($dataFile) === 0) {
                         'description' => 'Restructure Marketing Tools to organize by country with dropdown folders for downloads',
                         'completed' => false,
                         'created_at' => date('Y-m-d H:i:s'),
-                        'completed_at' => null
+                        'completed_at' => null,
+                        'developer_verified' => false,
+                        'developer_verified_at' => null,
+                        'developer_comment' => '',
+                        'owner_verified' => false,
+                        'owner_verified_at' => null,
+                        'owner_comment' => ''
                     ],
                     [
                         'id' => 'mis_task_6',
@@ -63,7 +93,13 @@ if (!file_exists($dataFile) || filesize($dataFile) === 0) {
                         'description' => 'Reorder Admin panel menu to place "Pre-Screening" immediately after Dashboard',
                         'completed' => false,
                         'created_at' => date('Y-m-d H:i:s'),
-                        'completed_at' => null
+                        'completed_at' => null,
+                        'developer_verified' => false,
+                        'developer_verified_at' => null,
+                        'developer_comment' => '',
+                        'owner_verified' => false,
+                        'owner_verified_at' => null,
+                        'owner_comment' => ''
                     ],
                     [
                         'id' => 'mis_task_7',
@@ -71,7 +107,13 @@ if (!file_exists($dataFile) || filesize($dataFile) === 0) {
                         'description' => 'Configure default menu access to "N/A" for new users - do not grant full access automatically',
                         'completed' => false,
                         'created_at' => date('Y-m-d H:i:s'),
-                        'completed_at' => null
+                        'completed_at' => null,
+                        'developer_verified' => false,
+                        'developer_verified_at' => null,
+                        'developer_comment' => '',
+                        'owner_verified' => false,
+                        'owner_verified_at' => null,
+                        'owner_comment' => ''
                     ],
                     [
                         'id' => 'mis_task_8',
@@ -79,7 +121,13 @@ if (!file_exists($dataFile) || filesize($dataFile) === 0) {
                         'description' => 'Add "Will you attend online or in person?" question to the Pre-Screening form',
                         'completed' => false,
                         'created_at' => date('Y-m-d H:i:s'),
-                        'completed_at' => null
+                        'completed_at' => null,
+                        'developer_verified' => false,
+                        'developer_verified_at' => null,
+                        'developer_comment' => '',
+                        'owner_verified' => false,
+                        'owner_verified_at' => null,
+                        'owner_comment' => ''
                     ],
                     [
                         'id' => 'mis_task_9',
@@ -87,7 +135,13 @@ if (!file_exists($dataFile) || filesize($dataFile) === 0) {
                         'description' => 'Perform comprehensive cleanup and optimization of the MIS front page',
                         'completed' => false,
                         'created_at' => date('Y-m-d H:i:s'),
-                        'completed_at' => null
+                        'completed_at' => null,
+                        'developer_verified' => false,
+                        'developer_verified_at' => null,
+                        'developer_comment' => '',
+                        'owner_verified' => false,
+                        'owner_verified_at' => null,
+                        'owner_comment' => ''
                     ],
                     [
                         'id' => 'mis_task_10',
@@ -95,7 +149,13 @@ if (!file_exists($dataFile) || filesize($dataFile) === 0) {
                         'description' => 'Remove the Muhanga office and add the Burundi office with their phone number',
                         'completed' => false,
                         'created_at' => date('Y-m-d H:i:s'),
-                        'completed_at' => null
+                        'completed_at' => null,
+                        'developer_verified' => false,
+                        'developer_verified_at' => null,
+                        'developer_comment' => '',
+                        'owner_verified' => false,
+                        'owner_verified_at' => null,
+                        'owner_comment' => ''
                     ],
                     [
                         'id' => 'mis_task_11',
@@ -103,7 +163,13 @@ if (!file_exists($dataFile) || filesize($dataFile) === 0) {
                         'description' => 'Integrate WhatsApp phone number with the website live chat functionality',
                         'completed' => false,
                         'created_at' => date('Y-m-d H:i:s'),
-                        'completed_at' => null
+                        'completed_at' => null,
+                        'developer_verified' => false,
+                        'developer_verified_at' => null,
+                        'developer_comment' => '',
+                        'owner_verified' => false,
+                        'owner_verified_at' => null,
+                        'owner_comment' => ''
                     ]
                 ]
             ],
@@ -207,6 +273,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 return $task['id'] !== $taskId;
             });
             $category['tasks'] = array_values($category['tasks']);
+        }
+    }
+    
+    // Developer verification
+    if (isset($_POST['action']) && $_POST['action'] === 'developer_verify') {
+        $taskId = $_POST['task_id'] ?? '';
+        $comment = $_POST['comment'] ?? '';
+        
+        foreach ($data['categories'] as &$category) {
+            foreach ($category['tasks'] as &$task) {
+                if ($task['id'] === $taskId) {
+                    $task['developer_verified'] = !$task['developer_verified'];
+                    $task['developer_verified_at'] = $task['developer_verified'] ? date('Y-m-d H:i:s') : null;
+                    $task['developer_comment'] = $comment;
+                    break 2;
+                }
+            }
+        }
+    }
+    
+    // Owner verification
+    if (isset($_POST['action']) && $_POST['action'] === 'owner_verify') {
+        $taskId = $_POST['task_id'] ?? '';
+        $comment = $_POST['comment'] ?? '';
+        
+        foreach ($data['categories'] as &$category) {
+            foreach ($category['tasks'] as &$task) {
+                if ($task['id'] === $taskId) {
+                    $task['owner_verified'] = !$task['owner_verified'];
+                    $task['owner_verified_at'] = $task['owner_verified'] ? date('Y-m-d H:i:s') : null;
+                    $task['owner_comment'] = $comment;
+                    
+                    // Auto-complete main task when owner approves
+                    if ($task['owner_verified']) {
+                        $task['completed'] = true;
+                        $task['completed_at'] = date('Y-m-d H:i:s');
+                    } else {
+                        // If owner revokes approval, keep task as completed (manual uncheck needed)
+                        // Or optionally uncheck main task too:
+                        // $task['completed'] = false;
+                        // $task['completed_at'] = null;
+                    }
+                    break 2;
+                }
+            }
         }
     }
     
@@ -588,6 +699,153 @@ $checklistData = json_decode(file_get_contents($dataFile), true);
             font-size: 0.8rem;
         }
 
+        /* Verification Section */
+        .verification-section {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .verification-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 0.8rem;
+            align-items: flex-start;
+        }
+
+        .verification-box {
+            flex: 1;
+            padding: 0.8rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+
+        .verification-box.developer {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(59, 130, 246, 0.02));
+        }
+
+        .verification-box.owner {
+            border-color: #10b981;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(16, 185, 129, 0.02));
+        }
+
+        .verification-box.verified {
+            border-color: var(--success);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+        }
+
+        .verification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .verification-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .verification-title.developer {
+            color: #3b82f6;
+        }
+
+        .verification-title.owner {
+            color: #10b981;
+        }
+
+        .verification-status {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .verification-status.developer {
+            border-color: #3b82f6;
+        }
+
+        .verification-status.owner {
+            border-color: #10b981;
+        }
+
+        .verification-status.verified {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        .verification-status:hover {
+            transform: scale(1.1);
+        }
+
+        .verification-comment {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.3rem;
+            font-style: italic;
+        }
+
+        .verification-time {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-top: 0.2rem;
+        }
+
+        .btn-verify {
+            padding: 0.3rem 0.6rem;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-verify.developer {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-verify.developer:hover {
+            background: #2563eb;
+        }
+
+        .btn-verify.owner {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-verify.owner:hover {
+            background: #059669;
+        }
+
+        .comment-input {
+            width: 100%;
+            padding: 0.4rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+            resize: vertical;
+            min-height: 40px;
+        }
+
+        .comment-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(242, 166, 90, 0.1);
+        }
+
         .empty-state {
             text-align: center;
             padding: 3rem;
@@ -796,6 +1054,93 @@ $checklistData = json_decode(file_get_contents($dataFile), true);
                                                         <span><i class="fas fa-check-circle"></i> Completed: <?php echo date('M j, Y', strtotime($task['completed_at'])); ?></span>
                                                     <?php endif; ?>
                                                 </div>
+                                                
+                                                <!-- Verification Section -->
+                                                <div class="verification-section">
+                                                    <!-- Developer Work Completion -->
+                                                    <div class="verification-box developer <?php echo ($task['developer_verified'] ?? false) ? 'verified' : ''; ?>">
+                                                        <div class="verification-header">
+                                                            <div class="verification-title developer">
+                                                                <i class="fas fa-code"></i>
+                                                                Developer - Work Completed
+                                                            </div>
+                                                            <div class="verification-status developer <?php echo ($task['developer_verified'] ?? false) ? 'verified' : ''; ?>" 
+                                                                 onclick="toggleVerification('developer', '<?php echo $task['id']; ?>')">
+                                                                <?php if ($task['developer_verified'] ?? false): ?>
+                                                                    <i class="fas fa-check"></i>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        </div>
+                                                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0.5rem 0;">
+                                                            Tick when the development work for this task is completed and ready for review
+                                                        </p>
+                                                        <?php if ($task['developer_verified'] ?? false): ?>
+                                                            <?php if (!empty($task['developer_comment'] ?? '')): ?>
+                                                                <div class="verification-comment"><?php echo htmlspecialchars($task['developer_comment']); ?></div>
+                                                            <?php endif; ?>
+                                                            <div class="verification-time">
+                                                                <i class="fas fa-clock"></i> Completed: <?php echo date('M j, Y H:i', strtotime($task['developer_verified_at'] ?? 'now')); ?>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                        <form method="POST" style="margin-top: 0.5rem;">
+                                                            <input type="hidden" name="action" value="developer_verify">
+                                                            <input type="hidden" name="task_id" value="<?php echo $task['id']; ?>">
+                                                            <textarea name="comment" class="comment-input" placeholder="Developer notes about the work completed..." rows="2"><?php echo htmlspecialchars($task['developer_comment'] ?? ''); ?></textarea>
+                                                            <button type="submit" class="btn-verify developer">
+                                                                <i class="fas fa-<?php echo ($task['developer_verified'] ?? false) ? 'times' : 'check'; ?>"></i>
+                                                                <?php echo ($task['developer_verified'] ?? false) ? 'Mark Incomplete' : 'Mark Complete'; ?>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                    
+                                                    <!-- Owner Final Approval -->
+                                                    <div class="verification-box owner <?php echo ($task['owner_verified'] ?? false) ? 'verified' : ''; ?>">
+                                                        <div class="verification-header">
+                                                            <div class="verification-title owner">
+                                                                <i class="fas fa-user-tie"></i>
+                                                                Project Owner - Final Approval
+                                                            </div>
+                                                            <div class="verification-status owner <?php echo ($task['owner_verified'] ?? false) ? 'verified' : ''; ?>" 
+                                                                 onclick="toggleVerification('owner', '<?php echo $task['id']; ?>')">
+                                                                <?php if ($task['owner_verified'] ?? false): ?>
+                                                                    <i class="fas fa-check"></i>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        </div>
+                                                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0.5rem 0;">
+                                                            Tick as final approval after reviewing the completed work
+                                                        </p>
+                                                        <?php if (!($task['developer_verified'] ?? false)): ?>
+                                                            <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0; font-size: 0.8rem;">
+                                                                <i class="fas fa-info-circle" style="color: #f39c12;"></i> 
+                                Waiting for developer to complete work first
+                                                            </div>
+                                                        <?php endif; ?>
+                                                        <?php if ($task['owner_verified'] ?? false): ?>
+                                                            <?php if (!empty($task['owner_comment'] ?? '')): ?>
+                                                                <div class="verification-comment"><?php echo htmlspecialchars($task['owner_comment']); ?></div>
+                                                            <?php endif; ?>
+                                                            <div class="verification-time">
+                                                                <i class="fas fa-clock"></i> Approved: <?php echo date('M j, Y H:i', strtotime($task['owner_verified_at'] ?? 'now')); ?>
+                                                            </div>
+                                                            <?php if ($task['completed'] ?? false): ?>
+                                                                <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0; font-size: 0.8rem;">
+                                                                    <i class="fas fa-check-circle" style="color: #28a745;"></i> 
+                                    Main task automatically marked as completed
+                                                                </div>
+                                                            <?php endif; ?>
+                                                        <?php endif; ?>
+                                                        <form method="POST" style="margin-top: 0.5rem;">
+                                                            <input type="hidden" name="action" value="owner_verify">
+                                                            <input type="hidden" name="task_id" value="<?php echo $task['id']; ?>">
+                                                            <textarea name="comment" class="comment-input" placeholder="Owner approval notes..." rows="2"><?php echo htmlspecialchars($task['owner_comment'] ?? ''); ?></textarea>
+                                                            <button type="submit" class="btn-verify owner" <?php echo !($task['developer_verified'] ?? false) ? 'disabled' : ''; ?>>
+                                                                <i class="fas fa-<?php echo ($task['owner_verified'] ?? false) ? 'times' : 'check'; ?>"></i>
+                                                                <?php echo ($task['owner_verified'] ?? false) ? 'Revoke Approval' : 'Give Final Approval'; ?>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div class="task-actions">
                                                 <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this task?')">
@@ -825,6 +1170,19 @@ $checklistData = json_decode(file_get_contents($dataFile), true);
             form.innerHTML = `
                 <input type="hidden" name="action" value="toggle_task">
                 <input type="hidden" name="task_id" value="${taskId}">
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        // Toggle verification (quick toggle without comment)
+        function toggleVerification(type, taskId) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = `
+                <input type="hidden" name="action" value="${type}_verify">
+                <input type="hidden" name="task_id" value="${taskId}">
+                <input type="hidden" name="comment" value="">
             `;
             document.body.appendChild(form);
             form.submit();

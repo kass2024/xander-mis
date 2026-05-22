@@ -16,7 +16,13 @@ $initialData = [
                     'description' => 'Update all references from "Student Account" to "My Account" throughout the system',
                     'completed' => false,
                     'created_at' => date('Y-m-d H:i:s'),
-                    'completed_at' => null
+                    'completed_at' => null,
+                    'developer_verified' => false,
+                    'developer_verified_at' => null,
+                    'developer_comment' => '',
+                    'owner_verified' => false,
+                    'owner_verified_at' => null,
+                    'owner_comment' => ''
                 ],
                 [
                     'id' => 'mis_task_2',
@@ -24,7 +30,13 @@ $initialData = [
                     'description' => 'Add validation for email format and phone number to prevent fake admin accounts',
                     'completed' => false,
                     'created_at' => date('Y-m-d H:i:s'),
-                    'completed_at' => null
+                    'completed_at' => null,
+                    'developer_verified' => false,
+                    'developer_verified_at' => null,
+                    'developer_comment' => '',
+                    'owner_verified' => false,
+                    'owner_verified_at' => null,
+                    'owner_comment' => ''
                 ],
                 [
                     'id' => 'mis_task_3',
@@ -32,7 +44,13 @@ $initialData = [
                     'description' => 'Add Uganda, DRC, and Kenya (Coming Soon) to Marketing Tools and Contracts section',
                     'completed' => false,
                     'created_at' => date('Y-m-d H:i:s'),
-                    'completed_at' => null
+                    'completed_at' => null,
+                    'developer_verified' => false,
+                    'developer_verified_at' => null,
+                    'developer_comment' => '',
+                    'owner_verified' => false,
+                    'owner_verified_at' => null,
+                    'owner_comment' => ''
                 ],
                 [
                     'id' => 'mis_task_4',
@@ -40,7 +58,13 @@ $initialData = [
                     'description' => 'Implement currency selection dropdown in the Payments section for multi-currency support',
                     'completed' => false,
                     'created_at' => date('Y-m-d H:i:s'),
-                    'completed_at' => null
+                    'completed_at' => null,
+                    'developer_verified' => false,
+                    'developer_verified_at' => null,
+                    'developer_comment' => '',
+                    'owner_verified' => false,
+                    'owner_verified_at' => null,
+                    'owner_comment' => ''
                 ],
                 [
                     'id' => 'mis_task_5',
@@ -48,7 +72,13 @@ $initialData = [
                     'description' => 'Restructure Marketing Tools to organize by country with dropdown folders for downloads',
                     'completed' => false,
                     'created_at' => date('Y-m-d H:i:s'),
-                    'completed_at' => null
+                    'completed_at' => null,
+                    'developer_verified' => false,
+                    'developer_verified_at' => null,
+                    'developer_comment' => '',
+                    'owner_verified' => false,
+                    'owner_verified_at' => null,
+                    'owner_comment' => ''
                 ],
                 [
                     'id' => 'mis_task_6',
@@ -56,7 +86,13 @@ $initialData = [
                     'description' => 'Reorder Admin panel menu to place "Pre-Screening" immediately after Dashboard',
                     'completed' => false,
                     'created_at' => date('Y-m-d H:i:s'),
-                    'completed_at' => null
+                    'completed_at' => null,
+                    'developer_verified' => false,
+                    'developer_verified_at' => null,
+                    'developer_comment' => '',
+                    'owner_verified' => false,
+                    'owner_verified_at' => null,
+                    'owner_comment' => ''
                 ],
                 [
                     'id' => 'mis_task_7',
@@ -64,7 +100,13 @@ $initialData = [
                     'description' => 'Configure default menu access to "N/A" for new users - do not grant full access automatically',
                     'completed' => false,
                     'created_at' => date('Y-m-d H:i:s'),
-                    'completed_at' => null
+                    'completed_at' => null,
+                    'developer_verified' => false,
+                    'developer_verified_at' => null,
+                    'developer_comment' => '',
+                    'owner_verified' => false,
+                    'owner_verified_at' => null,
+                    'owner_comment' => ''
                 ],
                 [
                     'id' => 'mis_task_8',
@@ -72,7 +114,13 @@ $initialData = [
                     'description' => 'Add "Will you attend online or in person?" question to the Pre-Screening form',
                     'completed' => false,
                     'created_at' => date('Y-m-d H:i:s'),
-                    'completed_at' => null
+                    'completed_at' => null,
+                    'developer_verified' => false,
+                    'developer_verified_at' => null,
+                    'developer_comment' => '',
+                    'owner_verified' => false,
+                    'owner_verified_at' => null,
+                    'owner_comment' => ''
                 ],
                 [
                     'id' => 'mis_task_9',
@@ -80,7 +128,13 @@ $initialData = [
                     'description' => 'Perform comprehensive cleanup and optimization of the MIS front page',
                     'completed' => false,
                     'created_at' => date('Y-m-d H:i:s'),
-                    'completed_at' => null
+                    'completed_at' => null,
+                    'developer_verified' => false,
+                    'developer_verified_at' => null,
+                    'developer_comment' => '',
+                    'owner_verified' => false,
+                    'owner_verified_at' => null,
+                    'owner_comment' => ''
                 ],
                 [
                     'id' => 'mis_task_10',
@@ -88,7 +142,13 @@ $initialData = [
                     'description' => 'Remove the Muhanga office and add the Burundi office with their phone number',
                     'completed' => false,
                     'created_at' => date('Y-m-d H:i:s'),
-                    'completed_at' => null
+                    'completed_at' => null,
+                    'developer_verified' => false,
+                    'developer_verified_at' => null,
+                    'developer_comment' => '',
+                    'owner_verified' => false,
+                    'owner_verified_at' => null,
+                    'owner_comment' => ''
                 ],
                 [
                     'id' => 'mis_task_11',
@@ -96,7 +156,13 @@ $initialData = [
                     'description' => 'Integrate WhatsApp phone number with the website live chat functionality',
                     'completed' => false,
                     'created_at' => date('Y-m-d H:i:s'),
-                    'completed_at' => null
+                    'completed_at' => null,
+                    'developer_verified' => false,
+                    'developer_verified_at' => null,
+                    'developer_comment' => '',
+                    'owner_verified' => false,
+                    'owner_verified_at' => null,
+                    'owner_comment' => ''
                 ]
             ]
         ]
