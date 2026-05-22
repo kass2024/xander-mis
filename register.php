@@ -37,6 +37,7 @@ if (!empty($_GET['error'])) {
 <title>Create account | XANDER GLOBAL SCHOLARS</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/css/intlTelInput.css">
 <style>
 :root {
   --primary: #1e3a5f;
@@ -191,6 +192,14 @@ h1 {
 }
 .inline-status.error { color: var(--danger); }
 .inline-status.success { color: var(--success); }
+.input-wrap input.is-invalid { border-color: var(--danger); box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.10); }
+.input-wrap input.is-valid   { border-color: var(--success); box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.10); }
+/* intl-tel-input integration with our icon-padded input */
+.iti { width: 100%; display: block; }
+.input-wrap.tel-wrap i.fa-phone { display: none; }
+.input-wrap.tel-wrap input { padding-left: 96px !important; }
+.iti__flag-container { z-index: 2; }
+.iti__selected-flag { padding: 0 8px 0 12px; }
 .submit-btn {
   width: 100%;
   margin-top: 10px;
@@ -305,10 +314,12 @@ h1 {
         </div>
         <div class="form-group">
           <label for="phone_number">Phone</label>
-          <div class="input-wrap">
+          <div class="input-wrap tel-wrap">
             <i class="fas fa-phone" aria-hidden="true"></i>
-            <input type="tel" name="phone_number" id="phone_number" required maxlength="40" placeholder="Include country code if applicable" value="<?= htmlspecialchars($_POST['phone_number'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+            <input type="tel" name="phone_number" id="phone_number" required maxlength="40" placeholder="7XXXXXXXX" value="<?= htmlspecialchars($_POST['phone_number'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
           </div>
+          <input type="hidden" name="phone_e164" id="phone_e164" value="">
+          <div id="phoneStatus" class="inline-status" aria-live="polite"></div>
         </div>
         <div class="form-group">
           <label for="email">Work email</label>
@@ -335,36 +346,108 @@ h1 {
     </div>
   </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/intlTelInput.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js"></script>
 <script>
 (function () {
   const form = document.getElementById('staffForm');
   if (!form) return;
   const firstNameInput = document.getElementById('first_name');
   const emailInput = document.getElementById('email');
+  const phoneInput = document.getElementById('phone_number');
+  const phoneE164  = document.getElementById('phone_e164');
   const firstNameStatus = document.getElementById('firstNameStatus');
   const emailStatus = document.getElementById('emailStatus');
+  const phoneStatus = document.getElementById('phoneStatus');
   const submitBtn = document.getElementById('submitBtn');
-  let firstTimer, emailTimer;
+  let firstTimer, emailTimer, phoneTimer;
+  const EMAIL_RE = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+
+  // Field validity state — submit only enabled when all are valid
+  const state = { firstName: true, email: false, phone: false };
 
   function setStatus(el, type, html) {
     el.className = 'inline-status' + (type ? ' ' + type : '');
     el.innerHTML = html;
   }
+  function setFieldValidity(input, ok) {
+    input.classList.toggle('is-valid', ok === true);
+    input.classList.toggle('is-invalid', ok === false);
+  }
+  function refreshSubmit() {
+    submitBtn.disabled = !(state.firstName && state.email && state.phone);
+  }
 
+  /* ---------- intl-tel-input on phone ---------- */
+  const iti = window.intlTelInput(phoneInput, {
+    initialCountry: 'auto',
+    separateDialCode: true,
+    nationalMode: true,
+    preferredCountries: ['rw', 'ke', 'ug', 'tz', 'us', 'gb'],
+    utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js',
+    geoIpLookup: function (cb) {
+      fetch('https://ipapi.co/json/')
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function (d) { cb(d && d.country_code ? d.country_code : 'RW'); })
+        .catch(function () { cb('RW'); });
+    }
+  });
+
+  function validatePhone() {
+    const raw = phoneInput.value.trim();
+    if (raw === '') {
+      setStatus(phoneStatus, '', '');
+      setFieldValidity(phoneInput, null);
+      phoneE164.value = '';
+      state.phone = false;
+      refreshSubmit();
+      return;
+    }
+    let ok = false;
+    try { ok = iti.isValidNumber(); } catch (e) { ok = false; }
+    if (ok) {
+      const e164 = (typeof window.intlTelInputUtils !== 'undefined')
+        ? iti.getNumber(window.intlTelInputUtils.numberFormat.E164)
+        : iti.getNumber();
+      phoneE164.value = e164 || '';
+      setFieldValidity(phoneInput, true);
+      setStatus(phoneStatus, 'success', '<i class="fas fa-circle-check"></i> Valid number');
+      state.phone = true;
+    } else {
+      phoneE164.value = '';
+      setFieldValidity(phoneInput, false);
+      const code = (typeof iti.getValidationError === 'function') ? iti.getValidationError() : -1;
+      let msg = 'Enter a valid phone number';
+      const utils = window.intlTelInputUtils;
+      if (utils) {
+        if (code === utils.validationError.TOO_SHORT) msg = 'Number is too short';
+        else if (code === utils.validationError.TOO_LONG) msg = 'Number is too long';
+        else if (code === utils.validationError.INVALID_COUNTRY_CODE) msg = 'Invalid country code';
+        else if (code === utils.validationError.NOT_A_NUMBER) msg = 'Only digits allowed';
+      }
+      setStatus(phoneStatus, 'error', '<i class="fas fa-circle-exclamation"></i> ' + msg);
+      state.phone = false;
+    }
+    refreshSubmit();
+  }
+  phoneInput.addEventListener('blur', validatePhone);
+  phoneInput.addEventListener('keyup', function () {
+    clearTimeout(phoneTimer);
+    phoneTimer = setTimeout(validatePhone, 250);
+  });
+  phoneInput.addEventListener('countrychange', validatePhone);
+
+  /* ---------- first name (existence check) ---------- */
   firstNameInput.addEventListener('input', function () {
     clearTimeout(firstTimer);
     firstTimer = setTimeout(checkFirstName, 450);
   });
-  emailInput.addEventListener('input', function () {
-    clearTimeout(emailTimer);
-    emailTimer = setTimeout(checkEmail, 450);
-  });
-
   function checkFirstName() {
     const v = firstNameInput.value.trim();
     if (v.length < 2) {
       setStatus(firstNameStatus, '', '');
-      submitBtn.disabled = false;
+      state.firstName = true;
+      refreshSubmit();
       return;
     }
     setStatus(firstNameStatus, '', '<i class="fas fa-spinner fa-spin"></i> Checking…');
@@ -377,26 +460,42 @@ h1 {
       .then(function (data) {
         if (data === 'exists') {
           setStatus(firstNameStatus, 'error', '<i class="fas fa-circle-exclamation"></i> This first name is already registered');
-          submitBtn.disabled = true;
+          state.firstName = false;
         } else {
           setStatus(firstNameStatus, 'success', '<i class="fas fa-circle-check"></i> OK');
-          submitBtn.disabled = false;
+          state.firstName = true;
         }
+        refreshSubmit();
       })
       .catch(function () {
         setStatus(firstNameStatus, '', '');
-        submitBtn.disabled = false;
+        state.firstName = true;
+        refreshSubmit();
       });
   }
 
+  /* ---------- email (format + existence) ---------- */
+  emailInput.addEventListener('input', function () {
+    clearTimeout(emailTimer);
+    emailTimer = setTimeout(checkEmail, 350);
+  });
   function checkEmail() {
     const v = emailInput.value.trim();
-    if (v.length < 5) {
+    if (v === '') {
       setStatus(emailStatus, '', '');
-      submitBtn.disabled = false;
+      setFieldValidity(emailInput, null);
+      state.email = false;
+      refreshSubmit();
       return;
     }
-    setStatus(emailStatus, '', '<i class="fas fa-spinner fa-spin"></i> Checking…');
+    if (!EMAIL_RE.test(v)) {
+      setStatus(emailStatus, 'error', '<i class="fas fa-circle-exclamation"></i> Enter a valid email address (e.g. you@example.com)');
+      setFieldValidity(emailInput, false);
+      state.email = false;
+      refreshSubmit();
+      return;
+    }
+    setStatus(emailStatus, '', '<i class="fas fa-spinner fa-spin"></i> Checking availability…');
     fetch('check_user.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -406,22 +505,42 @@ h1 {
       .then(function (data) {
         if (data === 'exists') {
           setStatus(emailStatus, 'error', '<i class="fas fa-circle-exclamation"></i> Email already in use');
-          submitBtn.disabled = true;
+          setFieldValidity(emailInput, false);
+          state.email = false;
         } else {
-          setStatus(emailStatus, 'success', '<i class="fas fa-circle-check"></i> Available');
-          submitBtn.disabled = false;
+          setStatus(emailStatus, 'success', '<i class="fas fa-circle-check"></i> Looks good');
+          setFieldValidity(emailInput, true);
+          state.email = true;
         }
+        refreshSubmit();
       })
       .catch(function () {
-        setStatus(emailStatus, '', '');
-        submitBtn.disabled = false;
+        // Network failure: don't block if format is fine
+        setStatus(emailStatus, 'success', '<i class="fas fa-circle-check"></i> Looks good');
+        setFieldValidity(emailInput, true);
+        state.email = true;
+        refreshSubmit();
       });
   }
 
-  form.addEventListener('submit', function () {
+  /* ---------- submit guard ---------- */
+  form.addEventListener('submit', function (e) {
+    validatePhone();
+    // Replace phone_number value with E.164 for server-side consistency
+    if (phoneE164.value) {
+      phoneInput.value = phoneE164.value;
+    }
+    if (!(state.firstName && state.email && state.phone)) {
+      e.preventDefault();
+      if (!state.email) emailInput.focus();
+      else if (!state.phone) phoneInput.focus();
+      return;
+    }
     submitBtn.classList.add('is-loading');
     submitBtn.disabled = true;
   });
+
+  refreshSubmit();
 })();
 </script>
 </body>

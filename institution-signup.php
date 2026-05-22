@@ -49,50 +49,64 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $contactName = trim((string) ($_POST['contact_name'] ?? ''));
         $contactTitle = trim((string) ($_POST['contact_title'] ?? ''));
         $email = xander_institution_email_norm((string) ($_POST['email'] ?? ''));
-        $phone = trim((string) ($_POST['phone'] ?? ''));
+        $phoneRaw = trim((string) ($_POST['phone'] ?? ''));
+        $phoneE164 = trim((string) ($_POST['phone_e164'] ?? ''));
+        $phone = $phoneE164 !== '' ? $phoneE164 : $phoneRaw;
 
-        $universityId = xander_institution_upsert_university(
-            $conn,
-            $universityId,
-            $name,
-            $regionId,
-            $countryId,
-            $website,
-            $city,
-            $institutionPhone,
-            $institutionKind
-        );
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $error = 'Please enter a valid login email address.';
+        }
+        if ($error === '') {
+            $phoneDigits = preg_replace('/\D+/', '', $phone) ?? '';
+            if (strlen($phoneDigits) < 7 || strlen($phoneDigits) > 15) {
+                $error = 'Please enter a valid phone number (7–15 digits, include country code).';
+            }
+        }
 
-        if ($universityId <= 0) {
-            $error = 'Please enter institution name, region, and country.';
-        } else {
-            $reg = xander_institution_register_portal_account(
+        if ($error === '') {
+            $universityId = xander_institution_upsert_university(
                 $conn,
                 $universityId,
-                $contactName,
-                $contactTitle,
-                $email,
-                null,
-                $phone
+                $name,
+                $regionId,
+                $countryId,
+                $website,
+                $city,
+                $institutionPhone,
+                $institutionKind
             );
-            if (!$reg['ok']) {
-                $error = $reg['message'];
+
+            if ($universityId <= 0) {
+                $error = 'Please enter institution name, region, and country.';
             } else {
-                $tempPassword = (string) ($reg['temp_password'] ?? '');
-                $auth = xander_institution_authenticate($conn, $email, $tempPassword);
-                if ($auth['ok']) {
-                    $acc = $auth['account'];
-                    session_regenerate_id(true);
-                    $_SESSION['institution_account_id'] = (int) $acc['id'];
-                    $_SESSION['institution_university_id'] = (int) $acc['university_id'];
-                    $_SESSION['institution_email'] = $email;
-                    $_SESSION['institution_name'] = trim((string) $acc['contact_name']);
-                    $_SESSION['institution_university_name'] = trim((string) ($acc['university_name'] ?? $name));
-                    header('Location: ' . pcvc_url('/institution/index.php?welcome=1'));
+                $reg = xander_institution_register_portal_account(
+                    $conn,
+                    $universityId,
+                    $contactName,
+                    $contactTitle,
+                    $email,
+                    null,
+                    $phone
+                );
+                if (!$reg['ok']) {
+                    $error = $reg['message'];
+                } else {
+                    $tempPassword = (string) ($reg['temp_password'] ?? '');
+                    $auth = xander_institution_authenticate($conn, $email, $tempPassword);
+                    if ($auth['ok']) {
+                        $acc = $auth['account'];
+                        session_regenerate_id(true);
+                        $_SESSION['institution_account_id'] = (int) $acc['id'];
+                        $_SESSION['institution_university_id'] = (int) $acc['university_id'];
+                        $_SESSION['institution_email'] = $email;
+                        $_SESSION['institution_name'] = trim((string) $acc['contact_name']);
+                        $_SESSION['institution_university_name'] = trim((string) ($acc['university_name'] ?? $name));
+                        header('Location: ' . pcvc_url('/institution/index.php?welcome=1'));
+                        exit;
+                    }
+                    header('Location: ' . pcvc_url('/institution-login.php?email=' . rawurlencode($email) . '&registered=1'));
                     exit;
                 }
-                header('Location: ' . pcvc_url('/institution-login.php?email=' . rawurlencode($email) . '&registered=1'));
-                exit;
             }
         }
     }
@@ -111,6 +125,7 @@ $fontsCssUrl = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;
   <link href="<?php echo htmlspecialchars($fontsCssUrl, ENT_QUOTES, 'UTF-8'); ?>" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/css/intlTelInput.css">
   <style>
     :root{--navy:#012F6B;--navy2:#254D81;--gold:#F2A65A;--bg:#eef2f7;}
     *{box-sizing:border-box}
@@ -122,6 +137,14 @@ $fontsCssUrl = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;
     .form-control,.form-select{border-radius:12px;border-color:#e2e8f0;padding:12px 14px;font-size:.95rem}
     .form-control:focus,.form-select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(242,166,90,.28)}
     .form-control::placeholder,.form-select option[value=""]{color:#94a3b8}
+    .form-control.is-valid{border-color:#16a34a;background-image:none;box-shadow:0 0 0 3px rgba(22,163,74,.15)}
+    .form-control.is-invalid{border-color:#dc2626;background-image:none;box-shadow:0 0 0 3px rgba(220,38,38,.12)}
+    .field-status{font-size:.8rem;margin-top:6px;min-height:1.1em;display:flex;align-items:center;gap:6px}
+    .field-status.is-error{color:#dc2626}
+    .field-status.is-ok{color:#16a34a}
+    .iti{width:100%;display:block}
+    .iti--separate-dial-code .iti__selected-flag{background:#f8fafc;border-top-left-radius:12px;border-bottom-left-radius:12px}
+    .iti input.form-control{padding-left:96px !important}
     .lookup-wrap{position:relative}
     .lookup-results{position:absolute;left:0;right:0;top:100%;z-index:50;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.12);max-height:220px;overflow-y:auto;display:none;margin-top:4px}
     .lookup-results.show{display:block}
@@ -204,14 +227,17 @@ $fontsCssUrl = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;
             <input class="form-control" name="contact_title" placeholder="Job title">
           </div>
           <div class="col-md-6">
-            <input class="form-control" type="email" name="email" required placeholder="Email (login) *">
+            <input class="form-control" type="email" id="inst_email" name="email" required maxlength="190" placeholder="Email (login) *" autocomplete="email">
+            <div class="field-status" id="instEmailStatus" aria-live="polite"></div>
           </div>
           <div class="col-md-6">
-            <input class="form-control" name="phone" placeholder="Your phone">
+            <input class="form-control" type="tel" id="inst_phone" name="phone" required placeholder="Your phone *">
+            <input type="hidden" name="phone_e164" id="inst_phone_e164" value="">
+            <div class="field-status" id="instPhoneStatus" aria-live="polite"></div>
           </div>
         </div>
 
-        <button type="submit" class="btn btn-primary-custom mt-4" id="submitBtn">
+        <button type="submit" class="btn btn-primary-custom mt-4" id="submitBtn" disabled>
           <i class="fas fa-check me-2"></i>Create portal access
         </button>
         <p class="text-center mt-3 mb-0">
@@ -223,5 +249,128 @@ $fontsCssUrl = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;
 
   <script type="application/json" id="inst-signup-config"><?php echo json_encode(['apiBase' => $appRoot], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
   <script src="assets/js/institution-signup.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/intlTelInput.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js"></script>
+  <script>
+  (function () {
+    const form        = document.getElementById('instSignupForm');
+    if (!form) return;
+    const emailInput  = document.getElementById('inst_email');
+    const phoneInput  = document.getElementById('inst_phone');
+    const phoneE164   = document.getElementById('inst_phone_e164');
+    const emailStatus = document.getElementById('instEmailStatus');
+    const phoneStatus = document.getElementById('instPhoneStatus');
+    const submitBtn   = document.getElementById('submitBtn');
+    const EMAIL_RE    = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+    const state       = { email: false, phone: false };
+
+    function setStatus(el, kind, html) {
+      el.className = 'field-status' + (kind ? ' is-' + kind : '');
+      el.innerHTML = html;
+    }
+    function setValidity(input, ok) {
+      input.classList.toggle('is-valid',   ok === true);
+      input.classList.toggle('is-invalid', ok === false);
+    }
+    function refreshSubmit() {
+      submitBtn.disabled = !(state.email && state.phone);
+    }
+
+    /* -------- Email format check (live) -------- */
+    function validateEmail() {
+      const v = emailInput.value.trim();
+      if (v === '') {
+        setStatus(emailStatus, '', '');
+        setValidity(emailInput, null);
+        state.email = false;
+      } else if (!EMAIL_RE.test(v) || v.length > 190) {
+        setStatus(emailStatus, 'error', '<i class="fas fa-circle-exclamation"></i> Enter a valid email (e.g. you@school.edu)');
+        setValidity(emailInput, false);
+        state.email = false;
+      } else {
+        setStatus(emailStatus, 'ok', '<i class="fas fa-circle-check"></i> Valid email');
+        setValidity(emailInput, true);
+        state.email = true;
+      }
+      refreshSubmit();
+    }
+    emailInput.addEventListener('input', validateEmail);
+    emailInput.addEventListener('blur',  validateEmail);
+
+    /* -------- Phone with intl-tel-input -------- */
+    const iti = window.intlTelInput(phoneInput, {
+      initialCountry: 'auto',
+      separateDialCode: true,
+      nationalMode: true,
+      autoPlaceholder: 'polite',
+      preferredCountries: ['rw', 'ke', 'ug', 'tz', 'us', 'gb'],
+      utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js',
+      geoIpLookup: function (cb) {
+        fetch('https://ipapi.co/json/')
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+          .then(function (d) { cb(d && d.country_code ? d.country_code : 'RW'); })
+          .catch(function () { cb('RW'); });
+      }
+    });
+
+    function validatePhone() {
+      const raw = phoneInput.value.trim();
+      if (raw === '') {
+        setStatus(phoneStatus, '', '');
+        setValidity(phoneInput, null);
+        phoneE164.value = '';
+        state.phone = false;
+        refreshSubmit();
+        return;
+      }
+      let ok = false;
+      try { ok = iti.isValidNumber(); } catch (e) { ok = false; }
+      if (ok) {
+        const utils = window.intlTelInputUtils;
+        const e164  = utils ? iti.getNumber(utils.numberFormat.E164) : iti.getNumber();
+        phoneE164.value = e164 || '';
+        setStatus(phoneStatus, 'ok', '<i class="fas fa-circle-check"></i> Valid number');
+        setValidity(phoneInput, true);
+        state.phone = true;
+      } else {
+        phoneE164.value = '';
+        const code  = (typeof iti.getValidationError === 'function') ? iti.getValidationError() : -1;
+        const utils = window.intlTelInputUtils;
+        let msg = 'Enter a valid phone number';
+        if (utils) {
+          if (code === utils.validationError.TOO_SHORT)  msg = 'Number is too short';
+          else if (code === utils.validationError.TOO_LONG) msg = 'Number is too long';
+          else if (code === utils.validationError.INVALID_COUNTRY_CODE) msg = 'Invalid country code';
+          else if (code === utils.validationError.NOT_A_NUMBER) msg = 'Only digits are allowed';
+        }
+        setStatus(phoneStatus, 'error', '<i class="fas fa-circle-exclamation"></i> ' + msg);
+        setValidity(phoneInput, false);
+        state.phone = false;
+      }
+      refreshSubmit();
+    }
+    phoneInput.addEventListener('blur', validatePhone);
+    phoneInput.addEventListener('keyup', validatePhone);
+    phoneInput.addEventListener('countrychange', validatePhone);
+
+    /* -------- Final submit guard -------- */
+    form.addEventListener('submit', function (e) {
+      validateEmail();
+      validatePhone();
+      if (phoneE164.value) {
+        // Send the normalized E.164 number as the `phone` value
+        phoneInput.value = phoneE164.value;
+      }
+      if (!(state.email && state.phone)) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (!state.email) emailInput.focus();
+        else phoneInput.focus();
+      }
+    }, true);
+
+    refreshSubmit();
+  })();
+  </script>
 </body>
 </html>

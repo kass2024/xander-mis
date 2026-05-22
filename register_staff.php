@@ -105,11 +105,17 @@ $first_name   = trim((string) ($_POST['first_name'] ?? ''));
 $last_name    = trim((string) ($_POST['last_name'] ?? ''));
 $username     = trim((string) ($_POST['username'] ?? ''));
 $phone_number = trim((string) ($_POST['phone_number'] ?? ''));
+$phone_e164   = trim((string) ($_POST['phone_e164'] ?? ''));
 $email        = trim((string) ($_POST['email'] ?? ''));
 $role         = trim((string) ($_POST['role'] ?? 'agent'));
 
 if ($role === '') {
     $role = 'agent';
+}
+
+// Prefer the validated E.164 number coming from the client (intl-tel-input)
+if ($phone_e164 !== '') {
+    $phone_number = $phone_e164;
 }
 
 if ($first_name === '' || $last_name === '' || $username === '' || $phone_number === '' || $email === '') {
@@ -118,6 +124,13 @@ if ($first_name === '' || $last_name === '' || $username === '' || $phone_number
 }
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    header('Location: register.php?error=invalid');
+    exit;
+}
+
+// Phone: must contain 7–15 digits (ITU E.164 allows up to 15)
+$phoneDigits = preg_replace('/\D+/', '', $phone_number);
+if (strlen((string) $phoneDigits) < 7 || strlen((string) $phoneDigits) > 15) {
     header('Location: register.php?error=invalid');
     exit;
 }

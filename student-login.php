@@ -218,7 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <img src="XANDER GLOBAL SCHOLARS LOGO1.png" alt="<?= htmlspecialchars(PCVC_COMPANY_DISPLAY_NAME, ENT_QUOTES, 'UTF-8') ?>" onerror="this.style.display='none'">
       </div>
       <h1><?= htmlspecialchars(PCVC_COMPANY_DISPLAY_NAME, ENT_QUOTES, 'UTF-8') ?></h1>
-      <p class="mb-0">Student Account — sign in to track your application status and upload required materials securely.</p>
+      <p class="mb-0">My Account — sign in to track your application status and upload required materials securely.</p>
     </aside>
     <section class="panel">
       <div class="panel-inner">

@@ -5371,6 +5371,63 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 <script>
+/* =====================================================
+   SMART EMAIL VALIDATION for the signup/application form
+   - Live regex check
+   - Bootstrap is-valid / is-invalid styling
+   - Populates #applicantEmailFeedback
+   - Blocks form submit if format is bad
+===================================================== */
+document.addEventListener("DOMContentLoaded", () => {
+  const emailInput = document.getElementById("applicant_email");
+  const feedback   = document.getElementById("applicantEmailFeedback");
+  if (!emailInput) return;
+
+  const EMAIL_RE = /^[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}$/i;
+
+  function setState(ok, msg) {
+    if (ok === null) {
+      emailInput.classList.remove("is-valid", "is-invalid");
+      if (feedback) { feedback.textContent = ""; feedback.classList.remove("valid-feedback"); feedback.classList.add("invalid-feedback"); }
+      return;
+    }
+    emailInput.classList.toggle("is-valid",  ok === true);
+    emailInput.classList.toggle("is-invalid", ok === false);
+    if (feedback) {
+      feedback.textContent = msg || "";
+      feedback.classList.toggle("valid-feedback",   ok === true);
+      feedback.classList.toggle("invalid-feedback", ok === false);
+      feedback.style.display = "block";
+    }
+  }
+
+  function validate() {
+    const v = emailInput.value.trim();
+    if (v === "") { setState(null); return false; }
+    if (!EMAIL_RE.test(v) || v.length > 100) {
+      setState(false, "Enter a valid email address (e.g. you@example.com).");
+      return false;
+    }
+    setState(true, "Looks good.");
+    return true;
+  }
+
+  emailInput.addEventListener("input", validate);
+  emailInput.addEventListener("blur",  validate);
+
+  const form = emailInput.closest("form");
+  if (form) {
+    form.addEventListener("submit", (e) => {
+      if (!validate()) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        emailInput.focus();
+      }
+    }, true);
+  }
+});
+</script>
+<script>
 document.addEventListener("DOMContentLoaded", () => {
   // =====================================================
   // REGION SELECTION AS CLOSEABLE TABS - DEBUG VERSION
