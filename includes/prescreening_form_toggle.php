@@ -49,33 +49,80 @@ declare(strict_types=1);
     });
   });
 
-  function selectedCountryCount(selectEl) {
-    if (!selectEl) return 0;
-    return Array.from(selectEl.selectedOptions).filter(function (o) {
-      return o.value && o.value.trim() !== '';
-    }).length;
+  function findCountryWidget(form, fieldName) {
+    return form.querySelector('.prescreen-country-multi[data-name="' + fieldName + '"]');
+  }
+
+  function selectedCountryCount(widget) {
+    if (!widget) return 0;
+    return widget.querySelectorAll('input.prescreen-country-check:checked').length;
+  }
+
+  function minSelections(widget) {
+    if (!widget) return 0;
+    const n = parseInt(widget.getAttribute('data-min-selections') || '0', 10);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function focusFirstUnchecked(widget) {
+    if (!widget) return;
+    const first = widget.querySelector('input.prescreen-country-check:not(:checked)');
+    if (first) first.focus();
   }
 
   function validateCountryMulti(form) {
     const type = currentType();
     if (type === 'work_abroad') {
-      const sel = form.querySelector('select.prescreen-country-multi[name="work_country_destination[]"]');
-      if (selectedCountryCount(sel) < 2) {
-        alert('Please select at least two countries of interest for work abroad.');
-        sel && sel.focus();
+      const w = findCountryWidget(form, 'work_country_destination');
+      const min = minSelections(w) || 1;
+      if (selectedCountryCount(w) < min) {
+        alert('Please tick at least ' + min + ' country of interest for work abroad.');
+        focusFirstUnchecked(w);
         return false;
       }
     }
     if (type === 'study_abroad') {
-      const sel = form.querySelector('select.prescreen-country-multi[name="country_interest[]"]');
-      if (selectedCountryCount(sel) < 2) {
-        alert('Please select at least two countries of interest.');
-        sel && sel.focus();
+      const w = findCountryWidget(form, 'country_interest');
+      const min = minSelections(w) || 1;
+      if (selectedCountryCount(w) < min) {
+        alert('Please tick at least ' + min + ' country of interest.');
+        focusFirstUnchecked(w);
         return false;
       }
     }
     return true;
   }
+
+  /* Live filter + counter for the country tickbox widget */
+  function refreshCountryCounter(widget) {
+    if (!widget) return;
+    const out = widget.querySelector('.prescreen-country-count');
+    if (out) out.textContent = String(selectedCountryCount(widget));
+  }
+
+  function filterCountryItems(widget, term) {
+    if (!widget) return;
+    const q = (term || '').trim().toLowerCase();
+    widget.querySelectorAll('.prescreen-country-item').forEach(function (item) {
+      const label = (item.getAttribute('data-label') || '').toLowerCase();
+      item.style.display = (q === '' || label.indexOf(q) !== -1) ? '' : 'none';
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.prescreen-country-multi').forEach(function (widget) {
+      refreshCountryCounter(widget);
+      const search = widget.querySelector('.prescreen-country-filter');
+      if (search) {
+        search.addEventListener('input', function () { filterCountryItems(widget, search.value); });
+      }
+      widget.addEventListener('change', function (e) {
+        if (e.target && e.target.classList && e.target.classList.contains('prescreen-country-check')) {
+          refreshCountryCounter(widget);
+        }
+      });
+    });
+  });
 
   /** Strip to digits; remove duplicated country code if user pasted full number twice. */
   function normalizeWhatsappInput(el) {

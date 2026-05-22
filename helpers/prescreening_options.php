@@ -81,6 +81,12 @@ function xander_prescreening_yes_no_maybe(): array
     return ['Yes', 'No', 'Maybe / open to discuss'];
 }
 
+/** @return list<string> */
+function xander_prescreening_attendance_modes(): array
+{
+    return ['Online', 'In person', 'Hybrid (both)', 'Not sure yet'];
+}
+
 /**
  * Countries for study interest (DB + popular destinations).
  *
@@ -283,25 +289,74 @@ function xander_prescreening_render_country_multi_select(
     array $options,
     $selected,
     bool $readonly,
-    int $min = 2,
-    string $placeholder = 'Select countries'
+    int $min = 1,
+    string $placeholder = 'Search country…'
 ): string {
     $selectedList = is_array($selected)
         ? $selected
         : xander_prescreening_split_stored_countries((string) $selected);
     $dis = $readonly ? ' disabled' : '';
-    $minAttr = $min > 0 ? ' data-min-selections="' . (int) $min . '"' : '';
-    $html = '<select name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '[]" class="form-select prescreen-country-multi" multiple size="8"' . $dis . $minAttr . '>';
-    $html .= '<option value="" disabled>' . htmlspecialchars($placeholder, ENT_QUOTES, 'UTF-8') . '</option>';
+    $nameAttr = htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '[]';
+    $minAttr = $min > 0 ? (int) $min : 0;
+    $selectedCount = 0;
+
+    static $cssOnce = false;
+    $html = '';
+    if (!$cssOnce) {
+        $cssOnce = true;
+        $html .= '<style>'
+              . '.prescreen-country-multi .prescreen-country-row{transition:background-color .12s ease;}'
+              . '.prescreen-country-multi .prescreen-country-row:hover{background:#f1f5ff;}'
+              . '.prescreen-country-multi .prescreen-country-check:checked + .form-check-label{font-weight:600;color:#1d4ed8;}'
+              . '.prescreen-country-multi .prescreen-country-row:has(.prescreen-country-check:checked){background:#eef4ff;}'
+              . '.prescreen-country-multi .prescreen-country-grid{background:#fff;}'
+              . '.prescreen-country-multi .form-check-input{cursor:pointer;}'
+              . '</style>';
+    }
+    $html .= '<div class="prescreen-country-multi" data-name="' . htmlspecialchars($name, ENT_QUOTES, 'UTF-8') . '" data-min-selections="' . $minAttr . '">';
+
+    if (!$readonly) {
+        $html .= '<div class="input-group input-group-sm mb-2 prescreen-country-search-wrap">'
+              . '<span class="input-group-text"><i class="bi bi-search"></i></span>'
+              . '<input type="text" class="form-control prescreen-country-filter" placeholder="'
+              . htmlspecialchars($placeholder, ENT_QUOTES, 'UTF-8') . '" aria-label="Filter countries">'
+              . '</div>';
+    }
+
+    $html .= '<div class="prescreen-country-grid border rounded p-2"'
+          . ' style="max-height:240px;overflow-y:auto;background:#fff;">'
+          . '<div class="row g-2 m-0">';
+
     foreach ($options as $opt) {
-        $sel = in_array($opt, $selectedList, true) ? ' selected' : '';
-        $html .= '<option value="' . htmlspecialchars($opt, ENT_QUOTES, 'UTF-8') . '"' . $sel . '>'
-            . htmlspecialchars($opt, ENT_QUOTES, 'UTF-8') . '</option>';
+        $isChecked = in_array($opt, $selectedList, true);
+        if ($isChecked) {
+            $selectedCount++;
+        }
+        $checked = $isChecked ? ' checked' : '';
+        $val = htmlspecialchars($opt, ENT_QUOTES, 'UTF-8');
+        $html .= '<div class="col-12 col-sm-6 col-md-4 prescreen-country-item" data-label="'
+              . htmlspecialchars(mb_strtolower($opt), ENT_QUOTES, 'UTF-8') . '">'
+              . '<label class="form-check d-flex align-items-center mb-0 py-1 px-2 rounded prescreen-country-row" style="cursor:pointer;">'
+              . '<input class="form-check-input me-2 mt-0 prescreen-country-check" type="checkbox" name="'
+              . $nameAttr . '" value="' . $val . '"' . $checked . $dis . '>'
+              . '<span class="form-check-label small">' . $val . '</span>'
+              . '</label>'
+              . '</div>';
     }
-    $html .= '</select>';
-    if ($min > 0 && !$readonly) {
-        $html .= '<div class="form-text">Select at least ' . (int) $min . ' countries (hold Ctrl/Cmd to select multiple).</div>';
+
+    $html .= '</div></div>';
+
+    if (!$readonly) {
+        $countText = $selectedCount > 0
+            ? '<strong class="prescreen-country-count">' . $selectedCount . '</strong> selected'
+            : '<strong class="prescreen-country-count">0</strong> selected';
+        $minText = $min > 1
+            ? 'Tick at least ' . (int) $min . ' countries. Select as many as you like.'
+            : 'Tick one or more countries.';
+        $html .= '<div class="form-text d-flex justify-content-between"><span>' . $minText . '</span><span>' . $countText . '</span></div>';
     }
+
+    $html .= '</div>';
 
     return $html;
 }

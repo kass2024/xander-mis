@@ -46,12 +46,12 @@ function xander_prescreening_save_submission(
         education_level, course_program, country_interest, open_other_countries,
         budget_tuition, funds_application_visa, sponsor, afford_deposit,
         has_valid_passport, academic_docs_ready, english_level, english_test_taken,
-        visa_denied, planned_intake, ready_to_apply,
+        visa_denied, planned_intake, study_attendance_mode, ready_to_apply,
         doc_valid_passport, doc_degree_transcripts, doc_high_school, doc_cv_resume,
         doc_recommendation, doc_personal_statement, doc_english_certificate,
         doc_birth_certificate, doc_passport_photo, doc_payment_proof,
         submitted_by_admin_id, submitted_at
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON DUPLICATE KEY UPDATE
         source=VALUES(source),
         student_name=VALUES(student_name),
@@ -77,6 +77,7 @@ function xander_prescreening_save_submission(
         english_test_taken=VALUES(english_test_taken),
         visa_denied=VALUES(visa_denied),
         planned_intake=VALUES(planned_intake),
+        study_attendance_mode=VALUES(study_attendance_mode),
         ready_to_apply=VALUES(ready_to_apply),
         doc_valid_passport=VALUES(doc_valid_passport),
         doc_degree_transcripts=VALUES(doc_degree_transcripts),
@@ -118,6 +119,7 @@ function xander_prescreening_save_submission(
         (string) ($fields['english_test_taken'] ?? ''),
         (string) ($fields['visa_denied'] ?? ''),
         (string) ($fields['planned_intake'] ?? ''),
+        (string) ($fields['study_attendance_mode'] ?? ''),
         (string) ($fields['ready_to_apply'] ?? ''),
         (string) ($docPaths['doc_valid_passport'] ?? ''),
         (string) ($docPaths['doc_degree_transcripts'] ?? ''),
@@ -132,7 +134,7 @@ function xander_prescreening_save_submission(
         $adminId,
         $submittedAt,
     ];
-    $types = str_repeat('s', 36) . 'is';
+    $types = str_repeat('s', 37) . 'is';
     $stmt->bind_param($types, ...$bind);
     if (!$stmt->execute()) {
         $err = $stmt->error;
@@ -166,6 +168,7 @@ function xander_prescreening_empty_study_fields(): array
         'english_test_taken' => '',
         'visa_denied' => '',
         'planned_intake' => '',
+        'study_attendance_mode' => '',
         'ready_to_apply' => '',
     ];
 }
@@ -210,8 +213,8 @@ function xander_prescreening_parse_form_payload(array $post, array $files, ?stri
             'work_country_destination',
             'work_country_destination'
         );
-        if (count($workCountries) < 2) {
-            $errors[] = 'Please select at least two countries of interest for work abroad.';
+        if (count($workCountries) < 1) {
+            $errors[] = 'Please tick at least one country of interest for work abroad.';
         }
         $fields['work_country_destination'] = xander_prescreening_format_country_list($workCountries);
 
@@ -245,8 +248,8 @@ function xander_prescreening_parse_form_payload(array $post, array $files, ?stri
             'country_interest',
             'country_interest'
         );
-        if (count($studyCountries) < 2) {
-            $errors[] = 'Please select at least two countries of interest.';
+        if (count($studyCountries) < 1) {
+            $errors[] = 'Please tick at least one country of interest.';
         }
         $fields['country_interest'] = xander_prescreening_format_country_list($studyCountries);
         $fields['open_other_countries'] = trim((string) ($post['open_other_countries'] ?? ''));
@@ -260,6 +263,7 @@ function xander_prescreening_parse_form_payload(array $post, array $files, ?stri
         $fields['english_test_taken'] = trim((string) ($post['english_test_taken'] ?? ''));
         $fields['visa_denied'] = trim((string) ($post['visa_denied'] ?? ''));
         $fields['planned_intake'] = trim((string) ($post['planned_intake'] ?? ''));
+        $fields['study_attendance_mode'] = trim((string) ($post['study_attendance_mode'] ?? ''));
         $fields['ready_to_apply'] = trim((string) ($post['ready_to_apply'] ?? ''));
     }
 

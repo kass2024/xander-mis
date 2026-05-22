@@ -64,14 +64,14 @@ if ($checkedKeys === [] && isset($_POST['work_checklist']) && is_array($_POST['w
       <div class="form-text">Use international format with country code once (e.g. +250788123456).</div>
     </div>
     <div class="col-12">
-      <label class="form-label">Countries of interest (work destinations) *</label>
+      <label class="form-label">Countries of interest (work destinations) <span class="text-muted small">(tick at least one)</span></label>
       <?= xander_prescreening_render_country_multi_select(
           'work_country_destination',
           $workCountries,
           (string) ($prefill['work_country_destination'] ?? ''),
           $readonly,
-          2,
-          'Select at least two countries'
+          1,
+          'Search country…'
       ) ?>
     </div>
     <div class="col-12">

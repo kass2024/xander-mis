@@ -52,6 +52,7 @@ function xander_prescreening_question_labels(): array
         'english_test_taken' => 'IELTS/TOEFL/Duolingo taken',
         'visa_denied' => 'Ever denied a visa',
         'planned_intake' => 'Planned intake',
+        'study_attendance_mode' => 'Will attend online or in person',
         'ready_to_apply' => 'Ready to start application now',
     ];
 }

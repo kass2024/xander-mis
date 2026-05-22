@@ -1420,7 +1420,29 @@ if (strtolower($role) !== 'catholic university of america') {
     <!-- Applications Section -->
     <div class="sidebar-section">
       <div class="sidebar-section-title">Applications</div>
-      
+
+      <?php if (adm_menu('prescreening')): ?>
+      <a href="#prescreening" class="sidebar-link" onclick="toggleSidebarMenu('prescreening')">
+        <i class="bi bi-clipboard-check"></i>
+        <span>Pre-screening</span>
+        <i class="bi bi-chevron-down arrow"></i>
+      </a>
+      <div class="sidebar-submenu" id="submenu_prescreening">
+        <?php if (adm_sub('prescreening', 'prescreening.php')): ?>
+        <a href="#" onclick="loadInFrame('prescreening.php', 'Pre-screening Form')">
+          <i class="bi bi-plus-circle"></i>
+          New pre-screening
+        </a>
+        <?php endif; ?>
+        <?php if (adm_sub('prescreening', 'prescreening-report.php')): ?>
+        <a href="#" onclick="loadInFrame('prescreening-report.php', 'Pre-screening List')">
+          <i class="bi bi-list-ul"></i>
+          Pre-screening list
+        </a>
+        <?php endif; ?>
+      </div>
+      <?php endif; ?>
+
       <?php if (adm_menu('all_admissions')): ?>
       <!-- All university admissions -->
       <a href="#all_admissions" class="sidebar-link" onclick="toggleSidebarMenu('all_admissions')">
@@ -1832,28 +1854,6 @@ if (strtolower($role) !== 'catholic university of america') {
           <i class="bi bi-file-earmark-text"></i>
           Burundi contracts
         </a>
-      </div>
-      <?php endif; ?>
-
-      <?php if (adm_menu('prescreening')): ?>
-      <a href="#prescreening" class="sidebar-link" onclick="toggleSidebarMenu('prescreening')">
-        <i class="bi bi-clipboard-check"></i>
-        <span>Pre-screening</span>
-        <i class="bi bi-chevron-down arrow"></i>
-      </a>
-      <div class="sidebar-submenu" id="submenu_prescreening">
-        <?php if (adm_sub('prescreening', 'prescreening.php')): ?>
-        <a href="#" onclick="loadInFrame('prescreening.php', 'Pre-screening Form')">
-          <i class="bi bi-plus-circle"></i>
-          New pre-screening
-        </a>
-        <?php endif; ?>
-        <?php if (adm_sub('prescreening', 'prescreening-report.php')): ?>
-        <a href="#" onclick="loadInFrame('prescreening-report.php', 'Pre-screening List')">
-          <i class="bi bi-list-ul"></i>
-          Pre-screening list
-        </a>
-        <?php endif; ?>
       </div>
       <?php endif; ?>
 

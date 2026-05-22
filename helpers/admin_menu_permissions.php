@@ -165,6 +165,39 @@ function xander_admin_menu_save_custom(mysqli $conn, int $adminId, array $payloa
     return $ok;
 }
 
+/**
+ * Initialize a brand-new admin with NO menu access (N/A by default).
+ * Inserts an empty permissions row so xander_admin_menu_resolve() returns
+ * an empty menu set instead of falling back to role defaults.
+ * Safe to call multiple times: existing rows are not overwritten.
+ */
+function xander_admin_menu_init_empty_for_admin(mysqli $conn, int $adminId, ?int $updatedBy = null): bool
+{
+    if ($adminId <= 0) {
+        return false;
+    }
+    xander_admin_menu_ensure_table($conn);
+
+    $json = json_encode(['menus' => [], 'submenus' => new stdClass()], JSON_UNESCAPED_UNICODE);
+    if ($json === false) {
+        return false;
+    }
+    $by = $updatedBy !== null ? (int) $updatedBy : $adminId;
+
+    $stmt = $conn->prepare(
+        'INSERT IGNORE INTO admin_menu_permissions (admin_id, permissions, updated_by)
+         VALUES (?, ?, ?)'
+    );
+    if (!$stmt) {
+        return false;
+    }
+    $stmt->bind_param('isi', $adminId, $json, $by);
+    $ok = $stmt->execute();
+    $stmt->close();
+
+    return $ok;
+}
+
 function xander_admin_menu_reset_custom(mysqli $conn, int $adminId): bool
 {
     xander_admin_menu_ensure_table($conn);

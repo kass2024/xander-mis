@@ -196,7 +196,13 @@ if (!$stmt->execute()) {
     exit;
 }
 
+$newAdminId = (int) $conn->insert_id;
 $stmt->close();
+
+// New admins start with N/A (no menu access). A superadmin must grant access
+// explicitly via Menu Access. Existing admins are unaffected.
+require_once __DIR__ . '/helpers/admin_menu_permissions.php';
+xander_admin_menu_init_empty_for_admin($conn, $newAdminId, $newAdminId);
 
 $loginUrl = register_staff_admin_login_url();
 $send     = register_staff_send_welcome_email($email, $full_name, $loginUrl, $username, REGISTER_STAFF_DEFAULT_PASSWORD);

@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS prescreening_submissions (
     english_test_taken VARCHAR(255) NOT NULL DEFAULT '',
     visa_denied VARCHAR(16) NOT NULL DEFAULT '',
     planned_intake VARCHAR(255) NOT NULL DEFAULT '',
+    study_attendance_mode VARCHAR(32) NOT NULL DEFAULT '',
     ready_to_apply VARCHAR(16) NOT NULL DEFAULT '',
     doc_valid_passport VARCHAR(512) NOT NULL DEFAULT '',
     doc_degree_transcripts VARCHAR(512) NOT NULL DEFAULT '',

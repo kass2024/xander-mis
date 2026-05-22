@@ -16,6 +16,10 @@ $stmt = $conn->prepare("INSERT INTO admins (username, password_hash, full_name) 
 $stmt->bind_param("sss", $username, $passwordHash, $fullName);
 
 if ($stmt->execute()) {
+    $newAdminId = (int) $conn->insert_id;
+    // Start with N/A menu access; superadmin grants permissions later via Menu Access.
+    require_once __DIR__ . '/helpers/admin_menu_permissions.php';
+    xander_admin_menu_init_empty_for_admin($conn, $newAdminId, $newAdminId);
     echo "Admin created successfully.";
 } else {
     echo "Error: " . $stmt->error;

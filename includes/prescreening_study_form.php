@@ -40,14 +40,14 @@ $studyCountries = xander_prescreening_study_countries($dbConn);
     ) ?>
   </div>
   <div class="mb-3">
-    <label class="form-label"><span class="q-num">3.</span> Countries of interest? *</label>
+    <label class="form-label"><span class="q-num">3.</span> Countries of interest? <span class="text-muted small">(tick at least one)</span></label>
     <?= xander_prescreening_render_country_multi_select(
         'country_interest',
         $studyCountries,
         (string) ($prefill['country_interest'] ?? ''),
         $readonly,
-        2,
-        'Select at least two countries'
+        1,
+        'Search country…'
     ) ?>
   </div>
   <div class="mb-3">
@@ -127,8 +127,18 @@ $studyCountries = xander_prescreening_study_countries($dbConn);
     ) ?>
     </div>
   </div>
+  <div class="mb-3">
+    <label class="form-label"><span class="q-num">15.</span> Will you attend online or in person?</label>
+    <?= xander_prescreening_render_select(
+        'study_attendance_mode',
+        xander_prescreening_attendance_modes(),
+        (string) ($prefill['study_attendance_mode'] ?? ''),
+        false,
+        $readonly
+    ) ?>
+  </div>
   <div class="mb-0">
-    <label class="form-label"><span class="q-num">15.</span> Ready to apply now?</label>
+    <label class="form-label"><span class="q-num">16.</span> Ready to apply now?</label>
     <?= xander_prescreening_render_select('ready_to_apply', ['Yes', 'No'], (string) ($prefill['ready_to_apply'] ?? ''), false, $readonly) ?>
   </div>
 </div>
