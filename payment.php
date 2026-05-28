@@ -51,6 +51,7 @@ if (!file_exists(__DIR__ . '/db.php')) {
 }
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers/payment_config.php';
+require_once __DIR__ . '/helpers/currencies.php';
 require_once __DIR__ . '/helpers/mailer.php';
 require_once __DIR__ . '/helpers/phone_utils.php';
 
@@ -1182,8 +1183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_payment'])) {
                 exit();
             }
 
-            $allowedCurrencies = ['USD', 'EUR', 'RWF'];
-            if (!in_array($other_currency, $allowedCurrencies, true)) {
+            if (!xander_is_valid_currency($other_currency)) {
                 $other_currency = 'USD';
             }
             $other_service_name = implode(', ', $other_labels);
@@ -1348,8 +1348,11 @@ if (!$momo_mode) {
 }
 
 $pageTitle = 'Secure Payment Portal - Xander Global Scholars';
+$otherCurrencyOptions = xander_payment_currency_options();
 include 'header.php';
 ?>
+
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 
 <?php if (isset($_GET['momo']) && $_GET['momo'] === '1'): ?>
 <?php
@@ -2100,10 +2103,14 @@ $prefillSrcAmount = (string)($_GET['src_amount'] ?? '');
     </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <script>
 // Fee items data for JavaScript
 const feeItemsData = <?= json_encode($fee_items) ?>;
 const packagesData = <?= json_encode($packages_summary) ?>;
+const otherCurrencyOptions = <?= json_encode($otherCurrencyOptions, JSON_UNESCAPED_UNICODE) ?>;
 
 document.addEventListener('DOMContentLoaded', function() {
     const searchNoMatch = document.getElementById('search-no-match');
@@ -2384,12 +2391,71 @@ document.addEventListener('DOMContentLoaded', function() {
 let otherPaymentListenersBound = false;
 let otherServiceRowCounter = 0;
 
+function buildOtherCurrencyOptionsHtml(selectedCode) {
+    const selected = String(selectedCode || 'USD').toUpperCase();
+    return (otherCurrencyOptions || []).map((item) => {
+        const code = String(item.code || '').toUpperCase();
+        const label = String(item.label || code);
+        const isSelected = code === selected ? ' selected' : '';
+        return `<option value="${escapeHtml(code)}"${isSelected}>${escapeHtml(label)}</option>`;
+    }).join('');
+}
+
+function destroyOtherCurrencySelect2() {
+    if (typeof jQuery === 'undefined' || !jQuery.fn.select2) return;
+    const $sel = jQuery('#other_currency');
+    if ($sel.length && $sel.hasClass('select2-hidden-accessible')) {
+        $sel.off('change.otherPayment select2:open.otherPayment');
+        $sel.select2('destroy');
+    }
+}
+
+function initOtherCurrencySelect2() {
+    if (typeof jQuery === 'undefined' || !jQuery.fn.select2) return;
+    const $sel = jQuery('#other_currency');
+    if (!$sel.length) return;
+
+    const $host = $sel.closest('.other-currency-select-host');
+    if (!$host.length) return;
+
+    destroyOtherCurrencySelect2();
+
+    $sel.select2({
+        width: '100%',
+        placeholder: 'Search currency…',
+        allowClear: false,
+        minimumResultsForSearch: 0,
+        dropdownParent: $host,
+        dropdownAutoWidth: false,
+    });
+
+    $sel.on('change.otherPayment', updateOtherPaymentTotal);
+
+    $sel.on('select2:open.otherPayment', function() {
+        const placeDropdown = () => {
+            const $container = $host.find('.select2-container').first();
+            const $dropdown = $host.find('.select2-dropdown').last();
+            if (!$container.length || !$dropdown.length) return;
+
+            $dropdown.css({
+                position: 'absolute',
+                top: $container.outerHeight(),
+                left: 0,
+                width: $container.outerWidth(),
+                boxSizing: 'border-box',
+            });
+        };
+
+        placeDropdown();
+        requestAnimationFrame(placeDropdown);
+    });
+}
+
 function revealFeeItemsSection(section) {
     if (!section) return;
     section.style.display = 'block';
     requestAnimationFrame(() => {
         section.style.opacity = '1';
-        section.style.transform = 'translateY(0)';
     });
 }
 
@@ -2397,7 +2463,6 @@ function hideFeeItemsSection(section) {
     if (!section) return;
     section.style.display = 'none';
     section.style.opacity = '0';
-    section.style.transform = 'translateY(20px)';
 }
 
 function buildOtherServiceRow(index) {
@@ -2564,13 +2629,13 @@ function loadFeeItems(packageId) {
                     <h4><i class="fas fa-hand-holding-usd"></i> Unlisted services</h4>
                     <p class="section-description">Add one or more services with name and price. Use the button below to add more lines.</p>
                 </div>
-                <div class="form-group">
+                <div class="form-group other-currency-wrap">
                     <label for="other_currency"><i class="fas fa-coins"></i> Currency <span class="required">*</span></label>
-                    <select name="other_currency" id="other_currency" class="form-control" required>
-                        <option value="USD">USD — US Dollar</option>
-                        <option value="EUR">EUR — Euro</option>
-                        <option value="RWF">RWF — Rwandan Franc</option>
-                    </select>
+                    <div class="other-currency-select-host">
+                        <select name="other_currency" id="other_currency" class="form-control other-currency-select" required>
+                            ${buildOtherCurrencyOptionsHtml('USD')}
+                        </select>
+                    </div>
                 </div>
                 <div id="other-services-list" class="other-services-list"></div>
                 <button type="button" class="btn btn-outline" id="add-other-service">
@@ -2582,11 +2647,14 @@ function loadFeeItems(packageId) {
             list.innerHTML = buildOtherServiceRow(++otherServiceRowCounter);
         }
         revealFeeItemsSection(feeItemsSection);
+        requestAnimationFrame(() => initOtherCurrencySelect2());
         bindOtherPaymentListeners();
         updateOtherServiceRemoveButtons();
         updateOtherPaymentTotal();
         return;
     }
+
+    destroyOtherCurrencySelect2();
 
     const defaultHeaderRestore = feeItemsSection.querySelector('.section-header');
     if (defaultHeaderRestore) {
@@ -2697,7 +2765,6 @@ function loadFeeItems(packageId) {
     
     setTimeout(() => {
         feeItemsSection.style.opacity = '1';
-        feeItemsSection.style.transform = 'translateY(0)';
     }, 10);
     
     updateSelectedItemsList();
@@ -3254,6 +3321,7 @@ body {
 
 .other-service-panel {
     padding: 8px 0 4px;
+    overflow: visible;
 }
 
 .other-service-panel .section-header h4 {
@@ -3671,6 +3739,94 @@ body {
     border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
+/* Select2 currency dropdown (Other package) */
+.other-currency-wrap {
+    position: relative;
+    z-index: 20;
+    overflow: visible;
+}
+
+.other-currency-select-host {
+    position: relative;
+    width: 100%;
+    overflow: visible;
+}
+
+.other-currency-select-host .select2-container {
+    width: 100% !important;
+    max-width: 100%;
+    display: block;
+}
+
+.other-currency-select-host .select2-container--open {
+    z-index: 10050;
+}
+
+.other-currency-select-host .select2-dropdown {
+    position: absolute !important;
+    left: 0 !important;
+    right: auto !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg);
+    z-index: 10051;
+}
+
+.other-currency-wrap .select2-container--default .select2-selection--single {
+    height: auto;
+    min-height: 52px;
+    padding: 10px 14px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: white;
+    display: flex;
+    align-items: center;
+}
+
+.other-currency-wrap .select2-container--default.select2-container--focus .select2-selection--single,
+.other-currency-wrap .select2-container--default.select2-container--open .select2-selection--single {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+.other-currency-wrap .select2-container--default .select2-selection--single .select2-selection__rendered {
+    padding: 0;
+    line-height: 1.4;
+    color: var(--dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.other-currency-wrap .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 100%;
+    top: 0;
+    right: 10px;
+}
+
+.other-currency-select-host .select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: var(--primary);
+}
+
+.other-currency-select-host .select2-search--dropdown {
+    padding: 8px;
+}
+
+.other-currency-select-host .select2-search--dropdown .select2-search__field {
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 1rem;
+    width: 100%;
+}
+
+.other-currency-select-host .select2-results__option {
+    padding: 10px 12px;
+    font-size: 0.95rem;
+}
+
 /* Buttons */
 .btn {
     display: inline-flex;
@@ -3900,11 +4056,23 @@ body {
     background: white;
     border-radius: var(--radius);
     box-shadow: var(--shadow);
-    overflow: hidden;
+    overflow: visible;
+}
+
+.package-card .card-header {
+    border-radius: var(--radius) var(--radius) 0 0;
 }
 
 .package-card .card-body {
     padding: 30px;
+    overflow: visible;
+}
+
+/* Animation for fee items section */
+#fee-items-section {
+    opacity: 0;
+    overflow: visible;
+    transition: opacity 0.4s ease;
 }
 
 /* Select Wrapper */
@@ -4441,13 +4609,6 @@ body {
     opacity: 1;
 }
 
-/* Animation for fee items section */
-#fee-items-section {
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
 /* Responsive Design for Mobile */
 @media (max-width: 768px) {
     .page-hero {
@@ -4546,6 +4707,35 @@ body {
     
     .method-options {
         grid-template-columns: 1fr;
+    }
+
+    .other-service-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .other-service-row .remove-other-service {
+        align-self: flex-end;
+        width: auto;
+        min-width: 44px;
+        height: 44px;
+    }
+
+    .other-currency-wrap .select2-container--default .select2-selection--single {
+        min-height: 48px;
+        padding: 8px 12px;
+    }
+
+    .other-currency-select-host .select2-results__option {
+        padding: 12px;
+        font-size: 1rem;
+    }
+
+    .other-currency-select-host .select2-search--dropdown .select2-search__field {
+        min-height: 44px;
+        font-size: 16px;
     }
     
     .btn {
