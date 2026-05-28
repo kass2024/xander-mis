@@ -9,7 +9,7 @@
  * Schedule every 5 minutes:
  *   cPanel: see scripts/CPANEL_CRON.txt
  *   Command: /bin/bash /home/USER/public_html/scripts/cron_spam_guard.sh
- *   Cron:    */5 * * * *
+ *   Cron:    every 5 minutes (star-slash-5 star star star star)
  */
 declare(strict_types=1);
 

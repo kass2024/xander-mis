@@ -1,0 +1,45 @@
+cPanel → Cron Jobs — TROUBLESHOOTING (xandhqav)
+================================================
+
+If I-20 spam is NOT being deleted, the cron is probably not running the script.
+
+STEP 1 — Upload these files to the LIVE server:
+  helpers/application_spam_guard.php
+  scripts/spam_guard_purge_all.php
+  scripts/cron_spam_guard.sh
+  api/admin-spam-purge.php
+  form-20-report.php  (has "Clean spam now" button)
+
+STEP 2 — Clean spam immediately (no cron needed):
+  Admin → I-20 Applicant List → click red "Clean spam now" button
+  (Superadmin only — removes gibberish names/universities/emails)
+
+STEP 3 — Verify cron command path
+  Site must match where files live. Try BOTH in cPanel Terminal:
+
+  ls -la /home/xandhqav/public_html/scripts/spam_guard_purge_all.php
+  ls -la /home/xandhqav/public_html/Xander/scripts/spam_guard_purge_all.php
+
+  Use whichever path exists in your cron command.
+
+STEP 4 — Run cron manually once:
+  /bin/bash /home/xandhqav/public_html/scripts/cron_spam_guard.sh
+
+  Or:
+  /usr/local/bin/php /home/xandhqav/public_html/scripts/spam_guard_purge_all.php --dry-run
+
+STEP 5 — Read logs (File Manager → logs/):
+  spam_cron_stdout.log     → should show "cron start" every 5 min
+  spam_guard_purge_all.log → JSON with deleted counts
+
+Common failures:
+  - "No such file" → wrong path in cron (see STEP 3)
+  - "Connection failed" → db.php on server has wrong DB credentials for CLI
+  - Empty log file → cron never ran; re-check schedule */5 * * * *
+  - "PHP CLI not found" → use HTTP cron (OPTION B in CPANEL_CRON.txt)
+
+Cron command (if site is in public_html root):
+  */5 * * * * /bin/bash /home/xandhqav/public_html/scripts/cron_spam_guard.sh
+
+HTTP fallback (set SPAM_GUARD_CRON_SECRET in .env first):
+  */5 * * * * /usr/bin/curl -sS "https://xanderglobalscholars.com/scripts/spam_guard_purge_all.php?key=YOUR_SECRET&limit=200" >> /home/xandhqav/public_html/logs/spam_cron_http.log 2>&1

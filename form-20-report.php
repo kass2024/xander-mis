@@ -1,6 +1,9 @@
 <?php
 require_once 'auth.php';
 require_once 'db.php';
+require_once __DIR__ . '/helpers/role.php';
+
+$isSuperadmin = pcvc_is_superadmin_role($_SESSION['role'] ?? '');
 
 // Initialize search variables
 $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
@@ -613,6 +616,11 @@ $fileFields = [
                 <button class="export-btn" onclick="exportToCSV()">
                     <i class="fas fa-download"></i> Export CSV
                 </button>
+                <?php if ($isSuperadmin): ?>
+                <button type="button" class="export-btn" id="purgeSpamBtn" style="background:#c0392b;border-color:#c0392b;">
+                    <i class="fas fa-broom"></i> Clean spam now
+                </button>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -1009,6 +1017,39 @@ $fileFields = [
                     });
                 }
             });
+            
+            const purgeBtn = document.getElementById('purgeSpamBtn');
+            if (purgeBtn) {
+                purgeBtn.addEventListener('click', function () {
+                    if (!confirm('Remove spam I-20 applications now? Real applicants are kept.')) {
+                        return;
+                    }
+                    purgeBtn.disabled = true;
+                    purgeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cleaning...';
+                    fetch('api/admin-spam-purge.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'scope=form_20&bulk=1&limit=200'
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'ok') {
+                            alert('Done. Removed ' + (data.deleted || 0) + ' spam application(s).');
+                            window.location.reload();
+                            return;
+                        }
+                        alert(data.message || 'Could not clean spam.');
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert('Request failed. Upload api/admin-spam-purge.php and helpers/application_spam_guard.php to the server.');
+                    })
+                    .finally(() => {
+                        purgeBtn.disabled = false;
+                        purgeBtn.innerHTML = '<i class="fas fa-broom"></i> Clean spam now';
+                    });
+                });
+            }
         });
         
         function exportToCSV() {

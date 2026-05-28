@@ -1,0 +1,25 @@
+cPanel → Cron Jobs → Add New Cron Job
+Account: xandhqav
+Site root: /home/xandhqav/public_html
+
+STEP 1 — Common Settings
+  Choose: "Every 5 Minutes (* */5 * * *)"
+  (Or set manually: Minute */5 | Hour * | Day * | Month * | Weekday *)
+
+STEP 2 — Command (copy this entire line):
+
+/usr/local/bin/php /home/xandhqav/public_html/scripts/spam_guard_purge_all.php --limit=200 >> /home/xandhqav/public_html/logs/spam_cron_stdout.log 2>&1
+
+STEP 3 — Click "Add New Cron Job"
+
+BEFORE FIRST RUN — upload to server (if not already):
+  scripts/spam_guard_purge_all.php
+  scripts/cron_spam_guard.sh
+  helpers/application_spam_guard.php
+
+Optional one-time test in cPanel Terminal:
+  /usr/local/bin/php /home/xandhqav/public_html/scripts/spam_guard_purge_all.php --dry-run
+
+Check results:
+  /home/xandhqav/public_html/logs/spam_guard_purge_all.log
+  /home/xandhqav/public_html/logs/spam_cron_stdout.log

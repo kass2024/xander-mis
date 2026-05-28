@@ -261,6 +261,7 @@ function pcvc_spam_check_optional_text_fields(array $fields, bool $trustExtracte
     $textKeys = [
         'first_name', 'last_name', 'username', 'full_name',
         'student_name', 'emergency_full_name', 'middle_name',
+        'university_name', 'program_admitted_for', 'city',
     ];
 
     foreach ($textKeys as $key) {
@@ -834,7 +835,16 @@ function pcvc_spam_purge_table_rows(
 
     $stmt = $conn->prepare($selectSql);
     if (!$stmt) {
-        return ['scanned' => 0, 'deleted' => 0, 'ids' => [], 'dry_run' => $dryRun, 'table' => $tableSafe];
+        error_log('[spam_guard] prepare failed for ' . $tableSafe . ': ' . $conn->error);
+
+        return [
+            'scanned' => 0,
+            'deleted' => 0,
+            'ids'     => [],
+            'dry_run' => $dryRun,
+            'table'   => $tableSafe,
+            'error'   => $conn->error,
+        ];
     }
     $stmt->bind_param('i', $limit);
     $stmt->execute();
@@ -959,16 +969,21 @@ function pcvc_spam_purge_form_20_applications(mysqli $conn, int $limit = 200, bo
     return pcvc_spam_purge_table_rows(
         $conn,
         'form_20_applications',
-        'SELECT user_id, first_name, last_name, email, mobile_number, phone_number
+        'SELECT user_id, first_name, middle_name, last_name, email, mobile_number, phone_number,
+                city, university_name, program_admitted_for
          FROM form_20_applications
          ORDER BY created_at DESC
          LIMIT ?',
         static function (array $row): array {
             return [
-                'first_name' => trim((string) ($row['first_name'] ?? '')),
-                'last_name'  => trim((string) ($row['last_name'] ?? '')),
-                'email'      => strtolower(trim((string) ($row['email'] ?? ''))),
-                'phone_number' => trim((string) ($row['mobile_number'] ?? ($row['phone_number'] ?? ''))),
+                'first_name'           => trim((string) ($row['first_name'] ?? '')),
+                'middle_name'          => trim((string) ($row['middle_name'] ?? '')),
+                'last_name'            => trim((string) ($row['last_name'] ?? '')),
+                'email'                => strtolower(trim((string) ($row['email'] ?? ''))),
+                'phone_number'         => trim((string) ($row['mobile_number'] ?? ($row['phone_number'] ?? ''))),
+                'city'                 => trim((string) ($row['city'] ?? '')),
+                'university_name'      => trim((string) ($row['university_name'] ?? '')),
+                'program_admitted_for' => trim((string) ($row['program_admitted_for'] ?? '')),
             ];
         },
         static function (mysqli $conn, int $id, array $row): bool {
@@ -991,6 +1006,44 @@ function pcvc_spam_purge_form_20_applications(mysqli $conn, int $limit = 200, bo
         $dryRun,
         $useAi
     );
+}
+
+/**
+ * Repeatedly purge I-20 spam until a pass finds nothing (or max rounds).
+ *
+ * @return array{scanned: int, deleted: int, ids: list<int|string>, dry_run: bool, table: string, rounds: int}
+ */
+function pcvc_spam_purge_form_20_bulk(mysqli $conn, int $limit = 200, bool $dryRun = false, int $maxRounds = 25): array
+{
+    $totals = [
+        'scanned' => 0,
+        'deleted' => 0,
+        'ids'     => [],
+        'dry_run' => $dryRun,
+        'table'   => 'form_20_applications',
+        'rounds'  => 0,
+    ];
+
+    for ($round = 0; $round < $maxRounds; $round++) {
+        $result = pcvc_spam_purge_form_20_applications($conn, $limit, $dryRun, false);
+        $totals['scanned'] += (int) ($result['scanned'] ?? 0);
+        $totals['deleted'] += (int) ($result['deleted'] ?? 0);
+        if (!empty($result['ids']) && is_array($result['ids'])) {
+            $totals['ids'] = array_values(array_unique(array_merge($totals['ids'], $result['ids'])));
+        }
+        $totals['rounds'] = $round + 1;
+
+        if ($dryRun) {
+            break;
+        }
+
+        $removedThisRound = (int) ($result['deleted'] ?? 0);
+        if ($removedThisRound === 0) {
+            break;
+        }
+    }
+
+    return $totals;
 }
 
 function pcvc_spam_purge_prescreening_submissions(mysqli $conn, int $limit = 200, bool $dryRun = false, bool $useAi = false): array
