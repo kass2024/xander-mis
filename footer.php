@@ -10,6 +10,8 @@ if (defined('FOOTER_LOADED')) {
 }
 define('FOOTER_LOADED', true);
 
+require_once __DIR__ . '/helpers/site_contacts.php';
+
 // Use same session/language system as header
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -76,18 +78,12 @@ $footer_translations = [
         
         // Contact (Translated to English)
         'contact_title' => 'Contact',
-        'us_phone' => '+1(450)390-8614',
-        'us_office' => 'San Francisco Office',
-        'us_address' => 'San Francisco, CA, USA',
-        'rwanda_phone' => '+250 788 242 069',
-        'rwanda_office' => 'Muhanga Office',
-        'rwanda_address' => 'Muhanga, Rwanda',
-        'kenya_phone' => '+254 744 111 121',
-        'kenya_office' => 'Nairobi Office',
-        'kenya_address' => 'Nairobi, Kenya',
-        'uganda_phone' => '+256 767 418 006',
-        'uganda_office' => 'Kampala Office',
-        'uganda_address' => 'Kampala, Uganda',
+        'us_phone' => '',
+        'us_office' => '',
+        'us_address' => '',
+        'rwanda_phone' => '',
+        'rwanda_office' => '',
+        'rwanda_address' => '',
         
         // Social
         'follow_us' => 'Follow Us',
@@ -168,18 +164,12 @@ $footer_translations = [
         
         // Contact (Original French)
         'contact_title' => 'Contact',
-        'us_phone' => '+1(450)390-8614',
-        'us_office' => 'Bureau de San Francisco',
-        'us_address' => 'San Francisco, CA',
-        'rwanda_phone' => '+250 788 242 069',
-        'rwanda_office' => 'Bureau de Muhanga',
-        'rwanda_address' => 'Muhanga, Rwanda',
-        'kenya_phone' => '+254 744 111 121',
-        'kenya_office' => 'Bureau de Nairobi',
-        'kenya_address' => 'Nairobi, Kenya',
-        'uganda_phone' => '+256 767 418 006',
-        'uganda_office' => 'Bureau de Kampala',
-        'uganda_address' => 'Kampala, Uganda',
+        'us_phone' => '',
+        'us_office' => '',
+        'us_address' => '',
+        'rwanda_phone' => '',
+        'rwanda_office' => '',
+        'rwanda_address' => '',
         
         // Social
         'follow_us' => 'Suivez-nous',
@@ -216,6 +206,9 @@ $footer_translations = [
     ]
 ];
 
+xgs_contact_sync_translation_keys($footer_translations, 'en');
+xgs_contact_sync_translation_keys($footer_translations, 'fr');
+
 // Function to translate footer text
 if (!function_exists('ft')) {
     function ft($key) {
@@ -226,7 +219,7 @@ if (!function_exists('ft')) {
 
 // Configuration - KEEPING ALL ORIGINAL SETTINGS
 $chat_enabled = true;
-$whatsapp_number = '+14389009784';
+$whatsapp_number = xgs_contact_phone_href(xgs_site_contacts()['offices'][0]['phone']);
 $current_year = date('Y');
 $site_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]";
 
@@ -269,38 +262,17 @@ $site_map_links = [
     ]
 ];
 
-// Contact information (keeping ALL original contacts)
-$contacts = [
-    [
-        'phone' => 'us_phone',
-        'label' => 'us_office',
-        'address' => 'us_address'
-    ],
-    [
-        'phone' => 'rwanda_phone',
-        'label' => 'rwanda_office',
-        'address' => 'rwanda_address'
-    ],
-    [
-        'phone' => 'kenya_phone',
-        'label' => 'kenya_office',
-        'address' => 'kenya_address'
-    ],
-    [
-        'phone' => 'uganda_phone',
-        'label' => 'uganda_office',
-        'address' => 'uganda_address'
-    ]
-];
+// Contact information (matches Contact Us page)
+$contacts = xgs_contact_footer_entries();
 
-// Fixed San Francisco location for map (keeping original)
+// Fixed San Francisco location for map
 $san_francisco_location = [
     'title' => 'san_francisco_location',
-    'lat' => 37.7749,
-    'lng' => -122.4194,
+    'lat' => xgs_site_contacts()['offices'][0]['lat'],
+    'lng' => xgs_site_contacts()['offices'][0]['lng'],
     'phone' => 'us_phone',
-    'address' => 'San Francisco, California, USA',
-    'google_maps_link' => 'https://maps.google.com/?q=San+Francisco,+CA,+USA'
+    'address' => xgs_site_contacts()['offices'][0]['address_en'],
+    'google_maps_link' => xgs_site_contacts()['offices'][0]['google_maps_link'],
 ];
 
 // Generate unique session ID for chat if not exists
@@ -1965,7 +1937,7 @@ $chat_session_id = $_SESSION['chat_session_id'];
                                 <i class="fas fa-phone-alt"></i>
                             </div>
                             <div class="footer-contact-details">
-                                <a href="tel:<?php echo ft($contact['phone']); ?>" 
+                                <a href="tel:<?php echo htmlspecialchars(xgs_contact_phone_href(ft($contact['phone'])), ENT_QUOTES, 'UTF-8'); ?>" 
                                    class="footer-contact-phone">
                                     <?php echo ft($contact['phone']); ?>
                                 </a>
@@ -2085,7 +2057,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <!-- Modern Floating WhatsApp Button -->
 <div class="xander-whatsapp-container">
-    <a href="https://wa.me/14389009784" 
+    <a href="https://wa.me/<?php echo htmlspecialchars(ltrim($whatsapp_number, '+'), ENT_QUOTES, 'UTF-8'); ?>" 
        target="_blank" 
        rel="noopener noreferrer"
        class="xander-whatsapp-float"

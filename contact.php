@@ -4,6 +4,7 @@
 // CONTACT PAGE WITH EMAIL FUNCTIONALITY
 // ============================================
 include 'header.php';
+require_once __DIR__ . '/helpers/site_contacts.php';
 
 // Set page title with language switching
 $pageTitle = $current_lang === 'en' ? 'Contact Us - Xander Global Scholars' : 'Contactez-nous - Xander Global Scholars';
@@ -28,15 +29,15 @@ $contact_translations = [
         'offices_subtitle' => 'Find us around the world',
         
         // Office Details
-        'sanfrancisco_title' => 'San Francisco Office',
-        'sanfrancisco_address' => 'San Francisco, CA, USA',
-        'sanfrancisco_phone' => '+1 (450) 390-8614',
-        'sanfrancisco_hours' => 'Mon-Fri: 9:00 AM - 6:00 PM PST',
+        'sanfrancisco_title' => '',
+        'sanfrancisco_address' => '',
+        'sanfrancisco_phone' => '',
+        'sanfrancisco_hours' => '',
         
-        'muhanga_title' => 'Rwanda Office',
-        'muhanga_address' => 'Muhanga, Rwanda',
-        'muhanga_phone' => '+250 788 242 069',
-        'muhanga_hours' => 'Mon-Fri: 9:00 AM - 5:00 PM CAT',
+        'muhanga_title' => '',
+        'muhanga_address' => '',
+        'muhanga_phone' => '',
+        'muhanga_hours' => '',
         
         // Contact Form
         'form_title' => 'Send Us a Message',
@@ -61,7 +62,7 @@ $contact_translations = [
         
         // Contact Information
         'info_title' => 'Contact Information',
-        'info_email' => 'info@xanderglobalscholars.com',
+        'info_email' => '',
         'info_emergency' => 'For urgent inquiries',
         'info_social' => 'Connect with us on social media',
         
@@ -107,15 +108,15 @@ $contact_translations = [
         'offices_subtitle' => 'Trouvez-nous à travers le monde',
         
         // Office Details
-        'sanfrancisco_title' => 'Bureau de San Francisco',
-        'sanfrancisco_address' => 'San Francisco, CA, USA',
-        'sanfrancisco_phone' => '+1 (450) 390-8614',
-        'sanfrancisco_hours' => 'Lun-Ven: 9:00 AM - 6:00 PM PST',
+        'sanfrancisco_title' => '',
+        'sanfrancisco_address' => '',
+        'sanfrancisco_phone' => '',
+        'sanfrancisco_hours' => '',
         
-        'muhanga_title' => 'Bureau de Muhanga',
-        'muhanga_address' => 'Muhanga, Rwanda',
-        'muhanga_phone' => '+250 788 242 069',
-        'muhanga_hours' => 'Lun-Ven: 9:00 AM - 5:00 PM CAT',
+        'muhanga_title' => '',
+        'muhanga_address' => '',
+        'muhanga_phone' => '',
+        'muhanga_hours' => '',
         
         // Contact Form
         'form_title' => 'Envoyez-nous un Message',
@@ -140,7 +141,7 @@ $contact_translations = [
         
         // Contact Information
         'info_title' => 'Informations de Contact',
-        'info_email' => 'Hello@xanderglobalscholars.com',
+        'info_email' => '',
         'info_emergency' => 'Pour les demandes urgentes',
         'info_social' => 'Connectez-vous avec nous sur les réseaux sociaux',
         
@@ -171,6 +172,9 @@ $contact_translations = [
         'page_title' => 'Contactez-nous - Xander Global Scholars',
     ]
 ];
+
+xgs_contact_sync_translation_keys($contact_translations, 'en');
+xgs_contact_sync_translation_keys($contact_translations, 'fr');
 
 // Function to get contact page translation
 function ct($key) {
@@ -209,7 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $form_error = 'Please enter a valid email address.';
     } else {
         // Email configuration
-        $to = 'Hello@xanderglobalscholars.com';
+        $to = xgs_contact_email();
         $email_subject = "New Contact Form: $subject";
         
         // Build email headers
@@ -287,31 +291,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Define offices (ONLY San Francisco and Rwanda/Muhanga)
-$offices = [
-    [
-        'title_key' => 'sanfrancisco_title',
-        'address_key' => 'sanfrancisco_address',
-        'phone_key' => 'sanfrancisco_phone',
-        'hours_key' => 'sanfrancisco_hours',
-        'flag' => '🇺🇸',
-        'color' => '#3B82F6',
-        'timezone' => 'PST',
-        'lat' => 37.7749,
-        'lng' => -122.4194
-    ],
-    [
-        'title_key' => 'muhanga_title',
-        'address_key' => 'muhanga_address',
-        'phone_key' => 'muhanga_phone',
-        'hours_key' => 'muhanga_hours',
-        'flag' => '🇷🇼',
-        'color' => '#10B981',
-        'timezone' => 'CAT',
-        'lat' => -2.0833,
-        'lng' => 29.7500
-    ]
-];
+// Define offices (same data as footer and all public pages)
+$offices = xgs_contact_page_offices();
 
 // Define subjects
 $subjects = [
@@ -1502,8 +1483,8 @@ body {
         <h3>Partnership Email</h3>
 
         <p class="info-content">
-          <a href="mailto:hello@xanderglobalscholars.com" class="info-email">
-            hello@xanderglobalscholars.com
+          <a href="mailto:<?php echo htmlspecialchars(strtolower(xgs_contact_email()), ENT_QUOTES, 'UTF-8'); ?>" class="info-email">
+            <?php echo htmlspecialchars(xgs_contact_email(), ENT_QUOTES, 'UTF-8'); ?>
           </a>
         </p>
 
@@ -1643,33 +1624,14 @@ body {
     }
     
     // Update map info box
-    const offices = <?php echo json_encode($offices); ?>;
-    const office = offices[index];
+    const officeDisplay = <?php echo json_encode(xgs_contact_office_display($current_lang), JSON_UNESCAPED_UNICODE); ?>;
+    const office = officeDisplay[index];
+    if (!office) return;
     
-    const titles = {
-      'sanfrancisco_title': 'San Francisco Office',
-      'muhanga_title': 'Rwanda Office'
-    };
-    
-    const addresses = {
-      'sanfrancisco_address': 'San Francisco, CA, USA',
-      'muhanga_address': 'Muhanga, Rwanda'
-    };
-    
-    const phones = {
-      'sanfrancisco_phone': '+1 (450) 390-8614',
-      'muhanga_phone': '+250 788 242 069'
-    };
-    
-    const hours = {
-      'sanfrancisco_hours': 'Mon-Fri: 9:00 AM - 6:00 PM PST',
-      'muhanga_hours': 'Mon-Fri: 9:00 AM - 5:00 PM CAT'
-    };
-    
-    document.getElementById('infoTitle').textContent = titles[office.title_key] || office.title_key;
-    document.getElementById('infoAddress').textContent = addresses[office.address_key] || office.address_key;
-    document.getElementById('infoPhone').textContent = phones[office.phone_key] || office.phone_key;
-    document.getElementById('infoHours').textContent = hours[office.hours_key] || office.hours_key;
+    document.getElementById('infoTitle').textContent = office.title;
+    document.getElementById('infoAddress').textContent = office.address;
+    document.getElementById('infoPhone').textContent = office.phone;
+    document.getElementById('infoHours').textContent = office.hours;
   };
 
   // FAQ toggle functionality
