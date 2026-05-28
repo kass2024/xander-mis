@@ -163,7 +163,7 @@ $index_translations = [
         'card_copy' => 'Copy Link',
         
         // Card 1: Study & Work Abroad
-        'card1_title' => 'Study & Work Abroad',
+        'card1_title' => 'Study Abroad',
         'card1_subtitle' => 'Complete guidance for international education and career opportunities',
         'card1_description' => 'Navigate international admissions with expert advice tailored to your academic background and career goals.',
         'card1_point1' => 'Personalized university and course shortlisting',

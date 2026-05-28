@@ -51,7 +51,7 @@ $footer_translations = [
         // Site Map (Translated to English)
         'site_map' => 'Site Map',
         'services_section' => 'Services',
-        'site_service1' => 'Study & Work Abroad',
+        'site_service1' => 'Study Abroad',
         'site_service2' => 'Application Procedure',
         'site_service3' => 'Business Life Support',
         'site_service4' => 'Academy/Recruitment',
@@ -137,7 +137,7 @@ $footer_translations = [
         // Site Map (Original French)
         'site_map' => 'Plan du Site',
         'services_section' => 'Services',
-        'site_service1' => 'Études & Travail à l\'Étranger',
+        'site_service1' => 'Études à l\'étranger',
         'site_service2' => 'Procédure d\'application',
         'site_service3' => 'Support Vies Affaires',
         'site_service4' => 'Académie/Recrutement',

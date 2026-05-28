@@ -188,7 +188,7 @@ $index_translations = [
         'card_copy' => 'Copy Link',
         
         // Card 1: Study & Work Abroad
-        'card1_title' => 'Study & Work Abroad',
+        'card1_title' => 'Study Abroad',
         'card1_subtitle' => 'Universities, jobs, visas – all in one place',
         'card1_description' => 'Comprehensive support for your international education and career journey.',
         'card1_point1' => 'University applications',
@@ -437,7 +437,7 @@ $index_translations = [
         'card_copy' => 'Copier le lien',
         
         // Card 1: Study & Work Abroad
-        'card1_title' => 'Étudier & Travailler à l\'Étranger',
+        'card1_title' => 'Études à l\'étranger',
         'card1_subtitle' => 'Universités, emplois, visas – tout au même endroit',
         'card1_description' => 'Soutien complet pour votre parcours international.',
         'card1_point1' => 'Candidatures universitaires',
