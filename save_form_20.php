@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'db.php';
+require_once __DIR__ . '/helpers/application_spam_guard.php';
 require_once 'PHPMailer/src/PHPMailer.php';
 require_once 'PHPMailer/src/SMTP.php';
 require_once 'PHPMailer/src/Exception.php';
@@ -41,6 +42,20 @@ switch ($step) {
     $_SESSION['region_id'] = $_POST['region_id'] ?? null;
 
     $_POST['form_url'] = 'form-20.php';
+
+    $spamVerdict = pcvc_spam_check_mapped_form($_POST, [
+        'first_name' => 'first_name',
+        'last_name' => 'last_name',
+        'middle_name' => 'middle_name',
+        'email' => 'email',
+    ]);
+    if ($spamVerdict['is_spam']) {
+        echo json_encode([
+            'status' => 'error',
+            'message' => $spamVerdict['reason'] ?: 'Please use your real name and a valid email.',
+        ]);
+        exit;
+    }
     break;
 
   case 'step2':

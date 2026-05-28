@@ -24,6 +24,9 @@ if (!empty($_GET['error'])) {
         case 'invalid':
             $bannerError = 'Please fill in all fields with valid information.';
             break;
+        case 'spam':
+            $bannerError = 'Registration blocked. Use your real name and a normal email address (no random text or dot-stuffed emails).';
+            break;
         default:
             $bannerError = 'Something went wrong. Please try again in a few minutes.';
     }

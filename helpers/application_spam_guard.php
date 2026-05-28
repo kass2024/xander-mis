@@ -148,7 +148,7 @@ function pcvc_spam_name_token_looks_random(string $token): bool
     }
 
     $len = mb_strlen($token, 'UTF-8');
-    if ($len < 10) {
+    if ($len < 8) {
         return false;
     }
 
@@ -197,6 +197,113 @@ function pcvc_spam_name_token_looks_random(string $token): bool
     return false;
 }
 
+function pcvc_spam_email_looks_suspicious(string $email): bool
+{
+    $email = strtolower(trim($email));
+    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return true;
+    }
+
+    $parts = explode('@', $email, 2);
+    if (count($parts) !== 2) {
+        return true;
+    }
+
+    [$local, $domain] = $parts;
+    if ($local === '' || $domain === '') {
+        return true;
+    }
+
+    if (preg_match('/^(test|fake|spam|bot|null|admin|noreply)[0-9._-]*@/i', $email)) {
+        return true;
+    }
+
+    $dotCount = substr_count($local, '.');
+    $localLen = strlen($local);
+    if ($localLen >= 8 && $dotCount >= 3) {
+        if (preg_match('/\d/', $local)) {
+            return true;
+        }
+        if ($dotCount / $localLen >= 0.22) {
+            return true;
+        }
+    }
+
+    $segments = explode('.', $local);
+    if (count($segments) >= 4) {
+        $shortSegments = 0;
+        foreach ($segments as $segment) {
+            if ($segment === '' || strlen($segment) <= 2) {
+                $shortSegments++;
+            }
+        }
+        if ($shortSegments >= 3) {
+            return true;
+        }
+    }
+
+    if (preg_match('/^[a-z0-9](?:\.[a-z0-9]){3,}$/', $local)) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * @param array<string, string> $fields
+ */
+function pcvc_spam_check_optional_text_fields(array $fields, bool $trustExtractedNames = false): ?array
+{
+    if ($trustExtractedNames) {
+        return null;
+    }
+
+    $textKeys = [
+        'first_name', 'last_name', 'username', 'full_name',
+        'student_name', 'emergency_full_name', 'middle_name',
+    ];
+
+    foreach ($textKeys as $key) {
+        $value = trim((string) ($fields[$key] ?? ''));
+        if ($value === '') {
+            continue;
+        }
+
+        if ($key === 'full_name' || $key === 'student_name' || $key === 'emergency_full_name') {
+            foreach (preg_split('/\s+/u', $value) ?: [] as $part) {
+                $part = trim((string) $part);
+                if ($part !== '' && pcvc_spam_name_token_looks_random($part)) {
+                    return [
+                        'is_spam' => true,
+                        'reason'  => 'Name does not look like a real person.',
+                        'method'  => 'heuristic_name',
+                    ];
+                }
+            }
+            continue;
+        }
+
+        if (pcvc_spam_name_token_looks_random($value)) {
+            return [
+                'is_spam' => true,
+                'reason'  => 'Name does not look like a real person.',
+                'method'  => 'heuristic_name',
+            ];
+        }
+    }
+
+    $full = trim(($fields['first_name'] ?? '') . ' ' . ($fields['last_name'] ?? ''));
+    if ($full !== '' && pcvc_spam_name_token_looks_random(str_replace(' ', '', $full))) {
+        return [
+            'is_spam' => true,
+            'reason'  => 'Applicant name appears to be randomly generated.',
+            'method'  => 'heuristic_name',
+        ];
+    }
+
+    return null;
+}
+
 /**
  * Fast local checks — returns spam verdict when confident.
  *
@@ -217,30 +324,23 @@ function pcvc_spam_heuristic_verdict(array $fields, bool $trustExtractedNames = 
                 ];
             }
         }
-    }
 
-    if ($trustExtractedNames) {
-        return null;
-    }
-
-    foreach (['first_name', 'last_name'] as $key) {
-        $name = $fields[$key] ?? '';
-        if ($name !== '' && pcvc_spam_name_token_looks_random($name)) {
+        if (pcvc_spam_email_looks_suspicious($email)) {
             return [
                 'is_spam' => true,
-                'reason'  => 'Name does not look like a real person.',
-                'method'  => 'heuristic_name',
+                'reason'  => 'Email address looks invalid or suspicious.',
+                'method'  => 'heuristic_email',
             ];
         }
     }
 
-    $full = trim(($fields['first_name'] ?? '') . ' ' . ($fields['last_name'] ?? ''));
-    if ($full !== '' && pcvc_spam_name_token_looks_random(str_replace(' ', '', $full))) {
-        return [
-            'is_spam' => true,
-            'reason'  => 'Applicant name appears to be randomly generated.',
-            'method'  => 'heuristic_name',
-        ];
+    $nameVerdict = pcvc_spam_check_optional_text_fields($fields, $trustExtractedNames);
+    if ($nameVerdict !== null) {
+        return $nameVerdict;
+    }
+
+    if ($trustExtractedNames) {
+        return null;
     }
 
     return null;
@@ -424,7 +524,7 @@ function pcvc_spam_check_payment_customer(array $post): array
         ];
     }
 
-    $heuristic = pcvc_spam_heuristic_verdict($fields, true);
+    $heuristic = pcvc_spam_heuristic_verdict($fields, false);
     if ($heuristic !== null && !empty($heuristic['is_spam'])) {
         return [
             'is_spam' => true,
@@ -441,6 +541,15 @@ function pcvc_spam_check_payment_customer(array $post): array
             'is_spam' => true,
             'reason' => 'Please enter your real first and last name.',
             'method' => 'payment_name',
+            'confidence' => 100,
+        ];
+    }
+
+    if (pcvc_spam_name_token_looks_random($first) || pcvc_spam_name_token_looks_random($last)) {
+        return [
+            'is_spam' => true,
+            'reason' => 'Please enter your real first and last name.',
+            'method' => 'payment_name_random',
             'confidence' => 100,
         ];
     }
@@ -611,4 +720,370 @@ function pcvc_spam_purge_database(mysqli $conn, int $limit = 200, bool $dryRun =
         'ids'     => $ids,
         'dry_run' => $dryRun,
     ];
+}
+
+/**
+ * @param array<string, mixed> $post
+ * @return array{is_spam: bool, reason: string, method: string}
+ */
+function pcvc_spam_check_staff_registration(array $post): array
+{
+    $fields = [
+        'first_name' => trim((string) ($post['first_name'] ?? '')),
+        'last_name'  => trim((string) ($post['last_name'] ?? '')),
+        'email'      => strtolower(trim((string) ($post['email'] ?? ''))),
+        'username'   => trim((string) ($post['username'] ?? '')),
+    ];
+
+    if ($fields['first_name'] === '' || $fields['last_name'] === '' || $fields['email'] === '' || $fields['username'] === '') {
+        return [
+            'is_spam' => true,
+            'reason'  => 'Please fill in all fields with valid information.',
+            'method'  => 'staff_required',
+        ];
+    }
+
+    if (!filter_var($fields['email'], FILTER_VALIDATE_EMAIL)) {
+        return [
+            'is_spam' => true,
+            'reason'  => 'Please use a valid email address.',
+            'method'  => 'staff_email',
+        ];
+    }
+
+    $verdict = pcvc_spam_heuristic_verdict($fields, false);
+    if ($verdict !== null && !empty($verdict['is_spam'])) {
+        return [
+            'is_spam' => (bool) $verdict['is_spam'],
+            'reason'  => (string) ($verdict['reason'] ?? 'Registration blocked.'),
+            'method'  => (string) ($verdict['method'] ?? 'staff_heuristic'),
+        ];
+    }
+
+    if (!preg_match('/^[a-zA-Z0-9._-]{3,40}$/', $fields['username'])) {
+        return [
+            'is_spam' => true,
+            'reason'  => 'Username must be 3–40 letters, numbers, dots, dashes, or underscores.',
+            'method'  => 'staff_username_format',
+        ];
+    }
+
+    return ['is_spam' => false, 'reason' => '', 'method' => 'staff_ok'];
+}
+
+/**
+ * Generic public-form spam check (jobs, I-20, prescreening, etc.).
+ *
+ * @param array<string, mixed> $post
+ * @param array<string, string> $fieldMap canonical field => POST key
+ * @return array{is_spam: bool, reason: string, method: string}
+ */
+function pcvc_spam_check_mapped_form(array $post, array $fieldMap): array
+{
+    $fields = [];
+    foreach ($fieldMap as $canonical => $postKey) {
+        $fields[$canonical] = trim((string) ($post[$postKey] ?? ''));
+    }
+
+    if (($fields['email'] ?? '') !== '' && !filter_var($fields['email'], FILTER_VALIDATE_EMAIL)) {
+        return [
+            'is_spam' => true,
+            'reason'  => 'Please use a valid email address.',
+            'method'  => 'form_email',
+        ];
+    }
+
+    $verdict = pcvc_spam_heuristic_verdict($fields, false);
+    if ($verdict !== null && !empty($verdict['is_spam'])) {
+        return [
+            'is_spam' => true,
+            'reason'  => (string) ($verdict['reason'] ?? 'Submission blocked.'),
+            'method'  => (string) ($verdict['method'] ?? 'form_heuristic'),
+        ];
+    }
+
+    return ['is_spam' => false, 'reason' => '', 'method' => 'form_ok'];
+}
+
+/**
+ * @return array{is_spam: bool, reason: string, method: string, confidence: int}
+ */
+function pcvc_spam_evaluate_row_fields(array $fields, bool $useAi = false): array
+{
+    return pcvc_spam_evaluate($fields, $useAi, false);
+}
+
+/**
+ * @param callable(mysqli,int,array<string,mixed>): bool $deleter
+ * @return array{scanned: int, deleted: int, ids: list<int|string>, dry_run: bool, table: string}
+ */
+function pcvc_spam_purge_table_rows(
+    mysqli $conn,
+    string $table,
+    string $selectSql,
+    callable $normalizer,
+    callable $deleter,
+    int $limit = 200,
+    bool $dryRun = false,
+    bool $useAi = false
+): array {
+    $limit = max(1, min(500, $limit));
+    $ids = [];
+    $deleted = 0;
+    $tableSafe = preg_replace('/[^a-zA-Z0-9_]/', '', $table) ?: 'unknown';
+
+    $stmt = $conn->prepare($selectSql);
+    if (!$stmt) {
+        return ['scanned' => 0, 'deleted' => 0, 'ids' => [], 'dry_run' => $dryRun, 'table' => $tableSafe];
+    }
+    $stmt->bind_param('i', $limit);
+    $stmt->execute();
+
+    $rows = [];
+    if (method_exists($stmt, 'get_result')) {
+        $res = $stmt->get_result();
+        if ($res) {
+            while ($row = $res->fetch_assoc()) {
+                $rows[] = $row;
+            }
+            $res->free();
+        }
+    }
+    $stmt->close();
+
+    foreach ($rows as $row) {
+        $fields = $normalizer($row);
+        $verdict = pcvc_spam_evaluate_row_fields($fields, $useAi);
+        if (empty($verdict['is_spam'])) {
+            continue;
+        }
+
+        $recordId = $row['id'] ?? ($row['user_id'] ?? null);
+        if ($recordId === null || $recordId === '') {
+            continue;
+        }
+
+        $ids[] = $recordId;
+        if (!$dryRun && $deleter($conn, is_numeric($recordId) ? (int) $recordId : 0, $row)) {
+            $deleted++;
+        }
+    }
+
+    return [
+        'scanned' => count($rows),
+        'deleted' => $dryRun ? 0 : $deleted,
+        'ids'     => $ids,
+        'dry_run' => $dryRun,
+        'table'   => $tableSafe,
+    ];
+}
+
+function pcvc_spam_purge_pending_admins(mysqli $conn, int $limit = 200, bool $dryRun = false, bool $useAi = false): array
+{
+    return pcvc_spam_purge_table_rows(
+        $conn,
+        'admins',
+        'SELECT id, username, first_name, last_name, email, phone_number, role, status
+         FROM admins
+         WHERE LOWER(TRIM(COALESCE(status, ""))) = "pending"
+         ORDER BY id DESC
+         LIMIT ?',
+        static function (array $row): array {
+            return [
+                'first_name' => trim((string) ($row['first_name'] ?? '')),
+                'last_name'  => trim((string) ($row['last_name'] ?? '')),
+                'email'      => strtolower(trim((string) ($row['email'] ?? ''))),
+                'username'   => trim((string) ($row['username'] ?? '')),
+            ];
+        },
+        static function (mysqli $conn, int $id, array $row): bool {
+            $role = strtolower(trim((string) ($row['role'] ?? '')));
+            if (in_array($role, ['super', 'superadmin', 'super_admin'], true)) {
+                return false;
+            }
+
+            $st = $conn->prepare('DELETE FROM admins WHERE id = ? AND LOWER(TRIM(COALESCE(status, ""))) = "pending" LIMIT 1');
+            if (!$st) {
+                return false;
+            }
+            $st->bind_param('i', $id);
+            $st->execute();
+            $ok = $st->affected_rows > 0;
+            $st->close();
+
+            return $ok;
+        },
+        $limit,
+        $dryRun,
+        $useAi
+    );
+}
+
+function pcvc_spam_purge_job_applications(mysqli $conn, int $limit = 200, bool $dryRun = false, bool $useAi = false): array
+{
+    return pcvc_spam_purge_table_rows(
+        $conn,
+        'job_applications',
+        'SELECT id, first_name, last_name, email, emergency_full_name
+         FROM job_applications
+         ORDER BY id DESC
+         LIMIT ?',
+        static function (array $row): array {
+            return [
+                'first_name'          => trim((string) ($row['first_name'] ?? '')),
+                'last_name'           => trim((string) ($row['last_name'] ?? '')),
+                'email'               => strtolower(trim((string) ($row['email'] ?? ''))),
+                'emergency_full_name' => trim((string) ($row['emergency_full_name'] ?? '')),
+            ];
+        },
+        static function (mysqli $conn, int $id): bool {
+            $st = $conn->prepare('DELETE FROM job_applications WHERE id = ? LIMIT 1');
+            if (!$st) {
+                return false;
+            }
+            $st->bind_param('i', $id);
+            $st->execute();
+            $ok = $st->affected_rows > 0;
+            $st->close();
+
+            return $ok;
+        },
+        $limit,
+        $dryRun,
+        $useAi
+    );
+}
+
+function pcvc_spam_purge_form_20_applications(mysqli $conn, int $limit = 200, bool $dryRun = false, bool $useAi = false): array
+{
+    return pcvc_spam_purge_table_rows(
+        $conn,
+        'form_20_applications',
+        'SELECT user_id, first_name, last_name, email, mobile_number, phone_number
+         FROM form_20_applications
+         ORDER BY created_at DESC
+         LIMIT ?',
+        static function (array $row): array {
+            return [
+                'first_name' => trim((string) ($row['first_name'] ?? '')),
+                'last_name'  => trim((string) ($row['last_name'] ?? '')),
+                'email'      => strtolower(trim((string) ($row['email'] ?? ''))),
+                'phone_number' => trim((string) ($row['mobile_number'] ?? ($row['phone_number'] ?? ''))),
+            ];
+        },
+        static function (mysqli $conn, int $id, array $row): bool {
+            $userId = trim((string) ($row['user_id'] ?? ''));
+            if ($userId === '') {
+                return false;
+            }
+            $st = $conn->prepare('DELETE FROM form_20_applications WHERE user_id = ? LIMIT 1');
+            if (!$st) {
+                return false;
+            }
+            $st->bind_param('s', $userId);
+            $st->execute();
+            $ok = $st->affected_rows > 0;
+            $st->close();
+
+            return $ok;
+        },
+        $limit,
+        $dryRun,
+        $useAi
+    );
+}
+
+function pcvc_spam_purge_prescreening_submissions(mysqli $conn, int $limit = 200, bool $dryRun = false, bool $useAi = false): array
+{
+    if (!pcvc_spam_table_exists($conn, 'prescreening_submissions')) {
+        return ['scanned' => 0, 'deleted' => 0, 'ids' => [], 'dry_run' => $dryRun, 'table' => 'prescreening_submissions'];
+    }
+
+    return pcvc_spam_purge_table_rows(
+        $conn,
+        'prescreening_submissions',
+        'SELECT id, student_name, student_email, whatsapp_number
+         FROM prescreening_submissions
+         ORDER BY id DESC
+         LIMIT ?',
+        static function (array $row): array {
+            return [
+                'student_name' => trim((string) ($row['student_name'] ?? '')),
+                'email'        => strtolower(trim((string) ($row['student_email'] ?? ''))),
+                'phone_number' => trim((string) ($row['whatsapp_number'] ?? '')),
+            ];
+        },
+        static function (mysqli $conn, int $id): bool {
+            $st = $conn->prepare('DELETE FROM prescreening_submissions WHERE id = ? LIMIT 1');
+            if (!$st) {
+                return false;
+            }
+            $st->bind_param('i', $id);
+            $st->execute();
+            $ok = $st->affected_rows > 0;
+            $st->close();
+
+            return $ok;
+        },
+        $limit,
+        $dryRun,
+        $useAi
+    );
+}
+
+function pcvc_spam_table_exists(mysqli $conn, string $table): bool
+{
+    $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    if ($table === '') {
+        return false;
+    }
+
+    $res = $conn->query("SHOW TABLES LIKE '{$table}'");
+
+    return $res instanceof mysqli_result && $res->num_rows > 0;
+}
+
+/**
+ * Purge spam across all supported public intake tables.
+ *
+ * @return array<string, mixed>
+ */
+function pcvc_spam_purge_all(mysqli $conn, int $limit = 200, bool $dryRun = false, bool $useAi = false): array
+{
+    $summary = [
+        'dry_run' => $dryRun,
+        'limit'   => $limit,
+        'at'      => gmdate('c'),
+        'tables'  => [],
+        'totals'  => ['scanned' => 0, 'deleted' => 0, 'flagged' => 0],
+    ];
+
+    $jobs = [
+        'student_applications' => static fn () => pcvc_spam_purge_database($conn, $limit, $dryRun, $useAi),
+        'admins_pending'         => static fn () => pcvc_spam_purge_pending_admins($conn, $limit, $dryRun, $useAi),
+        'job_applications'       => static fn () => pcvc_spam_purge_job_applications($conn, $limit, $dryRun, $useAi),
+        'form_20_applications'   => static fn () => pcvc_spam_purge_form_20_applications($conn, $limit, $dryRun, $useAi),
+        'prescreening_submissions' => static fn () => pcvc_spam_purge_prescreening_submissions($conn, $limit, $dryRun, $useAi),
+    ];
+
+    foreach ($jobs as $label => $runner) {
+        try {
+            $result = $runner();
+        } catch (Throwable $e) {
+            $result = [
+                'scanned' => 0,
+                'deleted' => 0,
+                'ids'     => [],
+                'dry_run' => $dryRun,
+                'error'   => $e->getMessage(),
+            ];
+        }
+
+        $summary['tables'][$label] = $result;
+        $summary['totals']['scanned'] += (int) ($result['scanned'] ?? 0);
+        $summary['totals']['deleted'] += (int) ($result['deleted'] ?? 0);
+        $summary['totals']['flagged'] += count($result['ids'] ?? []);
+    }
+
+    return $summary;
 }

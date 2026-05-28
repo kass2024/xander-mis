@@ -65,6 +65,7 @@ require_once 'db.php';
 require_once __DIR__ . '/helpers/phone_whatsapp_normalize.php';
 require_once __DIR__ . '/helpers/job_application_format.php';
 require_once __DIR__ . '/helpers/student_portal_accounts.php';
+require_once __DIR__ . '/helpers/application_spam_guard.php';
 
 if ($conn->connect_error) {
     respond('error', 'Database connection failed', [], 500);
@@ -109,6 +110,19 @@ if (!$lenient) {
             $conn->rollback();
             respond('error', "Missing field: {$field}", [], 422);
         }
+    }
+}
+
+if (!$lenient) {
+    $spamVerdict = pcvc_spam_check_mapped_form($_POST, [
+        'first_name' => 'first_name',
+        'last_name' => 'last_name',
+        'email' => 'email',
+        'emergency_full_name' => 'emergency_full_name',
+    ]);
+    if ($spamVerdict['is_spam']) {
+        $conn->rollback();
+        respond('error', $spamVerdict['reason'] ?: 'Please use your real name and a valid email.', [], 422);
     }
 }
 

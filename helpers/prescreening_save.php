@@ -25,7 +25,20 @@ function xander_prescreening_save_submission(
 ): array {
     require_once __DIR__ . '/phone_whatsapp_normalize.php';
     require_once __DIR__ . '/env_load.php';
+    require_once __DIR__ . '/application_spam_guard.php';
     xander_load_env_file();
+
+    $spamVerdict = pcvc_spam_check_mapped_form([
+        'student_name' => $studentName,
+        'email' => $studentEmail,
+    ], [
+        'student_name' => 'student_name',
+        'email' => 'email',
+    ]);
+    if ($spamVerdict['is_spam']) {
+        throw new InvalidArgumentException($spamVerdict['reason'] ?: 'Invalid applicant details.');
+    }
+
     $whatsapp = xander_prescreening_normalize_whatsapp(
         $whatsapp,
         xander_env_get('WHATSAPP_DEFAULT_COUNTRY_CODE') ?: null

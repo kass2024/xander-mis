@@ -1,0 +1,53 @@
+Xander — cPanel cron (spam purge every 5 minutes)
+=================================================
+
+OPTION A — PHP CLI (recommended)
+--------------------------------
+1. Upload these files to the server (if not already):
+   - scripts/spam_guard_purge_all.php
+   - scripts/cron_spam_guard.sh
+
+2. In cPanel → Terminal (or SSH), make the shell script executable:
+   chmod 755 /home/USERNAME/public_html/scripts/cron_spam_guard.sh
+
+3. cPanel → Cron Jobs → Add New Cron Job
+
+   Common Settings: Every 5 minutes (*/5)
+
+   Command (edit USERNAME and path to match your account):
+
+   /bin/bash /home/USERNAME/public_html/scripts/cron_spam_guard.sh
+
+   If the site is in a subfolder, e.g. public_html/Xander:
+
+   /bin/bash /home/USERNAME/public_html/Xander/scripts/cron_spam_guard.sh
+
+4. Logs:
+   - logs/spam_guard_purge_all.log   (JSON result each run)
+   - logs/spam_cron_stdout.log       (CLI output)
+
+
+OPTION B — HTTP cron (if PHP CLI path is unknown)
+-------------------------------------------------
+1. In .env on the server, set a long random secret:
+
+   SPAM_GUARD_CRON_SECRET=your-long-random-secret-here
+
+2. cPanel → Cron Jobs → Every 5 minutes:
+
+   /usr/bin/curl -sS "https://xanderglobalscholars.com/scripts/spam_guard_purge_all.php?key=your-long-random-secret-here&limit=200" >> /home/USERNAME/public_html/logs/spam_cron_http.log 2>&1
+
+   Use your real domain and .env secret. Do not share the URL publicly.
+
+
+Verify
+------
+Run once manually in cPanel Terminal:
+
+   /bin/bash /home/USERNAME/public_html/scripts/cron_spam_guard.sh
+
+Or dry-run:
+
+   php /home/USERNAME/public_html/scripts/spam_guard_purge_all.php --dry-run
+
+Check logs/spam_guard_purge_all.log for deleted counts.

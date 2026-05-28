@@ -11,6 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers/mail_smtp.php';
+require_once __DIR__ . '/helpers/application_spam_guard.php';
 
 use PHPMailer\PHPMailer\Exception as MailException;
 use PHPMailer\PHPMailer\PHPMailer;
@@ -125,6 +126,17 @@ if ($first_name === '' || $last_name === '' || $username === '' || $phone_number
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     header('Location: register.php?error=invalid');
+    exit;
+}
+
+$spamVerdict = pcvc_spam_check_staff_registration([
+    'first_name' => $first_name,
+    'last_name' => $last_name,
+    'username' => $username,
+    'email' => $email,
+]);
+if ($spamVerdict['is_spam']) {
+    header('Location: register.php?error=spam');
     exit;
 }
 
