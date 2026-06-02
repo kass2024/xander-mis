@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once '../db.php';
 require_once '../database.php';
+require_once '../helpers/mysqli_compat.php';
 
 // Debug: Log the request method
 error_log("Request method: " . $_SERVER['REQUEST_METHOD']);
@@ -60,8 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($stmt) {
         $stmt->bind_param("s", $username);
         $stmt->execute();
-        $result = $stmt->get_result();
-        $admin = $result->fetch_assoc();
+        $admin = pcvc_stmt_fetch_assoc($stmt);
         $stmt->close();
 
         if ($admin && password_verify($password, $admin['password_hash'])) {

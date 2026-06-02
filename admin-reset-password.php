@@ -5,6 +5,7 @@
 session_start();
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/helpers/mysqli_compat.php';
 require_once __DIR__ . '/helpers/admin_password_reset.php';
 
 xander_ensure_admin_password_reset_columns($conn);
@@ -27,8 +28,7 @@ if ($tokenIn !== '' && preg_match('/^[a-f0-9]{64}$/i', $tokenIn)) {
     if ($st) {
         $st->bind_param('s', $hash);
         $st->execute();
-        $res = $st->get_result();
-        $row = $res ? $res->fetch_assoc() : null;
+        $row = pcvc_stmt_fetch_assoc($st);
         $st->close();
         if ($row) {
             $expStr = $row['password_reset_expires'] ?? null;

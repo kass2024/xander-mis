@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/admin_menu_registry.php';
 require_once __DIR__ . '/role.php';
+require_once __DIR__ . '/mysqli_compat.php';
 
 function xander_admin_menu_ensure_table(mysqli $conn): void
 {
@@ -75,7 +76,7 @@ function xander_admin_menu_get_custom(mysqli $conn, int $adminId): ?array
     }
     $stmt->bind_param('i', $adminId);
     $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
+    $row = pcvc_stmt_fetch_assoc($stmt);
     $stmt->close();
     if (!$row || empty($row['permissions'])) {
         return null;

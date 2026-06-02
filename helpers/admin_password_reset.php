@@ -2,10 +2,7 @@
 /**
  * Admin password reset tokens (stored hashed) + optional column migration.
  */
-require_once __DIR__ . '/mail_smtp.php';
-
-use PHPMailer\PHPMailer\Exception as MailException;
-use PHPMailer\PHPMailer\PHPMailer;
+require_once __DIR__ . '/mysqli_compat.php';
 
 /**
  * Append to PHP error log and optional project log file (creates logs/ if missing).
@@ -81,6 +78,8 @@ function xander_public_origin(): string
  */
 function xander_send_admin_password_reset_email(string $toEmail, string $toName, string $resetUrl): array
 {
+    require_once __DIR__ . '/mail_smtp.php';
+
     $mail = null;
     try {
         $mail = xander_create_phpmailer();
@@ -104,15 +103,15 @@ function xander_send_admin_password_reset_email(string $toEmail, string $toName,
 
         xander_password_reset_log('Mail sent OK to ' . $toEmail . ' (host=' . (getenv('SMTP_HOST') ?: 'xanderglobalscholars.com') . ')');
         return ['ok' => true, 'error_info' => ''];
-    } catch (MailException $e) {
-        $info = ($mail instanceof PHPMailer) ? $mail->ErrorInfo : '';
+    } catch (\PHPMailer\PHPMailer\Exception $e) {
+        $info = ($mail instanceof \PHPMailer\PHPMailer\PHPMailer) ? $mail->ErrorInfo : '';
         xander_password_reset_log(
             'PHPMailer Exception: ' . $e->getMessage() . ($info !== '' ? ' | ErrorInfo: ' . $info : ''),
             true
         );
         return ['ok' => false, 'error_info' => $info !== '' ? $info : $e->getMessage()];
     } catch (\Throwable $e) {
-        $info = ($mail instanceof PHPMailer) ? $mail->ErrorInfo : '';
+        $info = ($mail instanceof \PHPMailer\PHPMailer\PHPMailer) ? $mail->ErrorInfo : '';
         xander_password_reset_log(
             'Throwable: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine() . ($info !== '' ? ' | ErrorInfo: ' . $info : ''),
             true
@@ -150,8 +149,7 @@ function xander_admin_fetch_for_password_reset(mysqli $conn, string $trimmedInpu
         $ok = $st->execute();
         $row = null;
         if ($ok) {
-            $res = $st->get_result();
-            $row = $res ? $res->fetch_assoc() : null;
+            $row = pcvc_stmt_fetch_assoc($st);
         }
         $st->close();
         if ($row) {
@@ -168,8 +166,7 @@ function xander_admin_fetch_for_password_reset(mysqli $conn, string $trimmedInpu
         $ok = $st->execute();
         $row = null;
         if ($ok) {
-            $res = $st->get_result();
-            $row = $res ? $res->fetch_assoc() : null;
+            $row = pcvc_stmt_fetch_assoc($st);
         }
         $st->close();
         if ($row) {
@@ -188,8 +185,7 @@ function xander_admin_fetch_for_password_reset(mysqli $conn, string $trimmedInpu
             $ok = $st->execute();
             $row = null;
             if ($ok) {
-                $res = $st->get_result();
-                $row = $res ? $res->fetch_assoc() : null;
+                $row = pcvc_stmt_fetch_assoc($st);
             }
             $st->close();
             if ($row) {

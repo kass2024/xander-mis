@@ -24,6 +24,7 @@ session_start();
  */
 require_once 'db.php';        // provides $conn
 require_once 'database.php';  // provides $conn2
+require_once __DIR__ . '/helpers/mysqli_compat.php';
 require_once __DIR__ . '/helpers/admin_password_reset.php';
 
 xander_ensure_admin_password_reset_columns($conn);
@@ -43,11 +44,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     /**
      * SECURITY: Prepared statement (UPDATED to include status column)
      */
+    // Username or email; no offices JOIN (table may be absent on some hosts).
     $stmt = $conn->prepare(
-        "SELECT a.id, a.password_hash, a.full_name, a.role, a.status, a.office_id, o.office_name
-         FROM admins a
-         LEFT JOIN offices o ON o.id = a.office_id
-         WHERE a.username = ?"
+        "SELECT id, password_hash, full_name, role, status, office_id
+         FROM admins
+         WHERE username = ?
+            OR (email IS NOT NULL AND email != '' AND LOWER(TRIM(email)) = LOWER(TRIM(?)))
+         LIMIT 1"
     );
 
     if (!$stmt) {
@@ -55,10 +58,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "System error. Please contact administrator.";
     } else {
 
-        $stmt->bind_param("s", $username);
+        $stmt->bind_param('ss', $username, $username);
         $stmt->execute();
-        $result = $stmt->get_result();
-        $admin  = $result->fetch_assoc();
+        $admin = pcvc_stmt_fetch_assoc($stmt);
         $stmt->close();
 
         /**
@@ -107,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['name']      = $admin['full_name'];
                 $_SESSION['role']       = $admin['role'];
                 $_SESSION['office_id']  = (int) ($admin['office_id'] ?? 0);
-                $_SESSION['office_name'] = trim((string) ($admin['office_name'] ?? ''));
+                $_SESSION['office_name'] = '';
 
                 $clr = $conn->prepare('UPDATE admins SET password_reset_token = NULL, password_reset_expires = NULL WHERE id = ?');
                 if ($clr) {

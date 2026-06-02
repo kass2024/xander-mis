@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/helpers/mysqli_compat.php';
+
 /**
  * Institution portal tables + universities profile columns (idempotent).
  */
@@ -26,7 +28,7 @@ function xander_institution_portal_ensure_schema(mysqli $conn): void
         }
         $st->bind_param('sss', $dbName, $table, $column);
         $st->execute();
-        $ok = (bool) $st->get_result()->fetch_assoc();
+        $ok = (bool) pcvc_stmt_fetch_assoc($st);
         $st->close();
 
         return $ok;
