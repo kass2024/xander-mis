@@ -152,7 +152,14 @@ $results['meta'] = [
 ];
 
 $results['env'] = [
-    'openai_api_key' => debug_mask_secret(getenv('OPENAI_API_KEY') ?: ''),
+    'gemini_api_key' => debug_mask_secret(getenv('GEMINI_API_KEY') ?: ''),
+    'anthropic_api_key' => debug_mask_secret(getenv('ANTHROPIC_API_KEY') ?: ''),
+    'document_ai_primary' => getenv('DOCUMENT_AI_PRIMARY') ?: 'gemini',
+    'document_ai_fast_mode' => getenv('DOCUMENT_AI_FAST_MODE') ?: '0',
+    'document_ai_concurrency' => getenv('DOCUMENT_AI_CONCURRENCY') ?: '3',
+    'document_ai_dual_provider' => getenv('DOCUMENT_AI_DUAL_PROVIDER') ?: '0',
+    'gemini_model' => getenv('GEMINI_MODEL') ?: '',
+    'anthropic_model' => getenv('ANTHROPIC_MODEL') ?: '',
     'smtp_host' => debug_mask_secret(getenv('SMTP_HOST') ?: ''),
     'smtp_username' => debug_mask_secret(getenv('SMTP_USERNAME') ?: ''),
     'smtp_password' => debug_mask_secret(getenv('SMTP_PASSWORD') ?: ''),

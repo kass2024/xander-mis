@@ -74,8 +74,11 @@ const filterLevel = document.getElementById("filterLevel");
 
 /** Currently selected application numeric id (student_applications.id) for inline edits */
 let currentViewApplicationId = null;
+let currentDocumentItems = [];
+let currentStudentBio = { first_name: "", last_name: "", email: "", phone: "" };
 let studyChoiceRegionsLoaded = false;
 let studyChoiceAddFormWired = false;
+let missingDocsModalWired = false;
 
 /**
  * =====================================================
@@ -86,6 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
     startTimeAgoTicker();
     loadFilterOptions().finally(() => loadStudents());
     wireStudyChoiceAddFormOnce();
+    wireMissingDocsModalOnce();
     document.getElementById("btnSaveAssignment")?.addEventListener("click", saveApplicationAssignment);
 });
 
@@ -963,6 +967,7 @@ function renderApplication(data, applicationNumericId) {
         education = {},
         study_choices = [],
         documents = {},
+        document_items = [],
         agent = {},
         meta = {}
     } = data;
@@ -1020,13 +1025,22 @@ function renderApplication(data, applicationNumericId) {
     );
 
     renderStudyChoices(study_choices);
-    renderDocuments(documents);
+
+    currentViewApplicationId = applicationNumericId;
+    currentStudentBio = {
+        first_name: String(bio.first_name || "").trim(),
+        last_name: String(bio.last_name || "").trim(),
+        email: String(bio.email || "").trim(),
+        phone: String(bio.phone || "").trim(),
+    };
+
+    currentDocumentItems = normalizeDocumentItems(document_items, documents);
+    renderDocuments(currentDocumentItems);
+    updateMissingDocsNotifyButton();
     renderAgent(agent);
 
     renderDeleteControls(applicationNumericId, canDelete);
     renderAssignmentEditor(data);
-
-    currentViewApplicationId = applicationNumericId;
     const scPanel = document.getElementById("studyChoiceAddPanel");
     if (scPanel) {
         if (meta.can_add_study_choice === true || meta.can_edit_assignment === true) {
@@ -1375,29 +1389,502 @@ function renderStudyChoices(choices) {
 
 /**
  * =====================================================
- * DOCUMENTS
+ * DOCUMENTS (admin upload / replace + missing-doc notify)
  * =====================================================
  */
-function renderDocuments(docs) {
+function companyDisplayName() {
+    return (typeof window.PCVC_COMPANY_DISPLAY_NAME === "string" && window.PCVC_COMPANY_DISPLAY_NAME.trim())
+        ? window.PCVC_COMPANY_DISPLAY_NAME.trim()
+        : "Xander Global Scholars";
+}
+
+function normalizeDocumentItems(documentItems, legacyDocs) {
+    if (Array.isArray(documentItems) && documentItems.length) {
+        return documentItems;
+    }
+    const legacy = legacyDocs && typeof legacyDocs === "object" ? legacyDocs : {};
+    const defs = [
+        { key: "degree_transcripts", label: "Degree Transcripts", multiple: true },
+        { key: "high_school_degree", label: "High School Degree", multiple: false },
+        { key: "passport", label: "Passport", multiple: false },
+        { key: "cv_resume", label: "CV / Resume", multiple: false },
+        { key: "personal_statement", label: "Personal Statement", multiple: false },
+        { key: "recommendation_letters", label: "Recommendation Letters", multiple: false },
+        { key: "english_certificate", label: "English Certificate", multiple: false },
+        { key: "birth_certificate", label: "Birth Certificate", multiple: false },
+        { key: "payment_proof", label: "Payment Proof", multiple: false },
+    ];
+    return defs.map((def) => {
+        const raw = legacy[def.key];
+        const paths = [];
+        if (def.multiple) {
+            const arr = Array.isArray(raw) ? raw : [];
+            arr.forEach((p) => {
+                if (typeof p === "string" && p.trim()) paths.push(p);
+            });
+        } else if (typeof raw === "string" && raw.trim()) {
+            paths.push(raw);
+        }
+        return {
+            key: def.key,
+            label: def.label,
+            multiple: def.multiple,
+            paths,
+            present: paths.length > 0,
+        };
+    });
+}
+
+function updateMissingDocsNotifyButton() {
+    const btn = document.getElementById("btnNotifyMissingDocs");
+    const bar = document.getElementById("missingDocsReminderBar");
+    const hint = document.getElementById("missingDocsReminderHint");
+    if (!btn) return;
+
+    if (!currentViewApplicationId) {
+        if (bar) bar.classList.add("hidden");
+        btn.disabled = true;
+        return;
+    }
+
+    if (bar) bar.classList.remove("hidden");
+    btn.disabled = false;
+
+    const missing = (currentDocumentItems || []).filter((it) => !it.present && !(Array.isArray(it.paths) && it.paths.length));
+    if (hint) {
+        if (missing.length > 0) {
+            const names = missing.slice(0, 2).map((it) => it.label || it.key).join(", ");
+            const extra = missing.length > 2 ? ` and ${missing.length - 2} more` : "";
+            hint.textContent = `${missing.length} missing: ${names}${extra}. Send a WhatsApp + email reminder.`;
+            btn.textContent = `Notify student (${missing.length})`;
+        } else {
+            hint.textContent = "All documents are on file. You can still send a custom reminder.";
+            btn.textContent = "Send reminder";
+        }
+    }
+}
+
+function renderDocuments(items) {
     const list = document.getElementById("documentsList");
+    if (!list) return;
     list.innerHTML = "";
 
-    let found = false;
+    const rows = Array.isArray(items) ? items : [];
+    if (!rows.length) {
+        list.innerHTML = `<div class="text-sm text-gray-400">No document types configured</div>`;
+        return;
+    }
 
-    Object.entries(docs).forEach(([label, value]) => {
-        if (!value) return;
+    rows.forEach((item) => {
+        list.appendChild(buildDocumentAdminCard(item));
+    });
+}
 
-        const files = Array.isArray(value) ? value : [value];
-        files.forEach(path => {
-            if (!path) return;
-            found = true;
-            list.appendChild(documentCard(path, label.replace(/_/g, " ")));
-        });
+function buildDocumentAdminCard(item) {
+    const key = String(item.key || "");
+    const label = String(item.label || key.replace(/_/g, " "));
+    const paths = Array.isArray(item.paths) ? item.paths.filter(Boolean) : [];
+    const present = paths.length > 0 || item.present === true;
+    const primaryPath = paths[0] || "";
+    const fileName = primaryPath ? primaryPath.split("/").pop() : "";
+
+    const div = document.createElement("div");
+    div.className = present
+        ? "flex flex-col gap-2 p-3 border border-slate-200 rounded-lg bg-slate-50"
+        : "flex flex-col gap-2 p-3 border border-amber-200 rounded-lg bg-amber-50";
+
+    const statusBadge = present
+        ? `<span class="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">On file</span>`
+        : `<span class="text-[10px] font-semibold uppercase tracking-wide text-amber-800">Missing</span>`;
+
+    const fileLine = present
+        ? `<span class="text-xs text-slate-500 truncate max-w-full" title="${escapeAttr(fileName)}">${escapeHTML(fileName)}</span>`
+        : `<span class="text-xs text-amber-700">Not uploaded yet</span>`;
+
+    const viewBtn = present
+        ? `<a href="${escapeAttr(primaryPath)}" target="_blank" rel="noopener" class="text-blue-600 text-xs font-semibold hover:underline shrink-0">View</a>`
+        : "";
+
+    const actionLabel = present ? "Replace" : "Upload";
+
+    div.innerHTML = `
+        <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-sm font-semibold text-slate-900">${escapeHTML(label)}</span>
+                    ${statusBadge}
+                </div>
+                ${fileLine}
+            </div>
+            ${viewBtn}
+        </div>
+        <div class="flex justify-end">
+            <button type="button" class="pcvc-doc-upload-btn rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100" data-doc-key="${escapeAttr(key)}">${escapeHTML(actionLabel)}</button>
+        </div>
+    `;
+
+    div.querySelector(".pcvc-doc-upload-btn")?.addEventListener("click", () => {
+        promptDocumentUpload(key);
     });
 
-    if (!found) {
-        list.innerHTML =
-            `<div class="text-sm text-gray-400">No documents uploaded</div>`;
+    return div;
+}
+
+function promptDocumentUpload(docKey) {
+    if (!currentViewApplicationId) {
+        alert("Select an application first.");
+        return;
+    }
+    const inp = document.createElement("input");
+    inp.type = "file";
+    inp.accept = ".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,application/pdf,image/*";
+    inp.addEventListener("change", () => {
+        const file = inp.files?.[0];
+        if (file) void uploadApplicationDocument(docKey, file);
+    });
+    inp.click();
+}
+
+async function uploadApplicationDocument(docKey, file) {
+    if (!currentViewApplicationId || !docKey || !file) return;
+
+    const fd = new FormData();
+    fd.append("application_id", String(currentViewApplicationId));
+    fd.append("document_key", docKey);
+    fd.append("file", file);
+
+    try {
+        const res = await fetch(
+            projectApiPath("api/applications.php?action=replace_document"),
+            { method: "POST", credentials: "same-origin", body: fd }
+        );
+        const data = await res.json();
+        if (!res.ok || data.success === false) {
+            const err = data.message || data.errors?.error || "Upload failed";
+            alert(err);
+            return;
+        }
+        if (Array.isArray(data.data?.documents)) {
+            currentDocumentItems = data.data.documents;
+            renderDocuments(currentDocumentItems);
+            updateMissingDocsNotifyButton();
+        }
+        showToast(data.data?.message || "Document saved.", null, "Document saved");
+    } catch (e) {
+        console.error("uploadApplicationDocument:", e);
+        alert("Upload failed. Check your connection and try again.");
+    }
+}
+
+function wireMissingDocsModalOnce() {
+    if (missingDocsModalWired) return;
+    missingDocsModalWired = true;
+
+    document.getElementById("btnNotifyMissingDocs")?.addEventListener("click", openMissingDocsModal);
+    document.getElementById("missingDocsModalClose")?.addEventListener("click", closeMissingDocsModal);
+    document.getElementById("missingDocsCancel")?.addEventListener("click", closeMissingDocsModal);
+    document.getElementById("missingDocsSendBtn")?.addEventListener("click", () => {
+        void sendMissingDocsNotification();
+    });
+
+    document.getElementById("missingDocsModal")?.addEventListener("click", (ev) => {
+        if (ev.target?.id === "missingDocsModal") closeMissingDocsModal();
+    });
+}
+
+function buildMissingDocsDefaultMessage(selectedLabels) {
+    const company = companyDisplayName();
+    const fullName = `${currentStudentBio.first_name || ""} ${currentStudentBio.last_name || ""}`.trim();
+    const greeting = fullName ? `Dear ${fullName},` : "Dear Applicant,";
+    const docs = (Array.isArray(selectedLabels) && selectedLabels.length)
+        ? selectedLabels.map((l) => `  • ${l}`).join("\n")
+        : "  • (no documents selected yet)";
+
+    return [
+        greeting,
+        "",
+        `Thank you for choosing ${company}.`,
+        "We are reviewing your application and still need the following document(s) to move forward:",
+        "",
+        docs,
+        "",
+        "Kindly upload them through your student portal as soon as possible. Once received, our team will continue processing your application without delay.",
+        "",
+        "If you have any difficulty uploading or need clarification on any document, simply reply to this message and we will assist you right away.",
+        "",
+        "Warm regards,",
+        "Admissions Team",
+        company,
+    ].join("\n");
+}
+
+function collectMissingDocsSelectedLabels() {
+    const checked = [...document.querySelectorAll('#missingDocsChecklist input[name="missing_doc_key"]:checked')];
+    const keys = checked.map((el) => el.value).filter(Boolean);
+    return keys
+        .map((k) => (currentDocumentItems.find((it) => it.key === k) || {}).label || k.replace(/_/g, " "))
+        .filter(Boolean);
+}
+
+function refreshMissingDocsMessage() {
+    const ta = document.getElementById("missingDocsMessage");
+    if (!ta) return;
+    ta.value = buildMissingDocsDefaultMessage(collectMissingDocsSelectedLabels());
+    ta.dataset.userEdited = "0";
+}
+
+function openMissingDocsModal() {
+    if (!currentViewApplicationId) {
+        alert("Select an application first.");
+        return;
+    }
+    const modal = document.getElementById("missingDocsModal");
+    const checklist = document.getElementById("missingDocsChecklist");
+    const statusEl = document.getElementById("missingDocsSendStatus");
+    if (!modal || !checklist) return;
+
+    const phoneEl = document.getElementById("missingDocsPhone");
+    const emailEl = document.getElementById("missingDocsEmail");
+    if (phoneEl) phoneEl.value = (currentStudentBio.phone || "").replace(/\s+/g, " ").trim();
+    if (emailEl) emailEl.value = currentStudentBio.email || "";
+
+    checklist.innerHTML = "";
+    const items = currentDocumentItems.length
+        ? currentDocumentItems
+        : normalizeDocumentItems([], {});
+
+    items.forEach((item) => {
+        const row = document.createElement("label");
+        row.className = "flex items-start gap-2 text-sm cursor-pointer";
+        const onFile = item.present === true || (Array.isArray(item.paths) && item.paths.length > 0);
+        row.innerHTML = `
+            <input type="checkbox" class="mt-0.5" name="missing_doc_key" value="${escapeAttr(item.key)}" ${onFile ? "" : "checked"}>
+            <span>
+                <span class="font-medium text-slate-800">${escapeHTML(item.label || item.key)}</span>
+                ${onFile ? '<span class="text-slate-400 text-xs"> (already on file)</span>' : '<span class="text-amber-700 text-xs"> (missing)</span>'}
+            </span>
+        `;
+        checklist.appendChild(row);
+    });
+
+    const ta = document.getElementById("missingDocsMessage");
+    if (ta) {
+        ta.value = buildMissingDocsDefaultMessage(collectMissingDocsSelectedLabels());
+        ta.dataset.userEdited = "0";
+        ta.addEventListener("input", () => { ta.dataset.userEdited = "1"; }, { once: false });
+    }
+    checklist.addEventListener("change", () => {
+        if (ta && ta.dataset.userEdited !== "1") {
+            ta.value = buildMissingDocsDefaultMessage(collectMissingDocsSelectedLabels());
+        }
+    });
+    document.getElementById("missingDocsResetMessage")?.addEventListener("click", refreshMissingDocsMessage, { once: false });
+
+    if (statusEl) {
+        statusEl.classList.add("hidden");
+        statusEl.textContent = "";
+        statusEl.className = "text-sm hidden";
+    }
+
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+    modal.setAttribute("aria-hidden", "false");
+}
+
+function closeMissingDocsModal() {
+    const modal = document.getElementById("missingDocsModal");
+    if (!modal) return;
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+    modal.setAttribute("aria-hidden", "true");
+}
+
+function setMissingDocsSpinner(active, stages) {
+    const overlay = document.getElementById("missingDocsSendingOverlay");
+    const titleEl = document.getElementById("missingDocsSendingTitle");
+    const hintEl  = document.getElementById("missingDocsSendingHint");
+    const sendBtn = document.getElementById("missingDocsSendBtn");
+    const cancel  = document.getElementById("missingDocsCancel");
+    const closeBt = document.getElementById("missingDocsModalClose");
+
+    if (active) {
+        if (overlay) {
+            overlay.classList.remove("hidden");
+            overlay.setAttribute("aria-hidden", "false");
+        }
+        if (sendBtn) {
+            if (!sendBtn.dataset.origHtml) sendBtn.dataset.origHtml = sendBtn.innerHTML;
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = `
+                <span class="inline-flex items-center gap-2">
+                    <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-opacity="0.35"></circle>
+                        <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"></path>
+                    </svg>
+                    Sending…
+                </span>`;
+        }
+        if (cancel)  cancel.disabled = true;
+        if (closeBt) closeBt.disabled = true;
+
+        if (Array.isArray(stages) && stages.length && titleEl && hintEl) {
+            let i = 0;
+            titleEl.textContent = stages[i].title;
+            hintEl.textContent  = stages[i].hint;
+            clearInterval(window.__missingDocsStageTimer);
+            window.__missingDocsStageTimer = setInterval(() => {
+                i = (i + 1) % stages.length;
+                titleEl.textContent = stages[i].title;
+                hintEl.textContent  = stages[i].hint;
+            }, 1400);
+        }
+    } else {
+        clearInterval(window.__missingDocsStageTimer);
+        window.__missingDocsStageTimer = null;
+        if (overlay) {
+            overlay.classList.add("hidden");
+            overlay.setAttribute("aria-hidden", "true");
+        }
+        if (sendBtn) {
+            sendBtn.disabled = false;
+            if (sendBtn.dataset.origHtml) {
+                sendBtn.innerHTML = sendBtn.dataset.origHtml;
+                delete sendBtn.dataset.origHtml;
+            }
+        }
+        if (cancel)  cancel.disabled = false;
+        if (closeBt) closeBt.disabled = false;
+    }
+}
+
+async function sendMissingDocsNotification() {
+    if (!currentViewApplicationId) return;
+
+    const keys = [...document.querySelectorAll('#missingDocsChecklist input[name="missing_doc_key"]:checked')]
+        .map((el) => el.value)
+        .filter(Boolean);
+    const sendWa = document.getElementById("missingSendWa")?.checked ?? true;
+    const sendEm = document.getElementById("missingSendEmail")?.checked ?? true;
+    const message = (document.getElementById("missingDocsMessage")?.value || "").trim();
+    const phoneOverride = (document.getElementById("missingDocsPhone")?.value || "").trim();
+    const emailOverride = (document.getElementById("missingDocsEmail")?.value || "").trim();
+    const statusEl = document.getElementById("missingDocsSendStatus");
+
+    if (!keys.length) {
+        alert("Select at least one document to request.");
+        return;
+    }
+    if (!sendWa && !sendEm) {
+        alert("Select WhatsApp and/or email.");
+        return;
+    }
+    if (sendWa && !phoneOverride) {
+        alert("Phone number is required for WhatsApp.");
+        document.getElementById("missingDocsPhone")?.focus();
+        return;
+    }
+    if (sendEm && !emailOverride) {
+        alert("Email is required for email reminder.");
+        document.getElementById("missingDocsEmail")?.focus();
+        return;
+    }
+
+    const fd = new FormData();
+    fd.append("application_id", String(currentViewApplicationId));
+    fd.append("missing_keys", JSON.stringify(keys));
+    fd.append("custom_note", message);
+    fd.append("custom_message", message);
+    fd.append("override_phone", phoneOverride);
+    fd.append("override_email", emailOverride);
+    fd.append("send_whatsapp", sendWa ? "1" : "0");
+    fd.append("send_email", sendEm ? "1" : "0");
+
+    const stages = [{ title: "Preparing reminder…", hint: "Validating phone, email and message" }];
+    if (sendWa) {
+        stages.push({ title: "Checking WhatsApp number…", hint: "Verifying " + phoneOverride + " is on WhatsApp" });
+        stages.push({ title: "Sending WhatsApp…", hint: "Delivering via approved template" });
+    }
+    if (sendEm) stages.push({ title: "Sending Email…", hint: "Dispatching to " + emailOverride });
+    stages.push({ title: "Finalising…", hint: "Just a moment" });
+
+    setMissingDocsSpinner(true, stages);
+    if (statusEl) {
+        statusEl.classList.add("hidden");
+        statusEl.textContent = "";
+        statusEl.className = "text-sm hidden";
+    }
+
+    try {
+        const res = await fetch(
+            projectApiPath("api/applications.php?action=notify_missing_documents"),
+            { method: "POST", credentials: "same-origin", body: fd }
+        );
+        const data = await res.json();
+        if (!res.ok || data.success === false) {
+            const err = data.errors?.error || data.message || "Send failed";
+            if (statusEl) {
+                statusEl.classList.remove("hidden");
+                statusEl.className = "text-sm text-red-600";
+                statusEl.textContent = err;
+            } else {
+                alert(err);
+            }
+            return;
+        }
+        const wa = data.data?.whatsapp || {};
+        const em = data.data?.email || {};
+        const okParts = [];
+        const skipParts = [];
+        if (wa.sent) {
+            okParts.push(`WhatsApp (${wa.method || "sent"})`);
+        } else if (sendWa) {
+            if (wa.not_on_whatsapp) {
+                skipParts.push("WhatsApp skipped — number not on WhatsApp");
+            } else if (wa.error) {
+                skipParts.push(`WhatsApp failed: ${wa.error}`);
+            }
+        }
+        if (em.sent) {
+            okParts.push("Email");
+        } else if (sendEm && em.error) {
+            skipParts.push(`Email failed: ${em.error}`);
+        }
+
+        let msg = "";
+        let tone = "text-emerald-700";
+        if (okParts.length && skipParts.length) {
+            msg = `Sent via ${okParts.join(" and ")}. ${skipParts.join(". ")}.`;
+            tone = "text-amber-700";
+        } else if (okParts.length) {
+            msg = `Sent via ${okParts.join(" and ")}.`;
+        } else if (skipParts.length) {
+            msg = skipParts.join(". ") + ".";
+            tone = "text-red-600";
+        } else {
+            msg = data.data?.message || "Notification sent.";
+        }
+
+        if (statusEl) {
+            statusEl.classList.remove("hidden");
+            statusEl.className = "text-sm " + tone;
+            statusEl.textContent = msg;
+        }
+        showToast(msg, null, "Notification");
+
+        if (okParts.length && !skipParts.length) {
+            setTimeout(closeMissingDocsModal, 1200);
+        }
+    } catch (e) {
+        console.error("sendMissingDocsNotification:", e);
+        if (statusEl) {
+            statusEl.classList.remove("hidden");
+            statusEl.className = "text-sm text-red-600";
+            statusEl.textContent = "Send failed. Try again.";
+        } else {
+            alert("Send failed.");
+        }
+    } finally {
+        setMissingDocsSpinner(false);
     }
 }
 
@@ -1571,39 +2058,6 @@ function escapeAttr(str) {
         .replace(/&/g, "&amp;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
-}
-/**
- * =====================================================
- * DOCUMENT CARD (REQUIRED)
- * =====================================================
- */
-function documentCard(path, label) {
-    const div = document.createElement("div");
-    div.className =
-        "flex items-center justify-between p-3 border rounded-md bg-slate-50 hover:bg-slate-100";
-
-    const fileName = path.split("/").pop();
-
-    div.innerHTML = `
-        <div class="flex flex-col">
-            <span class="text-sm font-medium capitalize">
-                ${escapeHTML(label)}
-            </span>
-            <span class="text-xs text-gray-500 truncate max-w-[220px]">
-                ${escapeHTML(fileName)}
-            </span>
-        </div>
-
-        <a
-            href="${escapeHTML(path)}"
-            target="_blank"
-            class="text-blue-600 text-xs font-semibold hover:underline"
-        >
-            View
-        </a>
-    `;
-
-    return div;
 }
 /**
  * =====================================================
@@ -2076,7 +2530,7 @@ function showToast(message, onClick, title) {
     const heading =
         typeof title === "string" && title.trim() !== ""
             ? title.trim()
-            : "Jobs Created";
+            : "Success";
 
     toast.innerHTML = `
         <div class="text-sm font-semibold">${escapeHTML(String(heading ?? ""))}</div>

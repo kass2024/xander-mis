@@ -4,6 +4,11 @@ session_start();
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers/role.php';
 require_once __DIR__ . '/includes/company_branding.php';
+require_once __DIR__ . '/helpers/student_applications_schema.php';
+
+if (isset($conn) && $conn instanceof mysqli) {
+    pcvc_student_applications_ensure_schema($conn);
+}
 
 $sessionRole = isset($_SESSION['role']) ? trim((string) $_SESSION['role']) : '';
 $dbRole = '';
@@ -670,8 +675,34 @@ th {
 
                     <!-- DOCUMENTS -->
                     <section class="card p-6">
-                        <div class="section-title">Documents</div>
+                        <div class="section-title mb-4">Documents</div>
+
                         <div id="documentsList" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+
+                        <!-- Missing-docs reminder bar (sits directly under the upload cards) -->
+                        <div
+                            id="missingDocsReminderBar"
+                            class="hidden mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4"
+                        >
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div class="min-w-0">
+                                    <div class="text-sm font-semibold text-amber-900">
+                                        Need missing documents?
+                                    </div>
+                                    <div id="missingDocsReminderHint" class="text-xs text-amber-800 mt-0.5">
+                                        Send a WhatsApp + email reminder to the student. Tick the documents that are still missing.
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    id="btnNotifyMissingDocs"
+                                    class="shrink-0 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-amber-600 disabled:opacity-45"
+                                    disabled
+                                >
+                                    Notify student
+                                </button>
+                            </div>
+                        </div>
                     </section>
 
                     <!-- AGENT -->
@@ -750,10 +781,78 @@ th {
     </main>
 </div>
 
+<!-- Missing documents notification modal -->
+<div id="missingDocsModal" class="fixed inset-0 z-[200] hidden items-center justify-center bg-slate-900/50 p-4" aria-hidden="true">
+    <div class="relative w-full max-w-lg rounded-xl bg-white shadow-xl" role="dialog">
+        <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <h3 class="text-base font-bold text-slate-900">Notify student — missing documents</h3>
+            <button type="button" id="missingDocsModalClose" class="text-2xl leading-none text-slate-400 hover:text-slate-700">&times;</button>
+        </div>
+
+        <!-- Sending overlay (smart spinner) -->
+        <div id="missingDocsSendingOverlay" class="hidden absolute inset-0 z-10 rounded-xl bg-white/85 backdrop-blur-sm flex flex-col items-center justify-center gap-3" aria-hidden="true">
+            <svg class="animate-spin h-10 w-10 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"></circle>
+                <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"></path>
+            </svg>
+            <div class="text-center">
+                <div id="missingDocsSendingTitle" class="text-sm font-bold text-slate-900">Sending…</div>
+                <div id="missingDocsSendingHint" class="mt-0.5 text-xs text-slate-600">This usually takes a few seconds.</div>
+            </div>
+            <div class="flex gap-1.5">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-bounce" style="animation-delay:0ms"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-bounce" style="animation-delay:150ms"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-bounce" style="animation-delay:300ms"></span>
+            </div>
+        </div>
+        <div class="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+            <p class="text-sm text-slate-600">Send via WhatsApp (approved template) and/or email. Tick the documents that are still missing. You can edit the phone, email, and message before sending.</p>
+
+            <div class="flex gap-3">
+                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="missingSendWa" checked> WhatsApp</label>
+                <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="missingSendEmail" checked> Email</label>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Phone (WhatsApp)</label>
+                    <input id="missingDocsPhone" type="tel" inputmode="tel" autocomplete="off"
+                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        placeholder="+250788123456">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Email</label>
+                    <input id="missingDocsEmail" type="email" autocomplete="off"
+                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        placeholder="student@example.com">
+                </div>
+            </div>
+
+            <div id="missingDocsChecklist" class="space-y-2 border border-slate-200 rounded-lg p-3 bg-slate-50 max-h-48 overflow-y-auto"></div>
+
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <label class="block text-xs font-semibold text-slate-600">Message</label>
+                    <button type="button" id="missingDocsResetMessage" class="text-[11px] font-semibold text-emerald-700 hover:underline">Reset to default</button>
+                </div>
+                <textarea id="missingDocsMessage" rows="8" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono"></textarea>
+                <p class="mt-1 text-[11px] text-slate-500">This text is sent in the email body and (as a fallback) in WhatsApp. The approved WhatsApp template only uses: student name, missing-document list, and portal link.</p>
+            </div>
+
+            <div id="missingDocsSendStatus" class="text-sm hidden"></div>
+        </div>
+        <div class="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
+            <button type="button" id="missingDocsCancel" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+            <button type="button" id="missingDocsSendBtn" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">Send notification</button>
+        </div>
+    </div>
+</div>
+
 <script>
 window.APP_ROOT = <?= json_encode($appRoot, JSON_UNESCAPED_SLASHES) ?>;
 window.CAN_DELETE_APPLICATION = <?= json_encode($canDeleteApplication) ?>;
 window.PCVC_DEFAULT_ASSIGNED_LABEL = <?= json_encode(PCVC_DEFAULT_ASSIGNED_PERSON_LABEL, JSON_UNESCAPED_UNICODE) ?>;
+window.PCVC_COMPANY_DISPLAY_NAME = <?= json_encode(PCVC_COMPANY_DISPLAY_NAME, JSON_UNESCAPED_UNICODE) ?>;
 </script>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>

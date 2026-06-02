@@ -1,13 +1,20 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/sql_run_file.php';
+
 /**
  * Ensure `student_applications` has all columns used by the app/portal.
  * Safe to run multiple times (idempotent).
+ *
+ * SQL file (auto-run): sql/student_applications_documents.sql
  */
 
 function pcvc_student_applications_ensure_schema(mysqli $conn): void
 {
+    $sqlFile = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'sql' . DIRECTORY_SEPARATOR . 'student_applications_documents.sql';
+    pcvc_sql_run_migration_file($conn, $sqlFile);
+
     // Fetch existing columns
     $existing = [];
     $sql = "SELECT COLUMN_NAME
