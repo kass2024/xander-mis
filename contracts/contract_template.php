@@ -208,7 +208,7 @@ This Employment Agreement (“Agreement”) is made and entered into on
 
 <p><strong>Employer</strong><br>
 Xander Global Scholars Ltd (XGS)<br>
-Town Center Building (near Simba Supermarket), 5th Floor, Nyarugenge, Kigali, Rwanda<br>
+Town Center Building (near Simba Supermarket), 2nd Floor, Door: F2B-022C, Nyarugenge<br>
 Email: info@xanderglobalscholars.com | +1 270 438 7305<br>
 Website: www.xanderglobalscholars.com<br>
 (Hereinafter referred to as the <strong>“Company”</strong> or <strong>“Employer”</strong>)
