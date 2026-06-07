@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/prescreening_schema.php';
-require_once __DIR__ . '/mail_smtp.php';
+require_once __DIR__ . '/mailer.php';
 require_once __DIR__ . '/phone_whatsapp_normalize.php';
 
 function xander_prescreening_ensure_invite_columns(mysqli $conn): void
@@ -261,18 +261,18 @@ function xander_prescreening_send_invite_email(string $toEmail, string $studentN
         . '<p>— Xander Global Scholars</p>';
 
     try {
-        $mail = xander_create_phpmailer_applicant_sender();
+        $mail = app_applicant_mailer();
         $mail->addAddress($toEmail, $name);
         $mail->Subject = 'Your Xander Global Scholars pre-screening link';
-        $mail->isHTML(true);
         $mail->Body = $html;
         $mail->AltBody = "Hello {$name},\n\nComplete your pre-screening here:\n{$link}\n\n— Xander Global Scholars";
         $mail->send();
 
         return ['ok' => true, 'error' => ''];
     } catch (Throwable $e) {
-        error_log('[prescreening_invite_email] ' . $e->getMessage());
+        $detail = $e->getMessage();
+        error_log('[prescreening_invite_email] ' . $detail);
 
-        return ['ok' => false, 'error' => 'Could not send email.'];
+        return ['ok' => false, 'error' => 'Could not send email.' . ($detail !== '' ? ' (' . $detail . ')' : '')];
     }
 }
