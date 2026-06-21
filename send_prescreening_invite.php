@@ -54,8 +54,12 @@ try {
     if ($phone === '') {
         invite_respond(['status' => 'error', 'message' => 'Student WhatsApp number is required.']);
     }
-    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        invite_respond(['status' => 'error', 'message' => 'Valid student email is required.']);
+    $emailRequired = ($channel === 'email' || $channel === 'both');
+    if ($emailRequired && ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL))) {
+        invite_respond(['status' => 'error', 'message' => 'Valid student email is required for email delivery.']);
+    }
+    if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        invite_respond(['status' => 'error', 'message' => 'Invalid email address.']);
     }
 
     $invite = xander_prescreening_create_invite($conn, $name, $email, $phone, $channel);

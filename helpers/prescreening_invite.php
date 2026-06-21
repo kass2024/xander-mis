@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/prescreening_schema.php';
 require_once __DIR__ . '/mailer.php';
 require_once __DIR__ . '/phone_whatsapp_normalize.php';
+require_once __DIR__ . '/urls.php';
 
 function xander_prescreening_ensure_invite_columns(mysqli $conn): void
 {
@@ -13,19 +14,12 @@ function xander_prescreening_ensure_invite_columns(mysqli $conn): void
 
 function xander_prescreening_base_url(): string
 {
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
-    if ($base === '/' || $base === '\\') {
-        $base = '';
-    }
-
-    return $scheme . '://' . $host . $base;
+    return pcvc_public_base_url();
 }
 
 function xander_prescreening_invite_url(string $token): string
 {
-    return rtrim(xander_prescreening_base_url(), '/') . '/prescreening-student.php?t=' . rawurlencode($token);
+    return pcvc_public_url('/prescreening-student.php?t=' . rawurlencode($token));
 }
 
 /**
@@ -260,7 +254,12 @@ function xander_prescreening_send_invite_email(string $toEmail, string $studentN
         . '<p>This link is unique to you. If you have questions, reply to this email.</p>'
         . '<p>— Xander Global Scholars</p>';
 
+    $mail = null;
     try {
+        if (xander_smtp_password() === '') {
+            return ['ok' => false, 'error' => 'SMTP is not configured (set SMTP_PASSWORD in .env).'];
+        }
+
         $mail = app_applicant_mailer();
         $mail->addAddress($toEmail, $name);
         $mail->Subject = 'Your Xander Global Scholars pre-screening link';
@@ -270,7 +269,7 @@ function xander_prescreening_send_invite_email(string $toEmail, string $studentN
 
         return ['ok' => true, 'error' => ''];
     } catch (Throwable $e) {
-        $detail = $e->getMessage();
+        $detail = xander_mailer_error_detail($mail, $e);
         error_log('[prescreening_invite_email] ' . $detail);
 
         return ['ok' => false, 'error' => 'Could not send email.' . ($detail !== '' ? ' (' . $detail . ')' : '')];

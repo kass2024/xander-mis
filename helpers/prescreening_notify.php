@@ -268,39 +268,44 @@ function xander_send_prescreening_notifications(array $row, string $reference, b
     $attachments = xander_prescreening_collect_attachments_for_row($row);
 
     $adminMail = xander_prescreening_build_email_html($row, $reference, true);
+    $adminMailer = null;
     try {
-        $mail = xander_create_phpmailer();
-        $mail->isHTML(true);
-        $mail->clearAddresses();
-        $mail->clearAttachments();
-        $mail->addAddress('admissions@xanderglobalscholars.com');
-        $mail->Subject = $adminMail['subject'];
-        $mail->Body = $adminMail['body'];
-        foreach ($attachments as $att) {
-            $mail->addAttachment($att['path'], $att['name']);
+        if (xander_smtp_password() === '') {
+            throw new RuntimeException('SMTP_PASSWORD is not configured.');
         }
-        $emailResult['admin'] = $mail->send();
+        $adminMailer = xander_create_phpmailer();
+        $adminMailer->isHTML(true);
+        $adminMailer->clearAddresses();
+        $adminMailer->clearAttachments();
+        $adminMailer->addAddress('admissions@xanderglobalscholars.com');
+        $adminMailer->Subject = $adminMail['subject'];
+        $adminMailer->Body = $adminMail['body'];
+        foreach ($attachments as $att) {
+            $adminMailer->addAttachment($att['path'], $att['name']);
+        }
+        $emailResult['admin'] = $adminMailer->send();
     } catch (Throwable $e) {
-        error_log('[prescreening_notify] admin email: ' . $e->getMessage());
+        error_log('[prescreening_notify] admin email: ' . xander_mailer_error_detail($adminMailer, $e));
     }
 
     $studentEmail = trim((string) ($row['student_email'] ?? ''));
     if ($studentEmail !== '' && filter_var($studentEmail, FILTER_VALIDATE_EMAIL)) {
         $studentMail = xander_prescreening_build_email_html($row, $reference, false);
+        $studentMailer = null;
         try {
-            $mail2 = xander_create_phpmailer_applicant_sender();
-            $mail2->isHTML(true);
-            $mail2->clearAddresses();
-            $mail2->clearAttachments();
-            $mail2->addAddress($studentEmail, trim((string) ($row['student_name'] ?? '')));
-            $mail2->Subject = $studentMail['subject'];
-            $mail2->Body = $studentMail['body'];
+            $studentMailer = xander_create_phpmailer_applicant_sender();
+            $studentMailer->isHTML(true);
+            $studentMailer->clearAddresses();
+            $studentMailer->clearAttachments();
+            $studentMailer->addAddress($studentEmail, trim((string) ($row['student_name'] ?? '')));
+            $studentMailer->Subject = $studentMail['subject'];
+            $studentMailer->Body = $studentMail['body'];
             foreach ($attachments as $att) {
-                $mail2->addAttachment($att['path'], $att['name']);
+                $studentMailer->addAttachment($att['path'], $att['name']);
             }
-            $emailResult['student'] = $mail2->send();
+            $emailResult['student'] = $studentMailer->send();
         } catch (Throwable $e) {
-            error_log('[prescreening_notify] student email: ' . $e->getMessage());
+            error_log('[prescreening_notify] student email: ' . xander_mailer_error_detail($studentMailer, $e));
         }
     }
 

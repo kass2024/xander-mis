@@ -94,81 +94,19 @@ try {
     if ($adminId < 0) {
         $adminId = 0;
     }
-    $submittedAt = date('Y-m-d H:i:s');
 
-    $sql = "INSERT INTO prescreening_submissions (
-        user_id, source, student_name, student_email, whatsapp_number,
-        education_level, course_program, country_interest, open_other_countries,
-        budget_tuition, funds_application_visa, sponsor, afford_deposit,
-        has_valid_passport, academic_docs_ready, english_level, english_test_taken,
-        visa_denied, planned_intake, ready_to_apply,
-        doc_valid_passport, doc_degree_transcripts, doc_high_school, doc_cv_resume,
-        doc_recommendation, doc_personal_statement, doc_english_certificate,
-        doc_birth_certificate, doc_payment_proof,
-        submitted_by_admin_id, submitted_at
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    ON DUPLICATE KEY UPDATE
-        source=VALUES(source),
-        student_name=VALUES(student_name),
-        student_email=VALUES(student_email),
-        whatsapp_number=VALUES(whatsapp_number),
-        education_level=VALUES(education_level),
-        course_program=VALUES(course_program),
-        country_interest=VALUES(country_interest),
-        open_other_countries=VALUES(open_other_countries),
-        budget_tuition=VALUES(budget_tuition),
-        funds_application_visa=VALUES(funds_application_visa),
-        sponsor=VALUES(sponsor),
-        afford_deposit=VALUES(afford_deposit),
-        has_valid_passport=VALUES(has_valid_passport),
-        academic_docs_ready=VALUES(academic_docs_ready),
-        english_level=VALUES(english_level),
-        english_test_taken=VALUES(english_test_taken),
-        visa_denied=VALUES(visa_denied),
-        planned_intake=VALUES(planned_intake),
-        ready_to_apply=VALUES(ready_to_apply),
-        doc_valid_passport=VALUES(doc_valid_passport),
-        doc_degree_transcripts=VALUES(doc_degree_transcripts),
-        doc_high_school=VALUES(doc_high_school),
-        doc_cv_resume=VALUES(doc_cv_resume),
-        doc_recommendation=VALUES(doc_recommendation),
-        doc_personal_statement=VALUES(doc_personal_statement),
-        doc_english_certificate=VALUES(doc_english_certificate),
-        doc_birth_certificate=VALUES(doc_birth_certificate),
-        doc_payment_proof=VALUES(doc_payment_proof),
-        submitted_by_admin_id=VALUES(submitted_by_admin_id),
-        submitted_at=VALUES(submitted_at)";
-
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        throw new RuntimeException('Prepare failed: ' . $conn->error);
-    }
-
-    $bind = [
-        $userId, 'admin', $studentName, $studentEmail, $whatsapp,
-        $fields['education_level'], $fields['course_program'], $fields['country_interest'], $fields['open_other_countries'],
-        $fields['budget_tuition'], $fields['funds_application_visa'], $fields['sponsor'], $fields['afford_deposit'],
-        $fields['has_valid_passport'], $fields['academic_docs_ready'], $fields['english_level'], $fields['english_test_taken'],
-        $fields['visa_denied'], $fields['planned_intake'], $fields['ready_to_apply'],
-        $docPaths['doc_valid_passport'] ?? '',
-        $docPaths['doc_degree_transcripts'] ?? '',
-        $docPaths['doc_high_school'] ?? '',
-        $docPaths['doc_cv_resume'] ?? '',
-        $docPaths['doc_recommendation'] ?? '',
-        $docPaths['doc_personal_statement'] ?? '',
-        $docPaths['doc_english_certificate'] ?? '',
-        $docPaths['doc_birth_certificate'] ?? '',
-        $docPaths['doc_payment_proof'] ?? '',
-        $adminId,
-        $submittedAt,
-    ];
-
-    $types = str_repeat('s', 29) . 'is';
-    $stmt->bind_param($types, ...$bind);
-    if (!$stmt->execute()) {
-        throw new RuntimeException('Save failed: ' . $stmt->error);
-    }
-    $stmt->close();
+    $saved = xander_prescreening_save_submission(
+        $conn,
+        $userId,
+        'admin',
+        $studentName,
+        $studentEmail,
+        $whatsapp,
+        $fields,
+        $docPaths,
+        $adminId > 0 ? $adminId : null,
+        false
+    );
 
     $row = array_merge([
         'student_name' => $studentName,
@@ -177,7 +115,7 @@ try {
         'user_id' => $userId,
     ], $fields, $docPaths);
 
-    $reference = 'PS-' . strtoupper(substr(md5($userId), 0, 8));
+    $reference = $saved['reference'];
 
     xander_prescreening_delete_invite($conn, $userId);
     unset($_SESSION['prescreen_admin_draft_user_id']);

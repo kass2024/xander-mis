@@ -157,6 +157,8 @@ function xander_env_get(string $key): string
             'SMTP_USERNAME' => true,
             'SMTP_FROM_EMAIL' => true,
             'SMTP_PORT' => true,
+            'SMTP_SECURE' => true,
+            'APP_URL' => true,
         ];
     }
     if (isset($directKeys[$key])) {

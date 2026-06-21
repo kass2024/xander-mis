@@ -572,6 +572,12 @@ function xander_prescreening_begin_questions(mysqli $conn, string $waPhone, arra
     if (trim((string) ($answers['student_name'] ?? '')) !== '') {
         $startIdx = 1;
     }
+    if (trim((string) ($answers['student_email'] ?? '')) !== '') {
+        $startIdx = max($startIdx, 2);
+    }
+    if ($startIdx >= count($questions)) {
+        $startIdx = count($questions) - 1;
+    }
     xander_prescreening_save_session($conn, $waPhone, 'q:' . $startIdx, $answers, 0);
     $intro = "*Xander Global Scholars — Quick Pre-screening*\n\n"
         . "Please answer each question in order.\n"
@@ -600,8 +606,12 @@ function xander_prescreening_extract_inbound_text(array $message): string
         return trim((string) ($message['button']['text'] ?? $message['button']['payload'] ?? ''));
     }
     if ($type === 'interactive') {
-        $btn = $message['interactive']['button_reply']['title'] ?? $message['interactive']['button_reply']['id'] ?? '';
-        $list = $message['interactive']['list_reply']['title'] ?? $message['interactive']['list_reply']['id'] ?? '';
+        $btn = $message['interactive']['button_reply']['title']
+            ?? $message['interactive']['button_reply']['id']
+            ?? '';
+        $list = $message['interactive']['list_reply']['title']
+            ?? $message['interactive']['list_reply']['id']
+            ?? '';
 
         return trim((string) ($btn !== '' ? $btn : $list));
     }
@@ -613,12 +623,42 @@ function xander_prescreening_extract_inbound_text(array $message): string
 function xander_prescreening_normalize_action(string $text): string
 {
     $t = strtolower(trim($text));
+    // Meta quick-reply payloads may be lowercase ids (start / cancel)
+    if (str_contains($t, 'start') && !str_contains($t, 'restart')) {
+        return 'start';
+    }
+    if (str_contains($t, 'cancel') || str_contains($t, 'stop')) {
+        return 'cancel';
+    }
 
     return match ($t) {
-        'start', 'yes', 'begin', 'ok', 'okay' => 'start',
-        'cancel', 'stop', 'quit', 'end' => 'cancel',
+        'yes', 'begin', 'ok', 'okay' => 'start',
+        'quit', 'end' => 'cancel',
         default => $t,
     };
+}
+
+/**
+ * Merge admin invite row (name/email) into session answers when available.
+ *
+ * @param array<string,mixed> $answers
+ * @return array<string,mixed>
+ */
+function xander_prescreening_merge_pending_invite_answers(mysqli $conn, string $waPhone, array $answers): array
+{
+    require_once __DIR__ . '/prescreening_invite.php';
+    $pending = xander_prescreening_find_pending_by_whatsapp($conn, $waPhone);
+    if (!$pending) {
+        return $answers;
+    }
+    if (trim((string) ($answers['student_name'] ?? '')) === '' && trim((string) ($pending['student_name'] ?? '')) !== '') {
+        $answers['student_name'] = trim((string) $pending['student_name']);
+    }
+    if (trim((string) ($answers['student_email'] ?? '')) === '' && trim((string) ($pending['student_email'] ?? '')) !== '') {
+        $answers['student_email'] = trim((string) $pending['student_email']);
+    }
+
+    return $answers;
 }
 
 /**
@@ -912,6 +952,7 @@ function xander_prescreening_handle_inbound(mysqli $conn, string $waPhone, array
             );
             return true;
         }
+        $answers = xander_prescreening_merge_pending_invite_answers($conn, $waPhone, $answers);
         xander_prescreening_begin_questions($conn, $waPhone, $answers);
         return true;
     }
