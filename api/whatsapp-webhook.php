@@ -1,17 +1,15 @@
 <?php
 /**
- * Meta WhatsApp webhook entry on cPanel.
- *
- * IMPORTANT (Namecheap split hosting):
- * - Meta callback should be: https://xanderbot.site/api/webhook/meta  (VPS — FAQ bot)
- * - If Meta still points here, set XANDERBOT_WEBHOOK_URL in .env to proxy to VPS.
- * - Pre-screening answers are handled on VPS → POST /api/prescreening-inbound.php on this host.
+ * Meta WhatsApp webhook on cPanel (legacy / backup).
+ * Primary Meta callback may point at the webhook app — pre-screening runs here via
+ * api/prescreening-inbound.php (messages + delivery status from the webhook relay).
  *
  * Health: /api/webhook-health.php
  */
 declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/helpers/env_load.php';
+require_once dirname(__DIR__) . '/helpers/whatsapp_track_log.php';
 xander_load_env_file();
 
 require_once dirname(__DIR__) . '/helpers/webhook_forward_xanderbot.php';
@@ -73,6 +71,40 @@ foreach ($payload['entry'] ?? [] as $entry) {
         if (!is_array($value)) {
             continue;
         }
+
+        foreach ($value['statuses'] ?? [] as $status) {
+            if (!is_array($status)) {
+                continue;
+            }
+            $wamid = trim((string) ($status['id'] ?? ''));
+            $delivery = strtolower(trim((string) ($status['status'] ?? '')));
+            $recipient = preg_replace('/\D+/', '', (string) ($status['recipient_id'] ?? '')) ?? '';
+            if ($delivery === '' || $recipient === '') {
+                continue;
+            }
+            $errorCode = null;
+            $errorMessage = '';
+            $errors = $status['errors'] ?? [];
+            if (is_array($errors) && isset($errors[0]) && is_array($errors[0])) {
+                $first = $errors[0];
+                $errorCode = isset($first['code']) ? (int) $first['code'] : null;
+                $errorMessage = trim((string) ($first['message'] ?? $first['title'] ?? ''));
+            }
+            xander_prescreening_apply_delivery_status(
+                $conn,
+                $wamid,
+                $delivery,
+                $errorCode,
+                $errorMessage,
+                $recipient
+            );
+            xander_whatsapp_track('invite_delivery_' . $delivery, [
+                'wamid' => $wamid,
+                'recipient' => $recipient,
+                'source' => 'cpanel_webhook',
+            ]);
+        }
+
         foreach ($value['messages'] ?? [] as $message) {
             if (!is_array($message)) {
                 continue;
@@ -95,4 +127,4 @@ foreach ($payload['entry'] ?? [] as $entry) {
 }
 
 header('Content-Type: application/json; charset=utf-8');
-echo json_encode(['status' => 'ok', 'note' => 'legacy prescreening-only; set XANDERBOT_WEBHOOK_URL for FAQ bot']);
+echo json_encode(['status' => 'ok', 'note' => 'cPanel pre-screening webhook']);

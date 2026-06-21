@@ -60,19 +60,30 @@ Reference: {{2}}. Our team will review your answers and documents and contact yo
 
 If this template is not approved, the system falls back to session text within the 24-hour window.
 
-## Webhook architecture
+## Webhook architecture (Meta URL unchanged)
 
-| Step | Endpoint |
-|------|----------|
-| Meta callback | `https://xanderbot.site/api/webhook/meta` (VPS) |
-| Pre-screening replies | VPS → `https://xanderglobalscholars.com/api/prescreening-inbound.php` |
-| Secret | `PRESCREENING_FORWARD_SECRET` (same on VPS and cPanel `.env`) |
+| Step | What happens |
+|------|----------------|
+| Admin sends invite | cPanel → Meta Graph API (template) |
+| Meta delivery status | Meta → webhook app → `api/prescreening-inbound.php` on cPanel |
+| Student taps START | Meta → webhook app → cPanel pre-screening Q&A |
 
-Set on cPanel if Meta still points at the old URL:
+On the **webhook app** (where Meta callback is registered), set in `.env`:
 
 ```env
-XANDERBOT_WEBHOOK_URL=https://xanderbot.site/api/webhook/meta
+XANDER_PRESCREENING_URL=https://xanderglobalscholars.com/api/prescreening-inbound.php
+PRESCREENING_FORWARD_SECRET=same-as-cPanel-PRESCREENING_FORWARD_SECRET
 ```
+
+On **cPanel** `.env`:
+
+```env
+PRESCREENING_FORWARD_SECRET=XgsXander_Fwd_2026_vmi2771824
+WHATSAPP_PHONE_NUMBER_ID=1157403454116116
+WHATSAPP_ACCESS_TOKEN=...
+```
+
+Do **not** change the Meta Business webhook URL.
 
 ## SMTP (email invites + submission copies)
 

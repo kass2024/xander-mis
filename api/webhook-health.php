@@ -46,7 +46,7 @@ wh_add(
     true,
     $inviteLang !== '' ? $inviteLang : 'default en (xander_prescreening_invite)'
 );
-wh_add($checks, 'PRESCREENING_FORWARD_SECRET', xander_env_get('PRESCREENING_FORWARD_SECRET') !== '', 'must match xanderbot VPS .env');
+wh_add($checks, 'PRESCREENING_FORWARD_SECRET', xander_env_get('PRESCREENING_FORWARD_SECRET') !== '', 'must match webhook app .env');
 wh_add(
     $checks,
     'XANDER_AUTO_SCHEMA',
@@ -160,8 +160,8 @@ echo json_encode([
     'checks' => $checks,
     'forward_inbound_url' => $scheme . '://' . $host . '/api/prescreening-inbound.php',
     'meta_setup' => [
-        'meta_webhook' => 'Keep https://xanderbot.site/api/webhook/meta (unchanged)',
-        'cpanel_forward' => 'VPS forwards prescreening to /api/prescreening-inbound.php',
-        'env' => 'PRESCREENING_FORWARD_SECRET must match xanderbot .env',
+        'prescreening_inbound' => $scheme . '://' . $host . '/api/prescreening-inbound.php',
+        'env' => 'PRESCREENING_FORWARD_SECRET must match the webhook relay app',
+        'invite_log' => $scheme . '://' . $host . '/api/prescreening-invite-log.php',
     ],
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);

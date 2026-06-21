@@ -188,7 +188,7 @@ xander_ensure_prescreening_schema($conn);
       } catch (e) { /* ignore */ }
       if (attempts >= maxAttempts) {
         clearInterval(pollTimer);
-        showStatus('warning', 'Still waiting for delivery confirmation. Check Invite log or Meta WhatsApp Manager.');
+        showStatus('warning', 'No delivery confirmation yet. If the student did not receive the message, verify their WhatsApp number.');
       }
     }, 3000);
   }

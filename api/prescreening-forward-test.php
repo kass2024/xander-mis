@@ -66,8 +66,9 @@ $recorded = xander_prescreening_apply_delivery_status(
 
 echo json_encode([
     'ok' => $recorded,
+    'forward_test_url' => 'api/prescreening-forward-test.php',
     'message' => $recorded
-        ? 'DB updated — cPanel can receive delivery_status. Deploy xanderbot forwardDeliveryStatus on VPS if real invites stay at api_accepted.'
+        ? 'DB updated — cPanel can record delivery status.'
         : 'DB update failed — check whatsapp_prescreening_sessions columns',
     'wa_phone' => $row['wa_phone'],
     'wamid' => $wamid,

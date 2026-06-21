@@ -321,7 +321,7 @@ function xander_prescreening_invite_status_message(?array $session): string
         return 'Template delivered to student WhatsApp (' . $st . ').';
     }
     if ($st === 'api_accepted' || $st === 'accepted') {
-        return 'Template invite queued with Meta. Waiting for webhook delivery status.';
+        return 'Template accepted by Meta WhatsApp API. Delivery status updates when Meta confirms (sent/delivered).';
     }
 
     return '';
@@ -570,7 +570,7 @@ function xander_prescreening_admin_send_invite(mysqli $conn, string $phoneRaw, s
         'wamid' => $out['message_id'],
         'conversation' => 'business_initiated_template',
         'student_name' => $name,
-        'note' => 'API accepted; final delivery comes via Meta webhook on xanderbot',
+        'note' => 'Template accepted by Meta API; delivery status recorded on cPanel when Meta confirms',
     ]);
 
     return $out;

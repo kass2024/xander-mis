@@ -34,14 +34,11 @@ $tail = xander_whatsapp_track_read_tail(100);
 
 $staffNumbers = xander_prescreening_staff_whatsapp_numbers();
 
-$hasDeliveryForward = false;
-$hasDeliveryWebhook = false;
+$hasDeliveryUpdate = false;
 foreach ($tail['lines'] as $line) {
     if (str_contains($line, 'delivery_status_forward') || str_contains($line, 'invite_delivery_')) {
-        $hasDeliveryForward = true;
-    }
-    if (str_contains($line, 'invite_delivery_failed') || str_contains($line, 'invite_delivery_delivered')) {
-        $hasDeliveryWebhook = true;
+        $hasDeliveryUpdate = true;
+        break;
     }
 }
 
@@ -68,25 +65,22 @@ if (is_file(dirname(__DIR__) . '/db.php')) {
 $diagnosis = [];
 foreach ($sessions as $s) {
     $phone = (string) ($s['wa_phone'] ?? '');
-    $st = strtolower((string) ($s['last_delivery_status'] ?? ''));
+    $st = strtolower(trim((string) ($s['last_delivery_status'] ?? '')));
     $code = (int) ($s['last_delivery_error_code'] ?? 0);
     if ($phone !== '' && in_array($phone, $staffNumbers, true)) {
-        $diagnosis[] = "Session …{$phone} (staff): use a student +250… number, not PRESCREENING_STAFF_WHATSAPP.";
+        $diagnosis[] = 'Session …' . substr($phone, -4) . ': staff number — use the student\'s personal WhatsApp, not PRESCREENING_STAFF_WHATSAPP.';
     }
     if ($st === 'api_accepted' || $st === 'accepted') {
-        $diagnosis[] = 'Session …' . substr($phone, -4) . ': API accepted — waiting for VPS webhook (sent/delivered/failed). Refresh in ~30s.';
+        $diagnosis[] = 'Session …' . substr($phone, -4) . ': Meta accepted the template. Refresh in ~30s for sent/delivered, or check the student\'s WhatsApp.';
     }
     if ($st === 'failed' && $code === 131031) {
-        $diagnosis[] = 'Session …' . substr($phone, -4) . ': Meta reports 131031 (business restricted) on this delivery attempt.';
+        $diagnosis[] = 'Session …' . substr($phone, -4) . ': Meta reports business account restricted (131031).';
     } elseif ($st === 'failed' && $code > 0) {
         $diagnosis[] = 'Session …' . substr($phone, -4) . ": delivery failed ({$code}): " . ($s['last_delivery_error_message'] ?? '');
     }
-}
-if (!$hasDeliveryForward) {
-    $diagnosis[] = 'No delivery_status_forward / invite_delivery_* lines in cPanel log — VPS → cPanel delivery webhook forward is missing or not deployed.';
-}
-if ($hasDeliveryForward && !$hasDeliveryWebhook) {
-    $diagnosis[] = 'Forward reached cPanel but no delivered/failed yet — wait 30s after invite or check VPS: tail -f storage/logs/laravel.log | grep delivery_failed';
+    if (in_array($st, ['sent', 'delivered', 'read'], true)) {
+        $diagnosis[] = 'Session …' . substr($phone, -4) . ": delivered ({$st}).";
+    }
 }
 
 echo json_encode([
@@ -95,18 +89,15 @@ echo json_encode([
     'lines' => $tail['lines'],
     'whatsapp_sessions' => $sessions,
     'diagnosis' => $diagnosis,
-    'delivery_forward_seen_in_cpanel_log' => $hasDeliveryForward,
-    'hint' => 'graph_template_ok / api_accepted = Meta accepted send. Real delivery = sent|delivered|failed from VPS webhook. Test forward: api/prescreening-forward-test.php (admin login).',
-    'vps_webhook' => 'https://xanderbot.site/api/webhook/meta',
-    'vps_diagnostic' => 'https://xanderbot.site/api/webhook/diagnostic',
+    'delivery_updates_in_log' => $hasDeliveryUpdate,
+    'hint' => 'graph_template_ok = Meta accepted the send. invite_delivery_* / delivery_status_forward = delivery confirmed on cPanel.',
     'forward_test_url' => 'api/prescreening-forward-test.php',
+    'delivery_poll_url' => 'api/prescreening-invite-delivery.php?phone=',
     'staff_whatsapp_numbers' => $staffNumbers,
     'env' => [
-        'WHATSAPP_PHONE_NUMBER_ID_set' => xander_env_get('WHATSAPP_PHONE_NUMBER_ID') !== '',
-        'WHATSAPP_ACCESS_TOKEN_set' => xander_env_get('WHATSAPP_ACCESS_TOKEN') !== '',
-        'WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG' => xander_env_get('WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG') ?: 'en (default)',
+        'WHATSAPP_PHONE_NUMBER_ID' => xander_env_get('WHATSAPP_PHONE_NUMBER_ID'),
+        'WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG' => xander_env_get('WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG') ?: 'en',
         'PRESCREENING_FORWARD_SECRET_set' => xander_env_get('PRESCREENING_FORWARD_SECRET') !== '',
     ],
     'api_diagnostic' => xander_whatsapp_api_diagnostic(),
-    'delivery_poll_url' => 'api/prescreening-invite-delivery.php?phone=',
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
