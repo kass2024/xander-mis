@@ -118,6 +118,7 @@ xander_ensure_prescreening_schema($conn);
     <div class="foot-links">
       <a href="api/webhook-health.php" target="_blank">Webhook</a>
       <a href="api/prescreening-invite-log.php" target="_blank">Invite log</a>
+      <a href="api/prescreening-invite-delivery.php?phone=" target="_blank" title="Append digits e.g. 14503675329">Delivery</a>
     </div>
   </div>
 
@@ -158,6 +159,38 @@ xander_ensure_prescreening_schema($conn);
     statusBox.style.display = 'block';
     statusBox.className = 'alert alert-' + kind;
     statusBox.textContent = msg;
+  }
+
+  let pollTimer = null;
+  function pollDelivery(phone, pollUrl) {
+    if (pollTimer) clearInterval(pollTimer);
+    let attempts = 0;
+    const maxAttempts = 20;
+    pollTimer = setInterval(async () => {
+      attempts++;
+      try {
+        const url = pollUrl || ('api/prescreening-invite-delivery.php?phone=' + encodeURIComponent(phone));
+        const res = await fetch(url, { credentials: 'same-origin' });
+        const d = await res.json();
+        if (d.delivered) {
+          showStatus('success', 'WhatsApp delivered to student (' + d.delivery_status + ').');
+          clearInterval(pollTimer);
+          return;
+        }
+        if (d.failed) {
+          showStatus('danger', 'WhatsApp delivery failed: ' + (d.display_message || d.error_message || d.delivery_status));
+          clearInterval(pollTimer);
+          return;
+        }
+        if (d.display_message) {
+          showStatus('warning', d.display_message);
+        }
+      } catch (e) { /* ignore */ }
+      if (attempts >= maxAttempts) {
+        clearInterval(pollTimer);
+        showStatus('warning', 'Still waiting for delivery confirmation. Check Invite log or Meta WhatsApp Manager.');
+      }
+    }, 3000);
   }
 
   document.getElementById('copyLinkBtn')?.addEventListener('click', function () {
@@ -210,7 +243,17 @@ xander_ensure_prescreening_schema($conn);
       }
       if (data.token) lastToken = data.token;
       const kind = data.status === 'success' ? 'success' : (data.status === 'partial' ? 'warning' : 'danger');
-      showStatus(kind, data.message || 'Done');
+      let msg = data.message || 'Done';
+      if (data.whatsapp?.message_id) {
+        msg += ' WAMID: ' + data.whatsapp.message_id.slice(-12) + '…';
+      }
+      if (data.whatsapp?.from_number) {
+        msg += ' From: ' + data.whatsapp.from_number + '.';
+      }
+      showStatus(kind, msg);
+      if (data.whatsapp?.sent && data.whatsapp?.to) {
+        pollDelivery(data.whatsapp.to, data.whatsapp.poll_url);
+      }
     } catch (err) {
       showStatus('danger', 'Network error.');
     } finally {

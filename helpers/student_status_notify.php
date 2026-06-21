@@ -506,7 +506,12 @@ function xander_whatsapp_user_hint(array $err): string
         return 'WhatsApp template language does not match Meta (check WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG).';
     }
     if ($code === 190 || stripos($msg, 'OAuth') !== false) {
-        return 'WhatsApp API authentication failed — check the access token.';
+        return 'WhatsApp API authentication failed — regenerate WHATSAPP_ACCESS_TOKEN in Meta Developer Console (expires after ~60 days).';
+    }
+    if ($code === 100) {
+        return 'WhatsApp Phone Number ID is wrong or the access token lacks permission. '
+            . 'In Meta → WhatsApp → API Setup, copy the Phone number ID to WHATSAPP_PHONE_NUMBER_ID '
+            . 'and generate a new token with whatsapp_business_messaging into WHATSAPP_ACCESS_TOKEN.';
     }
     if ($msg !== '') {
         return xander_notify_text_clip($msg, 280);
@@ -528,6 +533,9 @@ function xander_whatsapp_error_is_fatal_no_text_fallback(?array $json, int $http
         return false;
     }
     if ($e['code'] === 190) {
+        return true;
+    }
+    if ($e['code'] === 100) {
         return true;
     }
     if ($e['subcode'] === 131026) {

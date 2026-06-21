@@ -26,6 +26,7 @@ require_once dirname(__DIR__) . '/helpers/whatsapp_track_log.php';
 require_once dirname(__DIR__) . '/helpers/env_load.php';
 require_once dirname(__DIR__) . '/helpers/prescreening_whatsapp_schema.php';
 require_once dirname(__DIR__) . '/helpers/prescreening_whatsapp_flow.php';
+require_once dirname(__DIR__) . '/helpers/whatsapp_api.php';
 
 xander_load_env_file();
 
@@ -106,4 +107,6 @@ echo json_encode([
         'WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG' => xander_env_get('WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG') ?: 'en (default)',
         'PRESCREENING_FORWARD_SECRET_set' => xander_env_get('PRESCREENING_FORWARD_SECRET') !== '',
     ],
+    'api_diagnostic' => xander_whatsapp_api_diagnostic(),
+    'delivery_poll_url' => 'api/prescreening-invite-delivery.php?phone=',
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);

@@ -88,17 +88,28 @@ try {
             ]);
             $result = xander_prescreening_admin_send_invite($conn, $phone, $name);
             if (!$result['sent']) {
-                $errors[] = $result['error'] !== '' ? $result['error'] : 'WhatsApp invite failed.';
+                $errors[] = 'WhatsApp: ' . ($result['error'] !== '' ? $result['error'] : 'Invite template could not be sent.');
                 $out['whatsapp'] = ['sent' => false, 'error' => end($errors)];
             } else {
                 $session = xander_prescreening_load_session($conn, $result['to']);
+                $deliveryStatus = (string) ($session['last_delivery_status'] ?? 'api_accepted');
+                $deliveryMsg = xander_prescreening_invite_status_message($session);
                 $out['whatsapp'] = [
                     'sent' => true,
                     'to' => $result['to'],
                     'message_id' => $result['message_id'] ?? '',
-                    'delivery_status' => $session['last_delivery_status'] ?? 'api_accepted',
+                    'delivery_status' => $deliveryStatus,
+                    'delivery_message' => $deliveryMsg,
+                    'from_number' => $result['from_number'] ?? '',
+                    'template' => XANDER_WHATSAPP_PRESCREENING_INVITE_TEMPLATE,
+                    'poll_url' => 'api/prescreening-invite-delivery.php?phone=' . rawurlencode($result['to']),
                 ];
-                $out['message'] = 'WhatsApp template sent.';
+                $out['message'] = 'WhatsApp template queued with Meta (message ID received).';
+                if ($deliveryMsg !== '') {
+                    $out['message'] .= ' ' . $deliveryMsg;
+                } else {
+                    $out['message'] .= ' Checking delivery… (refresh or wait ~30s).';
+                }
             }
         }
     }

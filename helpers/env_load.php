@@ -7,6 +7,48 @@
  * - On Windows/XAMPP, getenv may return "" or whitespace for "unset" keys.
  * - If getenv returns only spaces, we must NOT skip .env — that was leaving WHATSAPP_* empty.
  */
+/**
+ * Keys where project-root .env always wins over cPanel/hosting environment variables.
+ * Prevents stale WHATSAPP_PHONE_NUMBER_ID (e.g. old 967543816449965) on production.
+ *
+ * @return array<int, string>
+ */
+function xander_env_dotenv_precedence_keys(): array
+{
+    return [
+        'APP_URL',
+        'WHATSAPP_PHONE_NUMBER_ID',
+        'WHATSAPP_ACCESS_TOKEN',
+        'WHATSAPP_BUSINESS_ID',
+        'WHATSAPP_VERIFY_TOKEN',
+        'WHATSAPP_APP_SECRET',
+        'WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG',
+        'WHATSAPP_DEFAULT_COUNTRY_CODE',
+        'META_SYSTEM_USER_TOKEN',
+        'META_GRAPH_VERSION',
+        'PRESCREENING_FORWARD_SECRET',
+        'PRESCREENING_STAFF_WHATSAPP',
+        'XANDERBOT_WEBHOOK_URL',
+        'SMTP_HOST',
+        'SMTP_PORT',
+        'SMTP_SECURE',
+        'SMTP_USERNAME',
+        'SMTP_PASSWORD',
+        'SMTP_FROM_EMAIL',
+        'SMTP_FROM_NAME',
+    ];
+}
+
+function xander_env_is_dotenv_precedence_key(string $key): bool
+{
+    static $set = null;
+    if ($set === null) {
+        $set = array_flip(xander_env_dotenv_precedence_keys());
+    }
+
+    return isset($set[$key]);
+}
+
 function xander_load_env_file()
 {
     static $loaded = false;
@@ -52,7 +94,11 @@ function xander_load_env_file()
         $fromSuper = isset($_ENV[$k]) ? trim((string) $_ENV[$k]) : '';
         $fromServer = isset($_SERVER[$k]) ? trim((string) $_SERVER[$k]) : '';
         $hasNonEmpty = ($gTrim !== '') || ($fromSuper !== '') || ($fromServer !== '');
-        if ($hasNonEmpty) {
+        // Hosting env must not block .env updates for WhatsApp/SMTP (stale cPanel vars).
+        if ($hasNonEmpty && !xander_env_is_dotenv_precedence_key($k)) {
+            continue;
+        }
+        if (xander_env_is_dotenv_precedence_key($k) && $v === '') {
             continue;
         }
         if (function_exists('putenv')) {
@@ -122,6 +168,21 @@ function xander_env_is_true(string $key): bool
 function xander_env_get(string $key): string
 {
     xander_load_env_file();
+
+    // .env file overrides cPanel/server environment for deployment-critical keys.
+    if (xander_env_is_dotenv_precedence_key($key)) {
+        $fromFile = xander_env_get_from_dotenv_file($key);
+        if ($fromFile !== '') {
+            $_ENV[$key] = $fromFile;
+            $_SERVER[$key] = $fromFile;
+            if (function_exists('putenv')) {
+                @putenv($key . '=' . $fromFile);
+            }
+
+            return $fromFile;
+        }
+    }
+
     if (isset($_ENV[$key])) {
         $v = trim((string) $_ENV[$key]);
         if ($v !== '') {
@@ -142,6 +203,7 @@ function xander_env_get(string $key): string
             'OPENAI_API_KEY' => true,
             'WHATSAPP_ACCESS_TOKEN' => true,
             'WHATSAPP_PHONE_NUMBER_ID' => true,
+            'WHATSAPP_BUSINESS_ID' => true,
             'WHATSAPP_DEFAULT_COUNTRY_CODE' => true,
             'META_GRAPH_VERSION' => true,
             'WHATSAPP_PRESCREENING_INVITE_TEMPLATE_LANG' => true,

@@ -17,6 +17,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/prescreening_options.php';
 require_once __DIR__ . '/mail_smtp.php';
 require_once __DIR__ . '/env_load.php';
+require_once __DIR__ . '/whatsapp_api.php';
 require_once __DIR__ . '/phone_whatsapp_normalize.php';
 require_once __DIR__ . '/student_status_notify.php';
 
@@ -322,13 +323,18 @@ function xander_send_prescreening_notifications(array $row, string $reference, b
         return ['email' => $emailResult, 'whatsapp' => $waResult];
     }
 
-    $token = xander_env_get('WHATSAPP_ACCESS_TOKEN');
-    $phoneId = xander_env_get('WHATSAPP_PHONE_NUMBER_ID');
-    if ($token === '' || $phoneId === '') {
-        $waResult['error'] = 'WhatsApp is not configured (check WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID in .env).';
+    $api = xander_whatsapp_resolve_api();
+    if ($api === null || empty($api['preflight_ok'])) {
+        $waResult['error'] = ($api['preflight_error'] ?? '') !== ''
+            ? $api['preflight_error']
+            : 'WhatsApp is not configured (check WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID in .env).';
 
         return ['email' => $emailResult, 'whatsapp' => $waResult];
     }
+
+    $token = $api['token'];
+    $phoneId = $api['phone_id'];
+    $messagesUrl = $api['url'];
 
     $defaultCc = xander_env_get('WHATSAPP_DEFAULT_COUNTRY_CODE');
     $to = xander_format_phone_for_whatsapp_e164($phoneRaw, $defaultCc !== '' ? $defaultCc : null);
@@ -338,12 +344,7 @@ function xander_send_prescreening_notifications(array $row, string $reference, b
         return ['email' => $emailResult, 'whatsapp' => $waResult];
     }
 
-    $version = xander_env_get('META_GRAPH_VERSION');
-    if ($version === '') {
-        $version = 'v19.0';
-    }
-    $messagesUrl = 'https://graph.facebook.com/' . rawurlencode($version) . '/' . rawurlencode((string) $phoneId) . '/messages';
-
+    $version = $api['version'];
     $studentName = trim((string) ($row['student_name'] ?? 'Student'));
     $templateTexts = [$studentName ?: 'Student', $reference];
 
@@ -355,7 +356,8 @@ function xander_send_prescreening_notifications(array $row, string $reference, b
         XANDER_WHATSAPP_PRESCREENING_TEMPLATE_LANG,
         XANDER_WHATSAPP_PRESCREENING_TEMPLATE_PARAMS,
         $templateTexts,
-        xander_prescreening_whatsapp_session_body($row, $reference)
+        xander_prescreening_whatsapp_session_body($row, $reference),
+        ['allow_text_fallback' => false]
     );
 
     if (!$textRes['sent']) {

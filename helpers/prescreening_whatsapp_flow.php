@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/env_load.php';
 require_once __DIR__ . '/student_status_notify.php';
+require_once __DIR__ . '/whatsapp_api.php';
 require_once __DIR__ . '/prescreening_notify.php';
 require_once __DIR__ . '/prescreening_whatsapp_schema.php';
 require_once __DIR__ . '/whatsapp_track_log.php';
@@ -146,21 +147,19 @@ function xander_prescreening_staff_whatsapp_numbers(): array
 
 function xander_whatsapp_api_messages_url(): ?array
 {
-    $token = xander_env_get('WHATSAPP_ACCESS_TOKEN');
-    $phoneId = xander_env_get('WHATSAPP_PHONE_NUMBER_ID');
-    if ($token === '' || $phoneId === '') {
+    $api = xander_whatsapp_resolve_api();
+    if ($api === null || ($api['url'] ?? '') === '') {
         return null;
-    }
-    $version = xander_env_get('META_GRAPH_VERSION');
-    if ($version === '') {
-        $version = 'v19.0';
     }
 
     return [
-        'token' => $token,
-        'phone_id' => $phoneId,
-        'version' => $version,
-        'url' => 'https://graph.facebook.com/' . rawurlencode($version) . '/' . rawurlencode($phoneId) . '/messages',
+        'token' => $api['token'],
+        'phone_id' => $api['phone_id'],
+        'version' => $api['version'],
+        'url' => $api['url'],
+        'display_phone' => $api['display_phone'] ?? '',
+        'preflight_ok' => (bool) ($api['preflight_ok'] ?? false),
+        'preflight_error' => (string) ($api['preflight_error'] ?? ''),
     ];
 }
 
@@ -502,6 +501,17 @@ function xander_prescreening_admin_send_invite(mysqli $conn, string $phoneRaw, s
 
         return $out;
     }
+    if (empty($api['preflight_ok'])) {
+        $out['error'] = ($api['preflight_error'] ?? '') !== ''
+            ? $api['preflight_error']
+            : 'WhatsApp API credentials failed preflight check.';
+        xander_whatsapp_track('invite_preflight_failed', [
+            'error' => $out['error'],
+            'phone_id_env' => xander_env_get('WHATSAPP_PHONE_NUMBER_ID'),
+        ]);
+
+        return $out;
+    }
 
     $name = trim($studentName) !== '' ? trim($studentName) : 'Student';
 
@@ -544,6 +554,7 @@ function xander_prescreening_admin_send_invite(mysqli $conn, string $phoneRaw, s
     $out['method'] = 'template';
     $out['template_lang'] = (string) ($lastRes['template_lang'] ?? xander_prescreening_invite_template_lang());
     $out['message_id'] = (string) ($lastRes['message_id'] ?? '');
+    $out['from_number'] = (string) ($api['display_phone'] ?? '');
 
     $answers = ['student_name' => $name];
     xander_prescreening_save_session($conn, $to, 'invited', $answers, 0);

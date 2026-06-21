@@ -7,6 +7,7 @@ declare(strict_types=1);
 $root = dirname(__DIR__);
 require_once $root . '/helpers/env_load.php';
 require_once $root . '/helpers/prescreening_whatsapp_flow.php';
+require_once $root . '/helpers/whatsapp_api.php';
 
 xander_load_env_file();
 
@@ -14,6 +15,7 @@ $phone = $argv[1] ?? '+250788000000';
 $name = $argv[2] ?? 'Diag Test';
 
 $checks = [
+    'api_diagnostic' => xander_whatsapp_api_diagnostic(),
     'WHATSAPP_ACCESS_TOKEN' => strlen(xander_env_get('WHATSAPP_ACCESS_TOKEN')),
     'WHATSAPP_PHONE_NUMBER_ID' => strlen(xander_env_get('WHATSAPP_PHONE_NUMBER_ID')),
     'WHATSAPP_DEFAULT_COUNTRY_CODE' => xander_env_get('WHATSAPP_DEFAULT_COUNTRY_CODE'),
