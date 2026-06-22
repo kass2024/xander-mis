@@ -33,11 +33,6 @@ $publicLink = xander_prescreening_public_url();
     }
     .link-box input { font-size: .8rem; font-family: ui-monospace, monospace; }
     #statusBox { display: none; margin-bottom: 1rem; }
-    .foot-links { margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 10px; font-size: .85rem; }
-    .foot-links a { color: #64748b; text-decoration: none; }
-    .foot-links a:hover { color: var(--brand); }
-    details.admin-form { margin-top: 1rem; }
-    details.admin-form summary { cursor: pointer; font-weight: 600; color: #475569; font-size: .9rem; }
     .env-hint { font-size: .8rem; color: #64748b; }
   </style>
 </head>
@@ -54,7 +49,6 @@ $publicLink = xander_prescreening_public_url();
     <h2 class="h6 fw-bold mb-2">Public pre-screening link</h2>
     <p class="small text-muted mb-3">
       Share this link with applicants. They fill in their name, email, and WhatsApp on the form.
-      The URL works on <strong>localhost</strong> and <strong>cPanel</strong> automatically.
     </p>
 
     <div class="link-box">
@@ -68,27 +62,7 @@ $publicLink = xander_prescreening_public_url();
       <p class="small text-muted mb-1">Applicants choose <strong>Study Abroad</strong> or <strong>Work Abroad</strong> on the form.</p>
       <p class="env-hint mb-0">Current base: <?= htmlspecialchars($publicLink, ENT_QUOTES, 'UTF-8') ?></p>
     </div>
-
-    <div class="mt-3">
-      <a href="<?= htmlspecialchars($publicLink, ENT_QUOTES, 'UTF-8') ?>" class="btn btn-primary btn-sm" target="_blank" rel="noopener">
-        <i class="bi bi-box-arrow-up-right me-1"></i> Open form
-      </a>
-    </div>
-
-    <div class="foot-links">
-      <a href="api/webhook-health.php" target="_blank">Webhook</a>
-      <a href="api/prescreening-invite-log.php" target="_blank">Invite log</a>
-      <a href="api/prescreening-invite-delivery.php?phone=" target="_blank" title="Append digits e.g. 14503675329">Delivery</a>
-    </div>
   </div>
-
-  <details class="admin-form card mt-3">
-    <summary class="p-3">Admin: fill form manually</summary>
-    <div class="p-3 pt-0 border-top">
-      <p class="small text-muted mb-2">Staff completes the form on behalf of a student.</p>
-      <a href="prescreening-admin-form.php" class="btn btn-sm btn-outline-secondary" target="_top">Open admin form</a>
-    </div>
-  </details>
 </div>
 
 <script>
