@@ -50,16 +50,15 @@ function xander_prescreening_whatsapp_study_steps(): array
         ['key' => 'education_level', 'prompt' => "Study 1/13 — *Highest level of education*?"],
         ['key' => 'course_program', 'prompt' => "Study 2/13 — *Course or program* to study?"],
         ['key' => 'country_interest', 'prompt' => "Study 3/13 — *Country* of interest?"],
-        ['key' => 'open_other_countries', 'prompt' => "Study 4/13 — Open to India, Cyprus, Malta (under \$15k/year)?"],
-        ['key' => 'budget_tuition', 'prompt' => "Study 5/13 — *Tuition budget* per year?"],
-        ['key' => 'funds_application_visa', 'prompt' => "Study 6/13 — Funds for application/visa fees? *Yes* or *No*."],
-        ['key' => 'sponsor', 'prompt' => "Study 7/13 — *Sponsor*? Reply *Self*, *Parent*, or *Sponsor*."],
-        ['key' => 'afford_deposit', 'prompt' => "Study 8/13 — Afford deposit & accommodation? *Yes* or *No*."],
-        ['key' => 'has_valid_passport', 'prompt' => "Study 9/13 — Valid passport? *Yes* or *No*."],
-        ['key' => 'academic_docs_ready', 'prompt' => "Study 10/13 — Academic documents ready? *Yes*, *No*, or *Partially*."],
-        ['key' => 'english_level', 'prompt' => "Study 11/13 — English level? *Basic*, *Good*, or *Test done*."],
-        ['key' => 'english_test_taken', 'prompt' => "Study 12/13 — IELTS/TOEFL/Duolingo? (scores or *No*)"],
-        ['key' => 'visa_denied', 'prompt' => "Study 13/13 — Ever denied a visa? *Yes* or *No*."],
+        ['key' => 'open_other_countries', 'prompt' => "Study 4/12 — Open to India, Cyprus, Malta (under \$5k/year)?"],
+        ['key' => 'budget_tuition', 'prompt' => "Study 5/12 — *Tuition budget* per year? (required)"],
+        ['key' => 'sponsor', 'prompt' => "Study 6/12 — *Sponsor*? Reply *Self*, *Parent*, or *Sponsor*."],
+        ['key' => 'afford_deposit', 'prompt' => "Study 7/12 — Afford deposit & accommodation? *Yes* or *No*."],
+        ['key' => 'has_valid_passport', 'prompt' => "Study 8/12 — Valid passport? *Yes* or *No*."],
+        ['key' => 'academic_docs_ready', 'prompt' => "Study 9/12 — Academic documents ready? *Yes*, *No*, or *Partially*."],
+        ['key' => 'english_level', 'prompt' => "Study 10/12 — English level? *Basic*, *Good*, or *Test done*."],
+        ['key' => 'english_test_taken', 'prompt' => "Study 11/12 — IELTS/TOEFL/Duolingo? (scores or *No*)"],
+        ['key' => 'visa_denied', 'prompt' => "Study 12/12 — Ever denied a visa? *Yes* or *No*."],
         ['key' => 'planned_intake', 'prompt' => "Study — *Planned intake*? e.g. Fall 2026"],
         ['key' => 'ready_to_apply', 'prompt' => "Study — Ready to apply now? *Yes* or *No*."],
     ];
@@ -309,6 +308,9 @@ function xander_prescreening_invite_status_message(?array $session): string
     if ($st === 'failed') {
         if ($code === 131031) {
             return 'Meta Business Account is locked/restricted. Check Meta Account Quality.';
+        }
+        if ($code === 131042) {
+            return 'WhatsApp billing issue — add or fix payment in Meta Business Manager → Billing Hub, then retry the invite.';
         }
         if ($code === 132000) {
             return 'Template parameter missing: student name is required by this template.';
@@ -765,7 +767,7 @@ function xander_prescreening_validate_answer(string $key, string $answer): ?stri
 
         return 'Please reply *1* for Study Abroad or *2* for Work Abroad.';
     }
-    $yesNo = ['funds_application_visa', 'afford_deposit', 'has_valid_passport', 'visa_denied', 'ready_to_apply'];
+    $yesNo = ['afford_deposit', 'has_valid_passport', 'visa_denied', 'ready_to_apply'];
     if (in_array($key, $yesNo, true)) {
         $n = strtolower($a);
         if (!in_array($n, ['yes', 'no', 'y', 'n'], true)) {

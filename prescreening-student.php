@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+session_start();
+
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers/prescreening_schema.php';
 require_once __DIR__ . '/helpers/prescreening_invite.php';
@@ -9,17 +11,33 @@ xander_ensure_prescreening_schema($conn);
 
 $token = trim((string) ($_GET['t'] ?? ''));
 $invite = $token !== '' ? xander_prescreening_load_invite_by_token($conn, $token) : null;
-$submittedRow = $token !== '' ? xander_prescreening_submission_by_invite_token($conn, $token) : null;
+$submittedRow = ($token !== '' && $invite) ? xander_prescreening_submission_by_invite_token($conn, $token) : null;
+$isPublic = ($token === '' || $invite === null);
 
-if (!$invite && !$submittedRow) {
+if (!$isPublic && !$invite && !$submittedRow) {
     http_response_code(404);
     exit('This pre-screening link is invalid or expired.');
 }
 
-$completed = $submittedRow !== null
-    || ($invite !== null && xander_prescreening_user_has_submission($conn, (string) $invite['user_id']));
-$prefill = $invite ?? $submittedRow;
+$draftUserId = '';
+if ($isPublic) {
+    if (empty($_SESSION['prescreen_student_draft_user_id'])
+        || !preg_match('/^user-[0-9]+-[0-9]+$/', (string) $_SESSION['prescreen_student_draft_user_id'])) {
+        $_SESSION['prescreen_student_draft_user_id'] = 'user-' . time() . '-' . random_int(1000, 9999);
+    }
+    $draftUserId = (string) $_SESSION['prescreen_student_draft_user_id'];
+    xander_prescreening_ensure_public_draft($conn, $draftUserId);
+    $prefill = xander_prescreening_load_draft_by_user_id($conn, $draftUserId) ?: [];
+    $completed = xander_prescreening_user_has_submission($conn, $draftUserId);
+} else {
+    $completed = $submittedRow !== null
+        || ($invite !== null && xander_prescreening_user_has_submission($conn, (string) $invite['user_id']));
+    $prefill = $invite ?? $submittedRow;
+    $draftUserId = (string) ($invite['user_id'] ?? '');
+}
+
 $asyncDocs = true;
+$editableContact = $isPublic;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -63,26 +81,32 @@ $asyncDocs = true;
     </div>
   <?php else: ?>
     <form id="studentForm" novalidate>
+      <?php if ($token !== '' && $invite): ?>
       <input type="hidden" name="token" value="<?= htmlspecialchars($token, ENT_QUOTES, 'UTF-8') ?>">
-      <input type="hidden" name="user_id" value="<?= htmlspecialchars((string) $invite['user_id'], ENT_QUOTES, 'UTF-8') ?>">
+      <?php endif; ?>
+      <input type="hidden" name="user_id" value="<?= htmlspecialchars($draftUserId, ENT_QUOTES, 'UTF-8') ?>">
 
       <div class="card-panel prescreen-contact-readonly">
         <h2>Your details</h2>
         <div class="row g-3">
           <div class="col-md-4">
-            <label class="form-label">Full name</label>
-            <input type="text" name="student_name" class="form-control" readonly
-                   value="<?= htmlspecialchars((string) ($invite['student_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+            <label class="form-label">Full name <span class="text-danger">*</span></label>
+            <input type="text" name="student_name" class="form-control"
+                   <?= $editableContact ? 'required' : 'readonly' ?>
+                   value="<?= htmlspecialchars((string) ($prefill['student_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
           </div>
           <div class="col-md-4">
-            <label class="form-label">Email</label>
-            <input type="email" name="student_email" class="form-control" readonly
-                   value="<?= htmlspecialchars((string) ($invite['student_email'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+            <label class="form-label">Email <span class="text-danger">*</span></label>
+            <input type="email" name="student_email" class="form-control"
+                   <?= $editableContact ? 'required' : 'readonly' ?>
+                   value="<?= htmlspecialchars((string) ($prefill['student_email'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
           </div>
           <div class="col-md-4">
-            <label class="form-label">WhatsApp</label>
-            <input type="tel" name="whatsapp_number" class="form-control" readonly
-                   value="<?= htmlspecialchars((string) ($invite['whatsapp_number'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+            <label class="form-label">WhatsApp <span class="text-danger">*</span></label>
+            <input type="tel" name="whatsapp_number" class="form-control"
+                   <?= $editableContact ? 'required pattern="^\+[0-9\s\-().]{10,20}$" title="+country code"' : 'readonly' ?>
+                   placeholder="<?= $editableContact ? '+250…' : '' ?>"
+                   value="<?= htmlspecialchars((string) ($prefill['whatsapp_number'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
           </div>
         </div>
       </div>
@@ -105,7 +129,8 @@ $asyncDocs = true;
 (function () {
   const form = document.getElementById('studentForm');
   const btn = document.getElementById('submitBtn');
-  const token = <?= json_encode($token) ?>;
+  const token = <?= json_encode($token !== '' ? $token : '') ?>;
+  const userId = <?= json_encode($draftUserId) ?>;
   const uploadsInFlight = new Set();
 
   function setDocStatus(row, state, text) {
@@ -122,8 +147,9 @@ $asyncDocs = true;
       el.classList.add('text-danger');
       el.innerHTML = '<i class="bi bi-exclamation-circle"></i> ' + (text || 'Failed');
     } else {
-      el.classList.add('text-muted');
-      el.innerHTML = '<span class="prescreen-doc-status-idle">Optional</span>';
+      const required = row.dataset.required === '1';
+      el.classList.add(required ? 'text-danger' : 'text-muted');
+      el.innerHTML = '<span class="prescreen-doc-status-idle">' + (required ? 'Required' : 'Optional') + '</span>';
     }
   }
 
@@ -135,7 +161,8 @@ $asyncDocs = true;
       if (!file || !docKey || !row) return;
 
       const fd = new FormData();
-      fd.append('token', token);
+      if (token) fd.append('token', token);
+      if (userId) fd.append('user_id', userId);
       fd.append('doc_key', docKey);
       fd.append('file', file);
 
@@ -164,6 +191,10 @@ $asyncDocs = true;
 
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
     const serviceSel = form.querySelector('select[name="service_type"]');
     if (serviceSel && !serviceSel.value) {
       serviceSel.reportValidity();

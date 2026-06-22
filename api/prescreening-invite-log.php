@@ -75,6 +75,8 @@ foreach ($sessions as $s) {
     }
     if ($st === 'failed' && $code === 131031) {
         $diagnosis[] = 'Session …' . substr($phone, -4) . ': Meta reports business account restricted (131031).';
+    } elseif ($st === 'failed' && $code === 131042) {
+        $diagnosis[] = 'Session …' . substr($phone, -4) . ': WhatsApp billing/payment restricted (131042) — fix payment in Meta Business Manager → Billing Hub.';
     } elseif ($st === 'failed' && $code > 0) {
         $diagnosis[] = 'Session …' . substr($phone, -4) . ": delivery failed ({$code}): " . ($s['last_delivery_error_message'] ?? '');
     }

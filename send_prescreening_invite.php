@@ -104,11 +104,25 @@ try {
                     'template' => XANDER_WHATSAPP_PRESCREENING_INVITE_TEMPLATE,
                     'poll_url' => 'api/prescreening-invite-delivery.php?phone=' . rawurlencode($result['to']),
                 ];
-                $out['message'] = 'WhatsApp template queued with Meta (message ID received).';
-                if ($deliveryMsg !== '') {
-                    $out['message'] .= ' ' . $deliveryMsg;
+                // Meta often returns delivery failed/sent within ~1s via webhook relay
+                usleep(900000);
+                $session = xander_prescreening_load_session($conn, $result['to']) ?: $session;
+                $deliveryStatus = (string) ($session['last_delivery_status'] ?? $deliveryStatus);
+                $deliveryMsg = xander_prescreening_invite_status_message($session);
+                $out['whatsapp']['delivery_status'] = $deliveryStatus;
+                $out['whatsapp']['delivery_message'] = $deliveryMsg;
+
+                if ($deliveryStatus === 'failed') {
+                    $errors[] = 'WhatsApp: ' . ($deliveryMsg !== '' ? $deliveryMsg : 'Delivery failed after send.');
+                    $out['whatsapp']['sent'] = false;
+                    $out['status'] = ($out['email']['sent'] ?? false) ? 'partial' : 'error';
+                } elseif (in_array($deliveryStatus, ['sent', 'delivered', 'read'], true)) {
+                    $out['message'] = 'WhatsApp template delivered (' . $deliveryStatus . ').';
                 } else {
-                    $out['message'] .= ' Checking delivery… (refresh or wait ~30s).';
+                    $out['message'] = 'WhatsApp template queued with Meta (message ID received).';
+                    if ($deliveryMsg !== '') {
+                        $out['message'] .= ' ' . $deliveryMsg;
+                    }
                 }
             }
         }

@@ -267,10 +267,17 @@ function xander_prescreening_parse_form_payload(array $post, array $files, ?stri
         $fields['country_interest'] = xander_prescreening_format_country_list($studyCountries);
         $fields['open_other_countries'] = trim((string) ($post['open_other_countries'] ?? ''));
         $fields['budget_tuition'] = trim((string) ($post['budget_tuition'] ?? ''));
-        $fields['funds_application_visa'] = trim((string) ($post['funds_application_visa'] ?? ''));
         $fields['sponsor'] = trim((string) ($post['sponsor'] ?? ''));
         $fields['afford_deposit'] = trim((string) ($post['afford_deposit'] ?? ''));
         $fields['has_valid_passport'] = trim((string) ($post['has_valid_passport'] ?? ''));
+        if ($fields['budget_tuition'] === '') {
+            $errors[] = 'Please select a tuition budget (question 5).';
+        } elseif (!in_array($fields['budget_tuition'], xander_prescreening_tuition_budgets(), true)) {
+            $errors[] = 'Please select a valid tuition budget option.';
+        }
+        if ($fields['has_valid_passport'] === '') {
+            $errors[] = 'Please indicate whether you have a valid passport (question 8).';
+        }
         $fields['academic_docs_ready'] = trim((string) ($post['academic_docs_ready'] ?? ''));
         $fields['english_level'] = trim((string) ($post['english_level'] ?? ''));
         $fields['english_test_taken'] = trim((string) ($post['english_test_taken'] ?? ''));
@@ -326,6 +333,10 @@ function xander_prescreening_parse_form_payload(array $post, array $files, ?stri
             continue;
         }
         $docPaths[$docKey] = 'uploads/prescreening/' . $filename;
+    }
+
+    if ($serviceType === 'study_abroad' && ($docPaths['doc_valid_passport'] ?? '') === '') {
+        $errors[] = 'Please upload your valid passport document.';
     }
 
     return ['fields' => $fields, 'docPaths' => $docPaths, 'user_id' => $uid, 'errors' => $errors];

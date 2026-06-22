@@ -22,6 +22,54 @@ function xander_prescreening_invite_url(string $token): string
     return pcvc_public_url('/prescreening-student.php?t=' . rawurlencode($token));
 }
 
+/** Public pre-screening form (no per-person token). Uses the current request host so localhost and cPanel each get the right URL. */
+function xander_prescreening_public_url(): string
+{
+    $host = trim((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    if ($host !== '') {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+
+        return rtrim($scheme . '://' . $host, '/') . pcvc_url('/prescreening-student.php');
+    }
+
+    return pcvc_public_url('/prescreening-student.php');
+}
+
+/**
+ * Session draft for the public form (document uploads before submit).
+ */
+function xander_prescreening_ensure_public_draft(mysqli $conn, string $userId): void
+{
+    xander_prescreening_ensure_invite_columns($conn);
+    if (!preg_match('/^user-[0-9]+-[0-9]+$/', $userId)) {
+        return;
+    }
+
+    $check = $conn->prepare('SELECT id FROM prescreening_invites WHERE user_id = ? LIMIT 1');
+    if (!$check) {
+        return;
+    }
+    $check->bind_param('s', $userId);
+    $check->execute();
+    $exists = (bool) $check->get_result()->fetch_row();
+    $check->close();
+    if ($exists) {
+        return;
+    }
+
+    $token = 'public-' . substr(hash('sha256', $userId), 0, 40);
+    $stmt = $conn->prepare(
+        'INSERT INTO prescreening_invites (
+            user_id, source, invite_token, invite_channel, created_at
+        ) VALUES (?, \'public\', ?, \'\', NOW())'
+    );
+    if ($stmt) {
+        $stmt->bind_param('ss', $userId, $token);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
 /**
  * @return array{user_id:string,token:string,url:string,id:int}
  */

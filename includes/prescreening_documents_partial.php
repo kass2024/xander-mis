@@ -5,11 +5,13 @@ declare(strict_types=1);
 /** @var array<string,mixed> $prefill */
 /** @var bool $readonly */
 /** @var bool $asyncDocs */
+/** @var list<string> $requiredDocKeys */
 
 $readonly = !empty($readonly);
 $prefill = $prefill ?? [];
 $docLabels = $docLabels ?? [];
 $asyncDocs = !empty($asyncDocs);
+$requiredDocKeys = $requiredDocKeys ?? [];
 
 if (!empty($asyncDocs)): ?>
 <p class="small text-muted mb-3">Files upload as soon as you pick them — submit is faster.</p>
@@ -18,9 +20,10 @@ if (!empty($asyncDocs)): ?>
 foreach ($docLabels as $key => $label):
     $existingPath = (string) ($prefill[$key] ?? '');
     $hasFile = $existingPath !== '';
+    $isRequired = in_array($key, $requiredDocKeys, true);
     ?>
-    <div class="mb-3 prescreen-doc-row" data-doc-key="<?= htmlspecialchars($key, ENT_QUOTES, 'UTF-8') ?>">
-      <label class="form-label"><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></label>
+    <div class="mb-3 prescreen-doc-row" data-doc-key="<?= htmlspecialchars($key, ENT_QUOTES, 'UTF-8') ?>"<?= $isRequired ? ' data-required="1"' : '' ?>>
+      <label class="form-label"><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?><?= $isRequired ? ' <span class="text-danger">*</span>' : '' ?></label>
       <input type="hidden"
              name="<?= htmlspecialchars($key, ENT_QUOTES, 'UTF-8') ?>_existing"
              class="prescreen-doc-path"
@@ -35,6 +38,8 @@ foreach ($docLabels as $key => $label):
         <span class="prescreen-doc-status small <?= $hasFile ? 'text-success' : 'text-muted' ?>">
           <?php if ($hasFile): ?>
             <i class="bi bi-check-circle-fill"></i> Saved
+          <?php elseif ($isRequired): ?>
+            <span class="prescreen-doc-status-idle text-danger">Required</span>
           <?php else: ?>
             <span class="prescreen-doc-status-idle">Optional</span>
           <?php endif; ?>

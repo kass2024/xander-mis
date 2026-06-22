@@ -4,10 +4,13 @@ declare(strict_types=1);
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers/prescreening_schema.php';
 require_once __DIR__ . '/helpers/prescreening_access.php';
+require_once __DIR__ . '/helpers/prescreening_invite.php';
 
 xander_prescreening_require_menu_access('prescreening.php');
 
 xander_ensure_prescreening_schema($conn);
+
+$publicLink = xander_prescreening_public_url();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -24,35 +27,18 @@ xander_ensure_prescreening_schema($conn);
     .top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
     .top h1 { font-size: 1.35rem; font-weight: 700; color: var(--ink); margin: 0; }
     .card { background: #fff; border-radius: 14px; box-shadow: 0 2px 16px rgba(15,23,42,.06); padding: 1.25rem; border: 1px solid #e2e8f0; }
-    .channel-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1rem; }
-    .channel-tabs input { position: absolute; opacity: 0; pointer-events: none; }
-    .channel-tabs label {
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      padding: 10px 8px; border-radius: 10px; border: 2px solid #e2e8f0;
-      font-size: .85rem; font-weight: 600; cursor: pointer; transition: .15s;
-    }
-    .channel-tabs input:checked + label { border-color: var(--brand); background: #eff6ff; color: var(--brand); }
-    .channel-tabs input[value="whatsapp"]:checked + label { border-color: var(--wa); background: #ecfdf5; color: #15803d; }
-    .channel-tabs input[value="both"]:checked + label { border-color: #7c3aed; background: #f5f3ff; color: #6d28d9; }
     .link-box {
-      display: none; margin-top: 1rem; padding: 12px; background: #f8fafc;
+      margin-top: .5rem; padding: 12px; background: #f8fafc;
       border-radius: 10px; border: 1px dashed #cbd5e1;
     }
-    .link-box.show { display: block; }
     .link-box input { font-size: .8rem; font-family: ui-monospace, monospace; }
-    .btn-send { font-weight: 600; padding: .65rem 1.25rem; }
-    .btn-wa { background: var(--wa); border: none; color: #fff; }
-    .btn-wa:hover { background: #1da851; color: #fff; }
-    .btn-email { background: var(--brand); border: none; color: #fff; }
-    .btn-email:hover { background: #1e40af; color: #fff; }
-    .btn-both { background: #6d28d9; border: none; color: #fff; }
-    .btn-both:hover { background: #5b21b6; color: #fff; }
     #statusBox { display: none; margin-bottom: 1rem; }
     .foot-links { margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 10px; font-size: .85rem; }
     .foot-links a { color: #64748b; text-decoration: none; }
     .foot-links a:hover { color: var(--brand); }
     details.admin-form { margin-top: 1rem; }
     details.admin-form summary { cursor: pointer; font-weight: 600; color: #475569; font-size: .9rem; }
+    .env-hint { font-size: .8rem; color: #64748b; }
   </style>
 </head>
 <body>
@@ -65,55 +51,29 @@ xander_ensure_prescreening_schema($conn);
   <div id="statusBox" class="alert" role="alert"></div>
 
   <div class="card">
-    <form id="inviteForm">
-      <div class="channel-tabs">
-        <div>
-          <input type="radio" name="send_via" id="ch_email" value="email">
-          <label for="ch_email"><i class="bi bi-envelope"></i> Email</label>
-        </div>
-        <div>
-          <input type="radio" name="send_via" id="ch_wa" value="whatsapp" checked>
-          <label for="ch_wa"><i class="bi bi-whatsapp"></i> WhatsApp</label>
-        </div>
-        <div>
-          <input type="radio" name="send_via" id="ch_both" value="both">
-          <label for="ch_both"><i class="bi bi-send"></i> Both</label>
-        </div>
-      </div>
+    <h2 class="h6 fw-bold mb-2">Public pre-screening link</h2>
+    <p class="small text-muted mb-3">
+      Share this link with applicants. They fill in their name, email, and WhatsApp on the form.
+      The URL works on <strong>localhost</strong> and <strong>cPanel</strong> automatically.
+    </p>
 
-      <div class="row g-2 mb-2">
-        <div class="col-12">
-          <input type="text" name="student_name" class="form-control" placeholder="Student full name *" required>
-        </div>
-        <div class="col-md-6">
-          <input type="email" name="student_email" class="form-control" placeholder="Email *" required>
-        </div>
-        <div class="col-md-6">
-          <input type="tel" name="whatsapp_number" class="form-control" placeholder="WhatsApp +250… *" required
-                 pattern="^\+[0-9\s\-().]{10,20}$" title="+country code">
-        </div>
+    <div class="link-box">
+      <label class="form-label small text-muted mb-1">Direct link — copy or share via email, WhatsApp, or any channel</label>
+      <div class="input-group input-group-sm mb-2">
+        <input type="text" class="form-control" id="publicLink" readonly value="<?= htmlspecialchars($publicLink, ENT_QUOTES, 'UTF-8') ?>">
+        <button type="button" class="btn btn-outline-secondary" id="copyLinkBtn" title="Copy link"><i class="bi bi-clipboard"></i></button>
+        <button type="button" class="btn btn-outline-primary" id="emailShareBtn" title="Share via email"><i class="bi bi-envelope"></i></button>
+        <button type="button" class="btn btn-outline-success" id="waShareBtn" title="Share on WhatsApp"><i class="bi bi-whatsapp"></i></button>
       </div>
+      <p class="small text-muted mb-1">Applicants choose <strong>Study Abroad</strong> or <strong>Work Abroad</strong> on the form.</p>
+      <p class="env-hint mb-0">Current base: <?= htmlspecialchars($publicLink, ENT_QUOTES, 'UTF-8') ?></p>
+    </div>
 
-      <div class="form-check mb-2" id="emailNowWrap" style="display:none">
-        <input class="form-check-input" type="checkbox" name="send_email_now" id="sendEmailNow" value="1" checked>
-        <label class="form-check-label small" for="sendEmailNow">Send link by email now</label>
-      </div>
-
-      <button type="submit" class="btn btn-send btn-wa w-100" id="inviteBtn">
-        <i class="bi bi-send me-1"></i> Send invite
-      </button>
-
-      <div class="link-box" id="linkBox">
-        <label class="form-label small text-muted mb-1">Direct link — share via email, WhatsApp, or any channel</label>
-        <div class="input-group input-group-sm mb-2">
-          <input type="text" class="form-control" id="inviteLink" readonly>
-          <button type="button" class="btn btn-outline-secondary" id="copyLinkBtn" title="Copy link"><i class="bi bi-clipboard"></i></button>
-          <button type="button" class="btn btn-outline-primary" id="emailLinkBtn" title="Send email"><i class="bi bi-envelope"></i></button>
-          <button type="button" class="btn btn-outline-success" id="waShareBtn" title="Share on WhatsApp"><i class="bi bi-whatsapp"></i></button>
-        </div>
-        <p class="small text-muted mb-0">Applicants choose <strong>Study Abroad</strong> or <strong>Work Abroad</strong> on the form.</p>
-      </div>
-    </form>
+    <div class="mt-3">
+      <a href="<?= htmlspecialchars($publicLink, ENT_QUOTES, 'UTF-8') ?>" class="btn btn-primary btn-sm" target="_blank" rel="noopener">
+        <i class="bi bi-box-arrow-up-right me-1"></i> Open form
+      </a>
+    </div>
 
     <div class="foot-links">
       <a href="api/webhook-health.php" target="_blank">Webhook</a>
@@ -133,27 +93,8 @@ xander_ensure_prescreening_schema($conn);
 
 <script>
 (function () {
-  const form = document.getElementById('inviteForm');
-  const btn = document.getElementById('inviteBtn');
+  const linkInput = document.getElementById('publicLink');
   const statusBox = document.getElementById('statusBox');
-  const linkBox = document.getElementById('linkBox');
-  const linkInput = document.getElementById('inviteLink');
-  const emailWrap = document.getElementById('emailNowWrap');
-  const channelInputs = form.querySelectorAll('input[name="send_via"]');
-  let lastToken = '';
-
-  function channel() {
-    return form.querySelector('input[name="send_via"]:checked')?.value || 'whatsapp';
-  }
-
-  function syncUi() {
-    const ch = channel();
-    btn.className = 'btn btn-send w-100 ' + (ch === 'email' ? 'btn-email' : ch === 'both' ? 'btn-both' : 'btn-wa');
-    btn.innerHTML = '<i class="bi bi-send me-1"></i> ' + (ch === 'email' ? 'Create link & send email' : ch === 'both' ? 'Send WhatsApp + email' : 'Send WhatsApp template');
-    emailWrap.style.display = (ch === 'email' || ch === 'both') ? 'block' : 'none';
-  }
-  channelInputs.forEach(r => r.addEventListener('change', syncUi));
-  syncUi();
 
   function showStatus(kind, msg) {
     statusBox.style.display = 'block';
@@ -161,104 +102,22 @@ xander_ensure_prescreening_schema($conn);
     statusBox.textContent = msg;
   }
 
-  let pollTimer = null;
-  function pollDelivery(phone, pollUrl) {
-    if (pollTimer) clearInterval(pollTimer);
-    let attempts = 0;
-    const maxAttempts = 20;
-    pollTimer = setInterval(async () => {
-      attempts++;
-      try {
-        const url = pollUrl || ('api/prescreening-invite-delivery.php?phone=' + encodeURIComponent(phone));
-        const res = await fetch(url, { credentials: 'same-origin' });
-        const d = await res.json();
-        if (d.delivered) {
-          showStatus('success', 'WhatsApp delivered to student (' + d.delivery_status + ').');
-          clearInterval(pollTimer);
-          return;
-        }
-        if (d.failed) {
-          showStatus('danger', 'WhatsApp delivery failed: ' + (d.display_message || d.error_message || d.delivery_status));
-          clearInterval(pollTimer);
-          return;
-        }
-        if (d.display_message) {
-          showStatus('warning', d.display_message);
-        }
-      } catch (e) { /* ignore */ }
-      if (attempts >= maxAttempts) {
-        clearInterval(pollTimer);
-        showStatus('warning', 'No delivery confirmation yet. If the student did not receive the message, verify their WhatsApp number.');
-      }
-    }, 3000);
-  }
-
   document.getElementById('copyLinkBtn')?.addEventListener('click', function () {
     if (!linkInput.value) return;
-    navigator.clipboard.writeText(linkInput.value).then(() => showStatus('success', 'Link copied.'));
+    navigator.clipboard.writeText(linkInput.value).then(() => showStatus('success', 'Link copied to clipboard.'));
   });
 
   document.getElementById('waShareBtn')?.addEventListener('click', function () {
-    if (!linkInput.value) {
-      showStatus('warning', 'Send an invite first to generate a link.');
-      return;
-    }
     const text = encodeURIComponent('Complete your Xander Global Scholars pre-screening here: ' + linkInput.value);
     window.open('https://wa.me/?text=' + text, '_blank', 'noopener');
   });
 
-  document.getElementById('emailLinkBtn')?.addEventListener('click', async function () {
-    if (!lastToken) { showStatus('warning', 'Send an invite first to generate a link.'); return; }
-    btn.disabled = true;
-    try {
-      const fd = new FormData();
-      fd.set('token', lastToken);
-      const res = await fetch('send_prescreening_link_email.php', { method: 'POST', body: fd, credentials: 'same-origin' });
-      const data = await res.json();
-      showStatus(data.status === 'success' ? 'success' : 'danger', data.message || 'Done');
-    } catch (e) {
-      showStatus('danger', 'Network error');
-    } finally {
-      btn.disabled = false;
-    }
-  });
-
-  form.addEventListener('submit', async function (e) {
-    e.preventDefault();
-    if (!form.checkValidity()) { form.reportValidity(); return; }
-    btn.disabled = true;
-    const fd = new FormData(form);
-    if (!fd.has('send_email_now')) fd.set('send_email_now', '0');
-    try {
-      const res = await fetch('send_prescreening_invite.php', { method: 'POST', body: fd, credentials: 'same-origin' });
-      const raw = await res.text();
-      let data;
-      try { data = JSON.parse(raw); } catch (err) {
-        showStatus('danger', 'Server error (not JSON).');
-        return;
-      }
-      if (data.link) {
-        linkInput.value = data.link;
-        linkBox.classList.add('show');
-      }
-      if (data.token) lastToken = data.token;
-      const kind = data.status === 'success' ? 'success' : (data.status === 'partial' ? 'warning' : 'danger');
-      let msg = data.message || 'Done';
-      if (data.whatsapp?.message_id) {
-        msg += ' WAMID: ' + data.whatsapp.message_id.slice(-12) + '…';
-      }
-      if (data.whatsapp?.from_number) {
-        msg += ' From: ' + data.whatsapp.from_number + '.';
-      }
-      showStatus(kind, msg);
-      if (data.whatsapp?.sent && data.whatsapp?.to) {
-        pollDelivery(data.whatsapp.to, data.whatsapp.poll_url);
-      }
-    } catch (err) {
-      showStatus('danger', 'Network error.');
-    } finally {
-      btn.disabled = false;
-    }
+  document.getElementById('emailShareBtn')?.addEventListener('click', function () {
+    const subject = encodeURIComponent('Xander Global Scholars — Pre-screening form');
+    const body = encodeURIComponent(
+      'Hello,\n\nPlease complete your pre-screening using this link:\n\n' + linkInput.value + '\n\n— Xander Global Scholars'
+    );
+    window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
   });
 })();
 </script>

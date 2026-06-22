@@ -50,7 +50,6 @@ function xander_prescreening_tuition_budgets(): array
         '$10,000 – $15,000 / year',
         '$15,000 – $25,000 / year',
         'Over $25,000 / year',
-        'Not sure yet',
     ];
 }
 
