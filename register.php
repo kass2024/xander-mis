@@ -24,8 +24,11 @@ if (!empty($_GET['error'])) {
         case 'invalid':
             $bannerError = 'Please fill in all fields with valid information.';
             break;
-        case 'spam':
-            $bannerError = 'Registration blocked. Use your real name and a normal email address (no random text or dot-stuffed emails).';
+        case 'invalid_email':
+            $bannerError = 'Please enter a valid email address (e.g. you@example.com).';
+            break;
+        case 'invalid_phone':
+            $bannerError = 'Please enter a valid phone number.';
             break;
         default:
             $bannerError = 'Something went wrong. Please try again in a few minutes.';
@@ -298,7 +301,6 @@ h1 {
             <i class="fas fa-user" aria-hidden="true"></i>
             <input type="text" name="first_name" id="first_name" required maxlength="120" placeholder="Given name" value="<?= htmlspecialchars($_POST['first_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
           </div>
-          <div id="firstNameStatus" class="inline-status" aria-live="polite"></div>
         </div>
         <div class="form-group">
           <label for="last_name">Last name</label>
@@ -355,19 +357,17 @@ h1 {
 (function () {
   const form = document.getElementById('staffForm');
   if (!form) return;
-  const firstNameInput = document.getElementById('first_name');
   const emailInput = document.getElementById('email');
   const phoneInput = document.getElementById('phone_number');
   const phoneE164  = document.getElementById('phone_e164');
-  const firstNameStatus = document.getElementById('firstNameStatus');
   const emailStatus = document.getElementById('emailStatus');
   const phoneStatus = document.getElementById('phoneStatus');
   const submitBtn = document.getElementById('submitBtn');
-  let firstTimer, emailTimer, phoneTimer;
+  let emailTimer, phoneTimer;
   const EMAIL_RE = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
-  // Field validity state — submit only enabled when all are valid
-  const state = { firstName: true, email: false, phone: false };
+  // Submit only enabled when email and phone are valid
+  const state = { email: false, phone: false };
 
   function setStatus(el, type, html) {
     el.className = 'inline-status' + (type ? ' ' + type : '');
@@ -378,7 +378,7 @@ h1 {
     input.classList.toggle('is-invalid', ok === false);
   }
   function refreshSubmit() {
-    submitBtn.disabled = !(state.firstName && state.email && state.phone);
+    submitBtn.disabled = !(state.email && state.phone);
   }
 
   /* ---------- intl-tel-input on phone ---------- */
@@ -440,44 +440,7 @@ h1 {
   });
   phoneInput.addEventListener('countrychange', validatePhone);
 
-  /* ---------- first name (existence check) ---------- */
-  firstNameInput.addEventListener('input', function () {
-    clearTimeout(firstTimer);
-    firstTimer = setTimeout(checkFirstName, 450);
-  });
-  function checkFirstName() {
-    const v = firstNameInput.value.trim();
-    if (v.length < 2) {
-      setStatus(firstNameStatus, '', '');
-      state.firstName = true;
-      refreshSubmit();
-      return;
-    }
-    setStatus(firstNameStatus, '', '<i class="fas fa-spinner fa-spin"></i> Checking…');
-    fetch('check_user.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'type=first_name&value=' + encodeURIComponent(v)
-    })
-      .then(function (r) { return r.text(); })
-      .then(function (data) {
-        if (data === 'exists') {
-          setStatus(firstNameStatus, 'error', '<i class="fas fa-circle-exclamation"></i> This first name is already registered');
-          state.firstName = false;
-        } else {
-          setStatus(firstNameStatus, 'success', '<i class="fas fa-circle-check"></i> OK');
-          state.firstName = true;
-        }
-        refreshSubmit();
-      })
-      .catch(function () {
-        setStatus(firstNameStatus, '', '');
-        state.firstName = true;
-        refreshSubmit();
-      });
-  }
-
-  /* ---------- email (format + existence) ---------- */
+  /* ---------- email (format only) ---------- */
   emailInput.addEventListener('input', function () {
     clearTimeout(emailTimer);
     emailTimer = setTimeout(checkEmail, 350);
@@ -498,32 +461,10 @@ h1 {
       refreshSubmit();
       return;
     }
-    setStatus(emailStatus, '', '<i class="fas fa-spinner fa-spin"></i> Checking availability…');
-    fetch('check_user.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'type=email&value=' + encodeURIComponent(v)
-    })
-      .then(function (r) { return r.text(); })
-      .then(function (data) {
-        if (data === 'exists') {
-          setStatus(emailStatus, 'error', '<i class="fas fa-circle-exclamation"></i> Email already in use');
-          setFieldValidity(emailInput, false);
-          state.email = false;
-        } else {
-          setStatus(emailStatus, 'success', '<i class="fas fa-circle-check"></i> Looks good');
-          setFieldValidity(emailInput, true);
-          state.email = true;
-        }
-        refreshSubmit();
-      })
-      .catch(function () {
-        // Network failure: don't block if format is fine
-        setStatus(emailStatus, 'success', '<i class="fas fa-circle-check"></i> Looks good');
-        setFieldValidity(emailInput, true);
-        state.email = true;
-        refreshSubmit();
-      });
+    setStatus(emailStatus, 'success', '<i class="fas fa-circle-check"></i> Valid email');
+    setFieldValidity(emailInput, true);
+    state.email = true;
+    refreshSubmit();
   }
 
   /* ---------- submit guard ---------- */
@@ -533,7 +474,7 @@ h1 {
     if (phoneE164.value) {
       phoneInput.value = phoneE164.value;
     }
-    if (!(state.firstName && state.email && state.phone)) {
+    if (!(state.email && state.phone)) {
       e.preventDefault();
       if (!state.email) emailInput.focus();
       else if (!state.phone) phoneInput.focus();

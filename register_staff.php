@@ -11,7 +11,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers/mail_smtp.php';
-require_once __DIR__ . '/helpers/application_spam_guard.php';
 
 use PHPMailer\PHPMailer\Exception as MailException;
 use PHPMailer\PHPMailer\PHPMailer;
@@ -125,25 +124,14 @@ if ($first_name === '' || $last_name === '' || $username === '' || $phone_number
 }
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    header('Location: register.php?error=invalid');
-    exit;
-}
-
-$spamVerdict = pcvc_spam_check_staff_registration([
-    'first_name' => $first_name,
-    'last_name' => $last_name,
-    'username' => $username,
-    'email' => $email,
-]);
-if ($spamVerdict['is_spam']) {
-    header('Location: register.php?error=spam');
+    header('Location: register.php?error=invalid_email');
     exit;
 }
 
 // Phone: must contain 7–15 digits (ITU E.164 allows up to 15)
 $phoneDigits = preg_replace('/\D+/', '', $phone_number);
 if (strlen((string) $phoneDigits) < 7 || strlen((string) $phoneDigits) > 15) {
-    header('Location: register.php?error=invalid');
+    header('Location: register.php?error=invalid_phone');
     exit;
 }
 
