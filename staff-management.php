@@ -243,6 +243,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_staff']) && $i
    FETCH ADMINS + OFFICES
 ============================================================ */
 $admins  = $conn->query("SELECT * FROM admins ORDER BY 
+    CASE WHEN LOWER(TRIM(COALESCE(status, 'pending'))) = 'pending' THEN 0 ELSE 1 END,
     CASE 
         WHEN role = 'superadmin' THEN 1
         WHEN role = 'admin' THEN 2
@@ -301,10 +302,6 @@ unset($_SESSION['success'], $_SESSION['error']);
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
         
-        .status-btn:active {
-            animation: statusPulse 0.3s ease;
-        }
-        
         .status-badge {
             display: inline-block;
             padding: 6px 12px;
@@ -313,6 +310,17 @@ unset($_SESSION['success'], $_SESSION['error']);
             font-weight: 600;
             text-align: center;
             min-width: 90px;
+        }
+
+        .filter-badge.pending-highlight {
+            background: #fff7ed;
+            border: 1px solid #fdba74;
+            color: #c2410c;
+            font-weight: 700;
+        }
+
+        tr.pending-row {
+            background: #fffbeb !important;
         }
         
         /* Tooltip styling */
@@ -794,13 +802,35 @@ unset($_SESSION['success'], $_SESSION['error']);
         </h1>
         
         <div class="stats-container">
+            <?php
+            $admins->data_seek(0);
+            $pendingCount = 0;
+            $totalCount = $admins->num_rows;
+            while ($countRow = $admins->fetch_assoc()) {
+                $rowStatus = strtolower(trim((string) ($countRow['status'] ?? 'pending')));
+                if ($rowStatus === 'pending') {
+                    $pendingCount++;
+                }
+            }
+            $admins->data_seek(0);
+            ?>
             <div class="stat-card">
                 <div class="stat-icon">
                     <i class="bi bi-people"></i>
                 </div>
                 <div class="stat-info">
-                    <h3><?= $admins->num_rows ?></h3>
+                    <h3><?= $totalCount ?></h3>
                     <p>Total</p>
+                </div>
+            </div>
+
+            <div class="stat-card" style="<?= $pendingCount > 0 ? 'border: 2px solid var(--warning);' : '' ?>">
+                <div class="stat-icon" style="background: rgba(237, 108, 2, 0.12); color: var(--warning);">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+                <div class="stat-info">
+                    <h3><?= $pendingCount ?></h3>
+                    <p>Pending</p>
                 </div>
             </div>
             
@@ -850,6 +880,9 @@ unset($_SESSION['success'], $_SESSION['error']);
         
         <div class="filter-badge active" onclick="filterByRole('all')">
             <i class="bi bi-people"></i> All
+        </div>
+        <div class="filter-badge<?= $pendingCount > 0 ? ' pending-highlight' : '' ?>" onclick="filterByStatus('pending')">
+            <i class="bi bi-hourglass-split"></i> Pending<?= $pendingCount > 0 ? ' (' . $pendingCount . ')' : '' ?>
         </div>
         <div class="filter-badge" onclick="filterByRole('superadmin')">
             <i class="bi bi-star-fill"></i> Super
@@ -927,7 +960,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                 break;
                         }
                     ?>
-                    <tr data-role="<?= htmlspecialchars($row['role'] ?? 'staff') ?>" data-status="<?= $status ?>">
+                    <tr data-role="<?= htmlspecialchars($row['role'] ?? 'staff') ?>" data-status="<?= $status ?>"<?= $status === 'pending' ? ' class="pending-row"' : '' ?>>
                         <form method="post" class="staff-form" data-id="<?= $row['id'] ?>">
                             <td class="text-center"><?= $counter++ ?></td>
                             <input type="hidden" name="id" value="<?= $row['id'] ?>">
@@ -1204,8 +1237,14 @@ document.getElementById('searchBox').addEventListener('keyup', function() {
 
 // Filter by role
 function filterByRole(role) {
+    document.querySelectorAll('.filters-section .filter-badge').forEach(function (el) {
+        el.classList.remove('active');
+    });
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+
     let rows = document.querySelectorAll('#staffTable tbody tr');
-    
     rows.forEach(row => {
         if (role === 'all') {
             row.style.display = '';
@@ -1213,6 +1252,22 @@ function filterByRole(role) {
             let rowRole = row.getAttribute('data-role');
             row.style.display = rowRole === role ? '' : 'none';
         }
+    });
+}
+
+// Filter by approval status
+function filterByStatus(status) {
+    document.querySelectorAll('.filters-section .filter-badge').forEach(function (el) {
+        el.classList.remove('active');
+    });
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+
+    let rows = document.querySelectorAll('#staffTable tbody tr');
+    rows.forEach(row => {
+        let rowStatus = (row.getAttribute('data-status') || 'pending').toLowerCase();
+        row.style.display = rowStatus === status ? '' : 'none';
     });
 }
 

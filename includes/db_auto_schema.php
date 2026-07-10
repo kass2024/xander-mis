@@ -19,6 +19,12 @@ function xander_db_maybe_auto_schema(mysqli $conn): void
         xander_admin_menu_ensure_table($conn);
     }
 
+    $adminSchema = dirname(__DIR__) . '/helpers/admin_schema.php';
+    if (is_readable($adminSchema)) {
+        require_once $adminSchema;
+        xander_ensure_admins_registration_schema($conn);
+    }
+
     $instSchema = dirname(__DIR__) . '/helpers/institution_portal_schema.php';
     if (is_readable($instSchema)) {
         require_once $instSchema;

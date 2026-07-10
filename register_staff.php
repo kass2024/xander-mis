@@ -11,6 +11,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers/mail_smtp.php';
+require_once __DIR__ . '/helpers/admin_schema.php';
+
+xander_ensure_admins_registration_schema($conn);
 
 use PHPMailer\PHPMailer\Exception as MailException;
 use PHPMailer\PHPMailer\PHPMailer;
@@ -190,6 +193,7 @@ $stmt->bind_param(
 );
 
 if (!$stmt->execute()) {
+    error_log('[register_staff] INSERT failed: ' . $stmt->error);
     $stmt->close();
     $conn->close();
     header('Location: register.php?error=system');
@@ -197,6 +201,12 @@ if (!$stmt->execute()) {
 }
 
 $newAdminId = (int) $conn->insert_id;
+if ($newAdminId <= 0) {
+    error_log('[register_staff] INSERT succeeded but insert_id is 0 for email: ' . $email);
+    $conn->close();
+    header('Location: register.php?error=system');
+    exit;
+}
 $stmt->close();
 
 // New admins start with N/A (no menu access). A superadmin must grant access
