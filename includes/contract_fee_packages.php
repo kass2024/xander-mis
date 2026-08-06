@@ -169,7 +169,20 @@ Fees apply exclusively to the selected package.
 
 <?php
 
+    if ($isSigned && $selectedCode !== '') {
 
+        $pkg = getPackageDetails($selectedCode);
+
+        if ($pkg) {
+
+            $summaryLabel = $pkg['label'] ?? $pkg['title'] ?? '';
+
+            echo '<div class="bc-selected-pkg-summary"><strong>Selected package:</strong> '
+                . htmlspecialchars($summaryLabel, ENT_QUOTES, 'UTF-8') . '</div>';
+
+        }
+
+    }
 
     $catalog = xander_contract_fee_catalog_list();
     $expeditedCode = 'p544';
@@ -256,18 +269,6 @@ Fees apply exclusively to the selected package.
 <input type="hidden" id="selected_package_label" name="selected_package_label" value="">
 
 <?php
-
-    if ($isSigned && $selectedCode !== '') {
-
-        $pkg = getPackageDetails($selectedCode);
-
-        if ($pkg) {
-
-            echo '<div class="bc-selected-pkg-summary"><strong>Selected package:</strong> ' . htmlspecialchars($pkg['title'], ENT_QUOTES, 'UTF-8') . '</div>';
-
-        }
-
-    }
 
     echo '</div>';
 

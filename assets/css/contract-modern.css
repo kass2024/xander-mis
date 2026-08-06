@@ -516,6 +516,16 @@ label.package-item:focus-within {
 }
 .bc-fee-closing-notices p { margin: 0 0 8px; }
 .bc-fee-closing-notices p:last-child { margin-bottom: 0; }
+.bc-selected-pkg-summary {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: var(--xgs-radius-md);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--xgs-ink);
+}
 .bc-fee-legal-wrap {
   margin-top: 14px;
   display: flex;
