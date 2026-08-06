@@ -110,7 +110,7 @@ if (!empty($contract['student_id']) && is_numeric($contract['student_id'])) {
 <title>Xander Global Scholars – Service Contract</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/contract-modern.css?v=20260806">
+<link rel="stylesheet" href="assets/css/contract-modern.css?v=20260806b">
 <style>
 /* Page-specific tweaks for the main student contract */
 .contract-letterhead { width:100%; margin:0 0 24px; }

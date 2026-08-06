@@ -462,18 +462,27 @@ label.package-item:focus-within {
   color: #fff;
 }
 .bc-fee-section-icon { font-size: 22px; line-height: 1; }
-.bc-fee-section-title {
+.bc-fee-section-title,
+.xgs-contract .bc-fee-section-head h3.bc-fee-section-title,
+.contract .bc-fee-section-head h3.bc-fee-section-title {
   margin: 0;
   flex: 1;
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 800;
+  color: #fff;
+  border: none;
+  padding: 0;
 }
-.bc-fee-section-count {
+.bc-fee-section-count,
+.bc-fee-section-head .bc-fee-section-count {
   font-size: 12px;
-  opacity: 0.88;
-  background: rgba(255,255,255,.14);
-  padding: 4px 10px;
+  font-weight: 700;
+  color: #fff;
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 5px 12px;
   border-radius: 999px;
+  white-space: nowrap;
 }
 .bc-fee-section-body {
   padding: 14px 16px 8px;
