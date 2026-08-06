@@ -24,26 +24,25 @@ function xander_db_maybe_auto_schema(mysqli $conn, bool $isLocal = false): void
 
     $done = true;
 
-
+    $light = defined('XANDER_DB_LIGHT') && XANDER_DB_LIGHT;
 
     require_once __DIR__ . '/db_table_repair.php';
 
-    require_once __DIR__ . '/fee_packages_sync.php';
+    if (!$light) {
+        require_once __DIR__ . '/fee_packages_sync.php';
+    }
 
     require_once __DIR__ . '/contract_branding.php';
 
 
 
     // Repair corrupted InnoDB tables before any schema checks (local: auto-remove orphan .ibd)
-
-    try {
-
-        xander_db_repair_critical_tables($conn, $isLocal);
-
-    } catch (Throwable $e) {
-
-        error_log('[db_auto_schema] table repair: ' . $e->getMessage());
-
+    if (!$light) {
+        try {
+            xander_db_repair_critical_tables($conn, $isLocal);
+        } catch (Throwable $e) {
+            error_log('[db_auto_schema] table repair: ' . $e->getMessage());
+        }
     }
 
     require_once __DIR__ . '/db_schema_align.php';
@@ -182,16 +181,23 @@ function xander_db_maybe_auto_schema(mysqli $conn, bool $isLocal = false): void
 
 
 
-    // Sync contract fee packages → payment portal + record-payment modal
-
-    try {
-
-        xander_sync_fee_packages_from_catalog($conn);
-
-    } catch (Throwable $e) {
-
-        error_log('[db_auto_schema] fee packages sync: ' . $e->getMessage());
-
+    // Sync contract fee packages → payment portal (skip on light/API requests; throttle on production)
+    if (!$light) {
+        try {
+            $runSync = $isLocal;
+            if (!$runSync) {
+                $stamp = dirname(__DIR__) . '/uploads/.fee_packages_sync_ts';
+                $runSync = !is_file($stamp) || (time() - (int) @filemtime($stamp)) > 3600;
+                if ($runSync) {
+                    @touch($stamp);
+                }
+            }
+            if ($runSync) {
+                xander_sync_fee_packages_from_catalog($conn);
+            }
+        } catch (Throwable $e) {
+            error_log('[db_auto_schema] fee packages sync: ' . $e->getMessage());
+        }
     }
 
 

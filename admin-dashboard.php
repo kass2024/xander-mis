@@ -439,7 +439,8 @@ if (strtolower($role) !== 'catholic university of america') {
       WHERE agent_email IS NOT NULL AND agent_email != ''
       GROUP BY agent_email
     ";
-    $res2 = mysqli_query($conn2, $cyprusQuery);
+    $res2 = ($conn2 instanceof mysqli) ? mysqli_query($conn2, $cyprusQuery) : false;
+    if ($res2) {
     while ($r = mysqli_fetch_assoc($res2)) {
         $email = strtolower(trim($r['agent_email']));
         $name = trim(($r['agent_first_name'] ?? '') . ' ' . ($r['agent_last_name'] ?? ''));
@@ -457,6 +458,7 @@ if (strtolower($role) !== 'catholic university of america') {
         $agentsCombined[$email]['total'] += (int)$r['total_students'];
         $agentsCombined[$email]['submitted'] += (int)$r['submitted'];
         $agentsCombined[$email]['admit'] += (int)$r['admit'];
+    }
     }
 
     foreach ($agentsCombined as $agent) {
@@ -1347,6 +1349,7 @@ if (strtolower($role) !== 'catholic university of america') {
       padding: 30px;
       border-radius: 10px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      pointer-events: none;
     }
 
     /* Table styling */
@@ -2976,9 +2979,14 @@ if (strtolower($role) !== 'catholic university of america') {
       };
 
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
+
         const res = await fetch('payment_dashboard_stats.php', {
-          credentials: 'same-origin'
+          credentials: 'same-origin',
+          signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         const data = await res.json().catch(() => null);
         if (!res.ok || !data || data.error) {
@@ -3065,7 +3073,10 @@ if (strtolower($role) !== 'catholic university of america') {
           
       } catch (err) {
         console.error('Payment dashboard failed:', err);
-        showPaymentError(err.message || 'Could not load payment data.');
+        const msg = err.name === 'AbortError'
+          ? 'Payment data timed out. The server may be busy — try refreshing the page.'
+          : (err.message || 'Could not load payment data.');
+        showPaymentError(msg);
       }
     });
     

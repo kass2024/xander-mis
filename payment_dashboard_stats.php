@@ -1,8 +1,12 @@
 <?php
 declare(strict_types=1);
 
+define('XANDER_DB_LIGHT', true);
 require_once 'db.php';
+require_once __DIR__ . '/helpers/payment_dashboard_helpers.php';
+
 header('Content-Type: application/json');
+set_time_limit(30);
 
 /* =====================================================
    HARD GUARD
@@ -35,36 +39,25 @@ function run(mysqli $conn, string $sql, string $stage): mysqli_result {
 
 /* =====================================================
    UNIFIED STUDENTS SOURCE (SCHEMA-AWARE)
-   — LOGIC SAFE —
 ===================================================== */
-$studentsSource = "
-(
-    SELECT
-        id,
-        email,
-        first_name,
-        last_name
-    FROM student_applications
+$studentsSource = xander_payment_students_source_sql($conn);
 
-    UNION ALL
-
-    SELECT
-        id,
-        email,
-        name    AS first_name,
-        surname AS last_name
-    FROM malta_applications
-
-    UNION ALL
-
-    SELECT
-        id,
-        email,
-        first_name,
-        last_name
-    FROM turkey_applications
-) sa
-";
+if (
+    !xander_payment_table_exists($conn, 'application_packages')
+    || !xander_payment_table_exists($conn, 'fee_items')
+) {
+    echo json_encode([
+        'error' => false,
+        'expected' => 0,
+        'collected' => 0,
+        'outstanding' => 0,
+        'status' => ['fully_paid' => 0, 'partial_paid' => 0, 'unpaid' => 0],
+        'methods' => [],
+        'recent' => [],
+        'message' => 'Payment tables not initialized yet.',
+    ], JSON_PRETTY_PRINT);
+    exit;
+}
 
 /* =====================================================
    KPI LIST MODE (MODAL)
