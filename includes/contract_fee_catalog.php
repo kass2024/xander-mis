@@ -242,7 +242,7 @@ function xander_contract_fee_catalog(): array
             'After visa approval', 1000, ''
         )),
         $mk('p544', 'EU-JS-EXP-01', 'job', 'Expedited / Express Processing (1–4 Months)', 250, [
-            ['name' => 'Additional fee (payable upfront)', 'amount' => 250, 'payable_stage' => 'Pre-Admission', 'note' => 'Non-refundable'],
+            ['name' => 'Additional fee', 'amount' => 250, 'payable_stage' => 'Pre-Admission', 'note' => 'Payable upfront · Non-refundable'],
         ]),
     ];
 }

@@ -490,16 +490,60 @@ label.package-item:focus-within {
   flex-direction: column;
   gap: 12px;
 }
-.bc-fee-footnotes {
-  margin-top: 8px;
-  padding: 14px 16px;
-  background: var(--xgs-soft);
-  border-radius: var(--xgs-radius-md);
-  border: 1px dashed var(--xgs-border-strong);
+.bc-fee-section-note {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: var(--xgs-radius-sm);
   font-size: 14px;
+  line-height: 1.55;
 }
-.bc-fee-footnotes p { margin: 0 0 8px; }
-.bc-fee-footnotes p:last-child { margin-bottom: 0; }
+.bc-fee-expedited-wrap {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 2px solid var(--xgs-border-strong);
+}
+.bc-fee-expedited-wrap .package-item-head .package-label-text::before {
+  content: "⚡ ";
+}
+.bc-fee-closing-notices {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 2px solid var(--xgs-border-strong);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.bc-fee-closing-notices p { margin: 0 0 8px; }
+.bc-fee-closing-notices p:last-child { margin-bottom: 0; }
+.bc-fee-legal-wrap {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bc-fee-legal-block {
+  padding: 14px 16px;
+  background: #fff5f5;
+  border-left: 4px solid #dc2626;
+  border-radius: var(--xgs-radius-md);
+}
+.bc-fee-legal-title,
+.bc-fee-legal-block h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #b91c1c;
+  font-style: normal;
+}
+.bc-fee-legal-block p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.65;
+  color: #dc2626;
+  font-style: normal;
+}
 .contract .bc-fee-notice,
 .xgs-contract .bc-fee-notice {
   margin: 0 0 18px;

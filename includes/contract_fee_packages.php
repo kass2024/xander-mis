@@ -107,9 +107,19 @@ function renderContractFeePackagesSection(bool $isSigned, string $selectedCode =
 
         echo '<ul class="package-lines">';
 
-        foreach ($pkg['lines'] as $line) {
+        if ($id === 'p544') {
 
-            echo '<li>' . htmlspecialchars($line, ENT_QUOTES, 'UTF-8') . '</li>';
+            echo '<li>Additional Fee: €250</li>';
+            echo '<li>Payable upfront</li>';
+            echo '<li>Non-refundable</li>';
+
+        } else {
+
+            foreach ($pkg['lines'] as $line) {
+
+                echo '<li>' . htmlspecialchars($line, ENT_QUOTES, 'UTF-8') . '</li>';
+
+            }
 
         }
 
@@ -162,6 +172,7 @@ Fees apply exclusively to the selected package.
 
 
     $catalog = xander_contract_fee_catalog_list();
+    $expeditedCode = 'p544';
 
     foreach ($sections as $key => $meta) {
 
@@ -173,6 +184,30 @@ Fees apply exclusively to the selected package.
 
         }
 
+        $expedited = null;
+
+        if ($key === 'job') {
+
+            foreach ($group as $idx => $pkg) {
+
+                if (($pkg['contract_code'] ?? '') === $expeditedCode) {
+
+                    $expedited = $pkg;
+
+                    unset($group[$idx]);
+
+                    break;
+
+                }
+
+            }
+
+            $group = array_values($group);
+
+        }
+
+        $packageCount = count($group) + ($expedited !== null ? 1 : 0);
+
         echo '<section class="bc-fee-section">';
 
         echo '<header class="bc-fee-section-head">';
@@ -181,15 +216,31 @@ Fees apply exclusively to the selected package.
 
         echo '<h3 class="bc-fee-section-title">' . htmlspecialchars($meta['label'], ENT_QUOTES, 'UTF-8') . '</h3>';
 
-        echo '<span class="bc-fee-section-count">' . count($group) . ' packages</span>';
+        echo '<span class="bc-fee-section-count">' . $packageCount . ' packages</span>';
 
         echo '</header>';
 
         echo '<div class="bc-fee-section-body">';
 
+        if ($key === 'job') {
+
+            renderContractJobSeekerIntroNote(false);
+
+        }
+
         foreach ($group as $pkg) {
 
             $mk($pkg);
+
+        }
+
+        if ($expedited !== null) {
+
+            echo '<div class="bc-fee-expedited-wrap">';
+
+            $mk($expedited);
+
+            echo '</div>';
 
         }
 
@@ -199,15 +250,7 @@ Fees apply exclusively to the selected package.
 
     ?>
 
-<div class="bc-fee-footnotes">
-
-<p><strong>N.B.:</strong> Basic English communication is mandatory for all job seeker positions. Applicants must have at least a High School diploma or equivalent.</p>
-
-<p><strong>N.B.:</strong> Air ticketing prices are determined by market rates and must be paid before ticket issuance.</p>
-
-<p>Failure to pay required fees may result in suspension or termination of services.</p>
-
-</div>
+<?php renderContractFeeClosingNotices(false); ?>
 
 <input type="hidden" id="selected_package_code" name="selected_package_code" value="<?= htmlspecialchars($selectedCode, ENT_QUOTES, 'UTF-8') ?>">
 <input type="hidden" id="selected_package_label" name="selected_package_label" value="">
@@ -264,11 +307,17 @@ function renderContractFeePackagesPdf(string $code): void
 
 <ul class="bc-list">
 
-<?php foreach ($pkg['lines'] as $line): ?>
+<?php if ($code === 'p544'): ?>
+
+<li>Additional Fee: €250</li>
+<li>Payable upfront</li>
+<li>Non-refundable</li>
+
+<?php else: foreach ($pkg['lines'] as $line): ?>
 
 <li><?= htmlspecialchars($line, ENT_QUOTES, 'UTF-8') ?></li>
 
-<?php endforeach; ?>
+<?php endforeach; endif; ?>
 
 </ul>
 
@@ -278,7 +327,7 @@ function renderContractFeePackagesPdf(string $code): void
 
 <?php endif; ?>
 
-<p>Failure to pay may result in suspension or termination of services.</p>
+<?php renderContractFeeClosingNotices(true); ?>
 
 <?php
 
