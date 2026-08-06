@@ -17,9 +17,7 @@ parrot/.env
 .htaccess
 **/.htaccess
 
-# Database credentials (not in repo — use db.example.php as template)
-db.php
-database.php
+# Database credentials — db.php is tracked for cPanel deploy (secrets stay in cPanel .env when set)
 helpers/db.php
 
 # Payment secrets live in .env — PHP files below are safe to commit (no keys in code)
