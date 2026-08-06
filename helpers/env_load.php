@@ -36,6 +36,11 @@ function xander_env_dotenv_precedence_keys(): array
         'SMTP_PASSWORD',
         'SMTP_FROM_EMAIL',
         'SMTP_FROM_NAME',
+        'DB_HOST',
+        'DB_USER',
+        'DB_PASS',
+        'DB_NAME',
+        'CYPRUS_DB_NAME',
     ];
 }
 

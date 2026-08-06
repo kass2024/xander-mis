@@ -1,12 +1,12 @@
 <?php
 // Copy to db.php — never commit db.php
 //
-// cPanel production (xanderglobalscholars.com):
-//   $db_host = getenv('DB_HOST') ?: 'localhost';
-//   $db_user = getenv('DB_USER') ?: 'xandhqav_user';
-//   $db_pass = getenv('DB_PASS') ?: 'your_password';
-//   $db_name = getenv('DB_NAME') ?: 'xandhqav_db';
-//
+// cPanel production (xanderglobalscholars.com) — set in .env (not committed):
+//   DB_HOST=localhost
+//   DB_USER=xandhqav_user
+//   DB_PASS=your_password
+//   DB_NAME=xandhqav_db
+//   CYPRUS_DB_NAME=xandhqav_db
 // Local XAMPP:
 //   $db_host = 'localhost';
 //   $db_user = 'root';

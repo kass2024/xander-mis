@@ -1,9 +1,11 @@
 <?php
 /**
  * Database connection — credentials live here (not in .env).
- * cPanel: xanderglobalscholars.com → xandhqav_db
+ * cPanel: xanderglobalscholars.com → read DB_* from .env when present
  * Local XAMPP: database "rwanda_xander" (root, no password)
  */
+
+require_once __DIR__ . '/helpers/env_load.php';
 
 $isLocalXampp = (
     (isset($_SERVER['HTTP_HOST']) && preg_match('/^(localhost|127\.0\.0\.1)(:\d+)?$/i', (string) $_SERVER['HTTP_HOST']))
@@ -29,18 +31,26 @@ if ($isLocalXampp) {
     $db_pass = '';
     $db_name = 'rwanda_xander';
 } else {
-    // cPanel: getenv() reads server env if set; otherwise use defaults below
-    $db_host = getenv('DB_HOST') ?: 'localhost';
-    $db_user = getenv('DB_USER') ?: 'xandhqav_user';
-    $db_pass = getenv('DB_PASS') ?: 'Xander@2026';
-    $db_name = getenv('DB_NAME') ?: 'xandhqav_db';
+    $db_host = xander_env_get('DB_HOST') ?: 'localhost';
+    $db_user = xander_env_get('DB_USER') ?: 'xandhqav_user';
+    $db_pass = xander_env_get('DB_PASS') ?: 'Xander@2026';
+    $db_name = xander_env_get('DB_NAME') ?: 'xandhqav_db';
 }
 
-$conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
+mysqli_report(MYSQLI_REPORT_OFF);
 
-if ($conn->connect_error) {
-    error_log('DB connection failed: ' . $conn->connect_error);
-    die('Connection failed: ' . $conn->connect_error);
+try {
+    $conn = @new mysqli($db_host, $db_user, $db_pass, $db_name);
+} catch (Throwable $e) {
+    error_log('DB connection exception: ' . $e->getMessage());
+    $conn = null;
+}
+
+if (!$conn instanceof mysqli || $conn->connect_errno) {
+    $err = ($conn instanceof mysqli) ? $conn->connect_error : 'mysqli init failed';
+    error_log('DB connection failed: ' . $err);
+    http_response_code(500);
+    exit('Database connection failed. Check DB_* settings in .env on the server.');
 }
 
 $conn->set_charset('utf8mb4');
