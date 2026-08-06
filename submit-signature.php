@@ -7,6 +7,7 @@ require_once __DIR__ . "/db.php";
 require_once __DIR__ . "/vendor/autoload.php";
 require_once __DIR__ . "/includes/contract_signature_schema.php";
 require_once __DIR__ . "/includes/contract_package_map.php";
+require_once __DIR__ . "/includes/contract_pdf_helpers.php";
 
 header("Content-Type: application/json");
 
@@ -67,7 +68,8 @@ if (!is_array($data)) {
 /* --- CORE --- */
 $token      = trim($data['token'] ?? '');
 $name       = trim($data['student_name'] ?? '');
-$signedDate = trim($data['signed_date'] ?? '');
+$signedDateRaw = trim($data['signed_date'] ?? '');
+$signedDate = xander_normalize_contract_date($signedDateRaw) ?? date('Y-m-d');
 $signature  = $data['signature'] ?? '';
 
 /* --- ARTICLE 7 PACKAGE --- */
@@ -77,7 +79,7 @@ $pkgCode  = trim($data['selected_package_code'] ?? '');
 /* --- CLIENT / STUDENT --- */
 $fullName    = trim($data['full_name'] ?? '');
 $email       = trim($data['student_email'] ?? '');
-$dob         = $data['student_dob'] ?? null;
+$dob         = xander_normalize_contract_date($data['student_dob'] ?? null);
 $nationality = trim($data['student_nationality'] ?? '');
 $passport    = trim($data['student_passport'] ?? '');
 $phone       = trim($data['student_phone'] ?? '');
@@ -93,7 +95,7 @@ $clientTypes = is_array($data['client_type'] ?? null)
 if (
     $token === '' ||
     $fullName === '' ||
-    $signedDate === '' ||
+    $signedDateRaw === '' ||
     $email === '' ||
     $signature === '' ||
     $pkgLabel === '' ||
@@ -112,7 +114,7 @@ if (!str_starts_with($signature, 'data:image/png;base64,')) {
 }
 
 if (!getPackageDetails($pkgCode)) {
-    fail("Invalid fee package selection", 400);
+    fail("Invalid fee package selection: " . $pkgCode, 400);
 }
 
 xander_ensure_contract_signature_columns($conn);
@@ -121,7 +123,7 @@ xander_ensure_contract_signature_columns($conn);
    4. LOAD CONTRACT (NO LOCK YET)
 ===================================================== */
 $stmt = $conn->prepare("
-    SELECT id, status
+    SELECT id, status, student_id
     FROM student_contracts
     WHERE contract_token = ?
     LIMIT 1
@@ -226,6 +228,16 @@ try {
         "message" => $e->getMessage(),
         "line"    => $e->getLine()
     ]);
+}
+
+/* =====================================================
+   6b. SYNC PAYMENT TABLES FOR SELECTED PACKAGE
+===================================================== */
+require_once __DIR__ . '/includes/fee_packages_sync.php';
+xander_sync_fee_packages_from_catalog($conn);
+$studentIdForPkg = (int) ($contract['student_id'] ?? 0);
+if ($studentIdForPkg > 0) {
+    xander_assign_application_package_from_contract($conn, $studentIdForPkg, $pkgCode);
 }
 
 /* =====================================================

@@ -2,6 +2,10 @@
 declare(strict_types=1);
 
 require_once __DIR__ . "/db.php";
+require_once __DIR__ . '/includes/contract_branding.php';
+xander_contract_ensure_branding_assets();
+$employerStampSrc = xander_contract_stamp_web_src();
+$employerHandSignatureSrc = xander_contract_hand_signature_web_src();
 
 /**
  * 0. Safety check: DB connection
@@ -1155,16 +1159,28 @@ button {
   <!-- SIGNATURE LINE WITH TALLER IMAGE -->
   <div style="
     border-bottom:1px solid #000;
-    height:60px;
+    min-height:110px;
     margin-bottom:10px;
     position:relative;
+    display:flex;
+    align-items:flex-end;
+    gap:12px;
   ">
-    <img src="admin/employer-signature.png"
+    <img src="<?= htmlspecialchars($employerHandSignatureSrc, ENT_QUOTES, 'UTF-8') ?>"
+         alt="Authorized Signature"
          style="
-           max-height:55px;
-           position:absolute;
-           bottom:2px;
-           left:0;
+           max-height:95px;
+           max-width:140px;
+           height:auto;
+           display:block;
+         ">
+    <img src="<?= htmlspecialchars($employerStampSrc, ENT_QUOTES, 'UTF-8') ?>"
+         alt="Authorized Stamp"
+         style="
+           max-height:105px;
+           max-width:140px;
+           height:auto;
+           display:block;
          ">
   </div>
 
@@ -1448,12 +1464,18 @@ function stopDraw() {
     return;
   }
 
-  const selectedPackageLabel = selectedRadio
-    .closest('label')
-    ?.textContent
-    ?.trim();
+  const selectedPackageLabel = selectedRadio.getAttribute('data-package-label')
+    || selectedRadio.closest('.package-item')?.getAttribute('data-package-label')
+    || selectedRadio.closest('.package-item')?.querySelector('.package-label-text')?.textContent?.trim()
+    || document.getElementById('selected_package_label')?.value?.trim()
+    || '';
 
-  if (!selectedPackageLabel) {
+  const selectedPackageCode = selectedRadio.value.trim()
+    || document.getElementById('selected_package_code')?.value?.trim()
+    || selectedRadio.getAttribute('data-package-code')
+    || '';
+
+  if (!selectedPackageCode || !selectedPackageLabel) {
     alert("Invalid package selection. Please reselect your package.");
     return;
   }
@@ -1855,10 +1877,17 @@ window.showPkg = function (id) {
     selected.style.display = 'block';
   }
 
-  // ✅ SAVE SELECTED PACKAGE CODE
+  // ✅ SAVE SELECTED PACKAGE CODE + LABEL
   const holder = document.getElementById('selected_package_code');
   if (holder) {
-    holder.value = id; // e.g. "p74"
+    holder.value = id;
+  }
+  const labelHolder = document.getElementById('selected_package_label');
+  if (labelHolder) {
+    const radio = document.querySelector('input[name="package"][value="' + id + '"]');
+    labelHolder.value = radio?.getAttribute('data-package-label')
+      || document.querySelector('.package-item[data-package-code="' + id + '"]')?.getAttribute('data-package-label')
+      || '';
   }
 };
 
@@ -1870,8 +1899,10 @@ window.showPkg = function (id) {
     const selectedRadio = document.querySelector('input[name="package"]:checked');
     if (!selectedRadio) return null;
 
-    const label = selectedRadio.closest('label');
-    return label ? label.textContent.trim() : null;
+    return selectedRadio.getAttribute('data-package-label')
+      || selectedRadio.closest('.package-item')?.getAttribute('data-package-label')
+      || document.getElementById('selected_package_label')?.value?.trim()
+      || null;
   };
 
 })();

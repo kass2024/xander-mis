@@ -2,109 +2,247 @@
 declare(strict_types=1);
 
 /**
- * Canonical fee packages from contracts/HEERA-Xander CLIENT CONTRACT-MAY 2026.pdf (Section 5).
- * Order matches the contract: Study → Visit → Credit → Asia → Job Seeker.
- * contract_code p501–p516 maps to fee_packages.id 1–16 (same order as contract).
+ * Canonical fee packages from Client Service Contract (Aug 2026).
+ * contract_code p501+ maps to fee_packages via scripts/sync-fee-packages-from-catalog.php.
  */
 function xander_contract_fee_catalog(): array
 {
     $sym = '€';
+    $order = 0;
+
     $mk = static function (
         string $contractCode,
-        int $packageId,
         string $dbCode,
         string $section,
-        string $num,
         string $title,
         float $total,
         array $items
-    ) use ($sym): array {
+    ) use ($sym, &$order): array {
+        $order++;
         $lines = [];
         foreach ($items as $item) {
             $amt = number_format((float) $item['amount'], 0, '.', ',');
-            $lines[] = $sym . $amt . ' – ' . $item['name'];
+            $suffix = !empty($item['note']) ? ' (' . $item['note'] . ')' : '';
+            $lines[] = $sym . $amt . ' – ' . $item['name'] . $suffix;
         }
         $totalFmt = $sym . number_format($total, 0, '.', ',');
         return [
             'contract_code' => $contractCode,
-            'package_id'    => $packageId,
+            'package_id'    => $order,
             'db_code'       => $dbCode,
             'section'       => $section,
-            'num'           => $num,
             'title'         => $title,
             'currency'      => 'EUR',
             'total'         => $total,
             'total_fmt'     => $totalFmt,
-            'label'         => "{$num} {$title} – {$totalFmt}",
+            'label'         => "{$title} – {$totalFmt}",
             'lines'         => $lines,
             'items'         => $items,
         ];
     };
 
+    $two = static function (string $pre, float $preAmt, string $preNote, string $post, float $postAmt, string $postNote = ''): array {
+        $items = [
+            ['name' => $pre, 'amount' => $preAmt, 'payable_stage' => 'Pre-Admission', 'note' => $preNote],
+            ['name' => $post, 'amount' => $postAmt, 'payable_stage' => 'Visa Approval', 'note' => $postNote],
+        ];
+        return $items;
+    };
+
+    $three = static function (
+        string $aName, float $aAmt, string $aNote,
+        string $bName, float $bAmt, string $bNote,
+        string $cName, float $cAmt, string $cNote
+    ): array {
+        return [
+            ['name' => $aName, 'amount' => $aAmt, 'payable_stage' => 'Pre-Admission', 'note' => $aNote],
+            ['name' => $bName, 'amount' => $bAmt, 'payable_stage' => 'Mid-Processing', 'note' => $bNote],
+            ['name' => $cName, 'amount' => $cAmt, 'payable_stage' => 'Visa Approval', 'note' => $cNote],
+        ];
+    };
+
     return [
-        $mk('p501', 1, 'EU-ST-01', 'study', '5.1', 'USA & Canada (Without Loan)', 1500, [
-            ['name' => 'Pre-admission', 'amount' => 350, 'payable_stage' => 'Pre-Admission'],
-            ['name' => 'After visa approval', 'amount' => 1150, 'payable_stage' => 'Visa Approval'],
+        // —— Study Services ——
+        $mk('p501', 'EU-ST-01', 'study', 'Study Services (Self-Sponsored) – USA, Canada, Europe, South America, Asia, Africa & Australia', 1500, $two(
+            'Pre-admission', 350, 'Non-refundable',
+            'After visa approval', 1150, ''
+        )),
+        $mk('p502', 'EU-ST-02', 'study', 'Education Loan Processing – USA, Canada & Europe', 1500, $two(
+            'Pre-admission', 750, '17% refundable if the loan is not approved',
+            'After visa approval', 750, ''
+        )),
+        $mk('p503', 'EU-ST-03', 'study', 'Full Scholarship Package – Italy, Asia, Ireland, USA & Other Eligible Destinations', 2500, $two(
+            'Pre-admission', 1250, '17% refundable',
+            'After visa approval', 1250, ''
+        )),
+        $mk('p504', 'EU-ST-04', 'study', 'High School Placement – USA, Canada, Australia & Europe', 4000, $two(
+            'Pre-admission', 2500, 'Non-refundable',
+            'After visa approval', 1500, ''
+        )),
+        $mk('p505', 'EU-ST-05', 'study', 'Financing Your Study Application Fees', 2000, [
+            ['name' => 'After visa approval', 'amount' => 2000, 'payable_stage' => 'Visa Approval', 'note' => 'Payment guarantee is mandatory'],
         ]),
-        $mk('p502', 2, 'EU-ST-02', 'study', '5.2', 'Education Loan Processing (USA & Canada)', 1500, [
-            ['name' => 'Pre-admission', 'amount' => 750, 'payable_stage' => 'Pre-Admission'],
-            ['name' => 'After visa approval', 'amount' => 750, 'payable_stage' => 'Visa Approval'],
+
+        // —— Credit Transfer ——
+        $mk('p506', 'EU-CT-01', 'credit', "Credit Transfer – Bachelor's Degree", 1500, $two(
+            'Pre-admission', 750, 'Non-refundable',
+            'After visa approval', 750, ''
+        )),
+        $mk('p507', 'EU-CT-02', 'credit', "Credit Transfer – Master's Degree", 1700, $two(
+            'Pre-admission', 850, 'Non-refundable',
+            'After visa approval', 850, ''
+        )),
+        $mk('p508', 'EU-CT-03', 'credit', 'Credit Transfer – PhD Level', 2400, $two(
+            'Pre-admission', 1200, 'Non-refundable',
+            'After visa approval', 1200, ''
+        )),
+
+        // —— Visit Visa ——
+        $mk('p509', 'EU-VV-US-01', 'visit', 'USA Visit Visa – Full Package', 3500, $two(
+            'Upfront', 1750, 'Non-refundable',
+            'After visa approval', 1750, ''
+        )),
+        $mk('p510', 'EU-VV-US-02', 'visit', 'USA Visit Visa – Invitation Only', 1400, [
+            ['name' => 'Upfront', 'amount' => 1400, 'payable_stage' => 'Pre-Admission', 'note' => ''],
         ]),
-        $mk('p503', 3, 'EU-ST-03', 'study', '5.3', 'Europe Study', 1500, [
-            ['name' => 'Pre-admission', 'amount' => 350, 'payable_stage' => 'Pre-Admission'],
-            ['name' => 'After visa approval', 'amount' => 1150, 'payable_stage' => 'Visa Approval'],
+        $mk('p511', 'EU-VV-CA-01', 'visit', 'Canada Visit Visa – Full Package', 3200, $two(
+            'Upfront', 1600, 'Non-refundable',
+            'After visa approval', 1600, ''
+        )),
+        $mk('p512', 'EU-VV-CA-02', 'visit', 'Canada Visit Visa – Invitation Only', 1600, [
+            ['name' => 'Upfront', 'amount' => 1600, 'payable_stage' => 'Pre-Admission', 'note' => ''],
         ]),
-        $mk('p504', 4, 'EU-ST-010', 'study', '5.4', 'Europe Study Full scholarships', 1500, [
-            ['name' => 'Pre-admission', 'amount' => 600, 'payable_stage' => 'Pre-Admission'],
-            ['name' => 'After visa approval', 'amount' => 900, 'payable_stage' => 'Visa Approval'],
+        $mk('p513', 'EU-VV-EU-01', 'visit', 'Europe Visit Visa – Full Package', 2600, $two(
+            'Upfront', 1300, 'Non-refundable',
+            'After visa approval', 1300, ''
+        )),
+        $mk('p514', 'EU-VV-EU-02', 'visit', 'Europe Visit Visa – Invitation Only', 600, [
+            ['name' => 'Upfront', 'amount' => 600, 'payable_stage' => 'Pre-Admission', 'note' => 'Non-refundable'],
         ]),
-        $mk('p505', 5, 'EU-ST-04', 'study', '5.5', 'High School Placement (USA, Canada & Europe)', 4000, [
-            ['name' => 'Pre-admission', 'amount' => 2500, 'payable_stage' => 'Pre-Admission'],
-            ['name' => 'After visa approval', 'amount' => 1500, 'payable_stage' => 'Visa Approval'],
+        $mk('p515', 'EU-VV-UK-01', 'visit', 'United Kingdom Visit Visa – Full Package', 2500, $two(
+            'Upfront', 1250, 'Non-refundable',
+            'After visa approval', 1250, ''
+        )),
+        $mk('p516', 'EU-VV-UK-02', 'visit', 'United Kingdom Visit Visa – Invitation Only', 1000, [
+            ['name' => 'Upfront', 'amount' => 1000, 'payable_stage' => 'Pre-Admission', 'note' => 'Non-refundable'],
         ]),
-        $mk('p506', 6, 'EU-ST-05', 'study', '5.6', 'South Korea and China Study', 2150, [
-            ['name' => 'Pre-admission', 'amount' => 1000, 'payable_stage' => 'Pre-Admission'],
-            ['name' => 'After visa approval', 'amount' => 1150, 'payable_stage' => 'Visa Approval'],
+        $mk('p517', 'EU-VV-AU-01', 'visit', 'Australia Visit Visa (Business Invitation) – Full Package', 2500, $two(
+            'Upfront', 1250, 'Non-refundable',
+            'After visa approval', 1250, ''
+        )),
+        $mk('p518', 'EU-VV-AU-02', 'visit', 'Australia Visit Visa – Invitation Only', 600, [
+            ['name' => 'Upfront', 'amount' => 600, 'payable_stage' => 'Pre-Admission', 'note' => 'Non-refundable'],
         ]),
-        $mk('p507', 7, 'EU-VV-01', 'visit', '5.7', 'USA & Canada Visit Visa', 4000, [
-            ['name' => 'Pre-admission', 'amount' => 2600, 'payable_stage' => 'Pre-Admission'],
-            ['name' => 'After visa approval', 'amount' => 1400, 'payable_stage' => 'Visa Approval'],
+        $mk('p519', 'EU-VV-NZ-01', 'visit', 'New Zealand Visit Visa (Business Invitation) – Full Package', 2500, $two(
+            'Upfront', 1250, 'Non-refundable',
+            'After visa approval', 1250, ''
+        )),
+        $mk('p520', 'EU-VV-NZ-02', 'visit', 'New Zealand Visit Visa – Invitation Only', 600, [
+            ['name' => 'Upfront', 'amount' => 600, 'payable_stage' => 'Pre-Admission', 'note' => 'Non-refundable'],
         ]),
-        $mk('p508', 8, 'EU-VV-02', 'visit', '5.8', 'Europe Visit Visa', 2500, [
-            ['name' => 'Pre-admission', 'amount' => 1625, 'payable_stage' => 'Pre-Admission'],
-            ['name' => 'After visa approval', 'amount' => 875, 'payable_stage' => 'Visa Approval'],
+        $mk('p521', 'EU-VV-AS-01', 'visit', 'Asia Visit Visa – Full Package', 1500, $two(
+            'Upfront', 750, 'Non-refundable',
+            'After visa approval', 750, ''
+        )),
+        $mk('p522', 'EU-VV-AS-02', 'visit', 'Asia Visit Visa – Invitation Only', 500, [
+            ['name' => 'Upfront', 'amount' => 500, 'payable_stage' => 'Pre-Admission', 'note' => 'Non-refundable'],
         ]),
-        $mk('p509', 9, 'EU-CT-01', 'credit', '5.9', "Bachelor's Degree", 1500, [
-            ['name' => 'Pre-admission', 'amount' => 750, 'payable_stage' => 'Pre-Admission'],
-            ['name' => 'After visa approval', 'amount' => 750, 'payable_stage' => 'Visa Approval'],
+        $mk('p523', 'EU-VV-AS-03', 'visit', 'Asia – Full Service Package + Accommodation', 2000, $two(
+            'Before application', 1000, 'Non-refundable',
+            'After visa approval', 1000, ''
+        )),
+        $mk('p524', 'EU-VV-AF-01', 'visit', 'Africa Visit Visa (Business Invitation) – Full Package', 1500, $two(
+            'Upfront', 750, 'Non-refundable',
+            'After visa approval', 750, ''
+        )),
+        $mk('p525', 'EU-VV-AF-02', 'visit', 'Africa Visit Visa – Invitation Only', 300, [
+            ['name' => 'Upfront', 'amount' => 300, 'payable_stage' => 'Pre-Admission', 'note' => 'Non-refundable'],
         ]),
-        $mk('p510', 10, 'EU-CT-02', 'credit', '5.10', "Master's Degree", 1700, [
-            ['name' => 'Pre-admission', 'amount' => 850, 'payable_stage' => 'Pre-Admission'],
-            ['name' => 'After visa approval', 'amount' => 850, 'payable_stage' => 'Visa Approval'],
+        $mk('p526', 'EU-VV-ME-01', 'visit', 'Middle East Visit Visa (Business Invitation) – Full Package', 1500, $two(
+            'Upfront', 750, '',
+            'After visa approval', 750, ''
+        )),
+        $mk('p527', 'EU-VV-ME-02', 'visit', 'Middle East Visit Visa – Invitation Only', 600, [
+            ['name' => 'Upfront', 'amount' => 600, 'payable_stage' => 'Pre-Admission', 'note' => 'Non-refundable'],
         ]),
-        $mk('p511', 11, 'EU-CT-03', 'credit', '5.11', 'PhD Level', 2400, [
-            ['name' => 'Pre-admission', 'amount' => 1200, 'payable_stage' => 'Pre-Admission'],
-            ['name' => 'After visa approval', 'amount' => 1200, 'payable_stage' => 'Visa Approval'],
+        $mk('p528', 'EU-VV-SA-01', 'visit', 'South America Visit Visa (Business Invitation) – Full Package', 2500, $two(
+            'Upfront', 1250, '',
+            'After visa approval', 1250, ''
+        )),
+        $mk('p529', 'EU-VV-SA-02', 'visit', 'South America Visit Visa – Invitation Only', 600, [
+            ['name' => 'Upfront', 'amount' => 600, 'payable_stage' => 'Pre-Admission', 'note' => 'Non-refundable'],
         ]),
-        $mk('p512', 12, 'EU-AS-01', 'asia', '5.12', 'Documentation Support Only', 1200, [
-            ['name' => 'Pre-admission', 'amount' => 600, 'payable_stage' => 'Pre-Admission'],
-            ['name' => 'After visa approval', 'amount' => 600, 'payable_stage' => 'Visa Approval'],
-        ]),
-        $mk('p513', 13, 'EU-AS-02', 'asia', '5.13', 'Application Processing Only', 800, [
-            ['name' => 'Pre-admission', 'amount' => 400, 'payable_stage' => 'Pre-Admission'],
-            ['name' => 'After visa approval', 'amount' => 400, 'payable_stage' => 'Visa Approval'],
-        ]),
-        $mk('p514', 14, 'EU-AS-03', 'asia', '5.14', 'Full Service Package', 2000, [
-            ['name' => 'Pre-admission', 'amount' => 1000, 'payable_stage' => 'Pre-Admission'],
-            ['name' => 'After visa approval', 'amount' => 1000, 'payable_stage' => 'Visa Approval'],
-        ]),
-        $mk('p515', 15, 'EU-JS-01', 'job', '5.15', 'Expedited Processing (1-3 month)', 2500, [
-            ['name' => 'Before application', 'amount' => 1250, 'payable_stage' => 'Before Application'],
-            ['name' => 'After visa approval', 'amount' => 1250, 'payable_stage' => 'After Visa Approval'],
-        ]),
-        $mk('p516', 16, 'EU-JS-02', 'job', '5.16', 'Standard Processing (2-7 months)', 1500, [
-            ['name' => 'Before application', 'amount' => 750, 'payable_stage' => 'Before Application'],
-            ['name' => 'Before embassy appointment', 'amount' => 750, 'payable_stage' => 'Before Embassy Appointment'],
+        $mk('p530', 'EU-VV-FIN-01', 'visit', 'Financing USA & Canada Visit Visa Application Fees', 4000, $two(
+            'Upfront', 1500, 'Non-refundable',
+            'After visa approval', 2500, ''
+        )),
+
+        // —— Job Seeker ——
+        $mk('p531', 'EU-JS-ES-01', 'job', 'Spain (Semi-skilled Work)', 2500, $three(
+            'Non-refundable', 1000, 'Non-refundable',
+            '17% refundable installment', 750, '17% refundable',
+            'After visa approval', 750, ''
+        )),
+        $mk('p532', 'EU-JS-PT-01', 'job', 'Portugal (Semi-skilled Work)', 2600, $three(
+            'Non-refundable', 750, 'Non-refundable',
+            '17% refundable installment', 1000, '17% refundable',
+            'After visa approval', 850, ''
+        )),
+        $mk('p533', 'EU-JS-FIN-01', 'job', 'Financing Spain & Portugal Job Application Fees', 4000, $two(
+            'Upfront', 650, 'Non-refundable',
+            'After visa approval', 3350, ''
+        )),
+        $mk('p534', 'EU-JS-HU-01', 'job', 'Hungary (Semi-skilled Work / Assistant Agronomist)', 2500, $three(
+            'Non-refundable', 1000, 'Non-refundable',
+            '17% refundable installment', 750, '17% refundable',
+            'After visa approval', 750, ''
+        )),
+        $mk('p535', 'EU-JS-IT-01', 'job', 'Italy (Agricultural Work & Others)', 3650, $three(
+            'Non-refundable', 1100, 'Non-refundable',
+            '17% refundable installment', 1250, '17% refundable',
+            'After visa approval', 1300, ''
+        )),
+        $mk('p536', 'EU-JS-DE-01', 'job', 'Germany (Semi-skilled Work)', 3100, $three(
+            'Non-refundable', 1100, 'Non-refundable',
+            '17% refundable installment', 1000, '17% refundable',
+            'After visa approval', 1000, ''
+        )),
+        $mk('p537', 'EU-JS-SK-01', 'job', 'Slovakia (Skilled Work)', 2350, $three(
+            'Non-refundable', 750, 'Non-refundable',
+            '17% refundable installment', 800, '17% refundable',
+            'After visa approval', 800, ''
+        )),
+        $mk('p538', 'EU-JS-PL-01', 'job', 'Poland (Semi-skilled Work)', 2100, $three(
+            'Non-refundable', 1000, 'Non-refundable',
+            '17% refundable installment', 700, '17% refundable',
+            'After visa approval', 400, ''
+        )),
+        $mk('p539', 'EU-JS-CZ-01', 'job', 'Czech Republic (Semi-skilled Work)', 1200, $two(
+            'Non-refundable', 750, 'Non-refundable',
+            '17% refundable installment', 450, '17% refundable'
+        )),
+        $mk('p540', 'EU-JS-RS-01', 'job', 'Serbia (Warehouse Worker / Semi-skilled Work)', 2150, $three(
+            'Non-refundable', 750, 'Non-refundable',
+            '17% refundable installment', 800, '17% refundable',
+            'After visa approval', 600, ''
+        )),
+        $mk('p541', 'EU-JS-RO-01', 'job', 'Romania (Semi-skilled Work)', 2100, $three(
+            'Non-refundable', 1000, 'Non-refundable',
+            '17% refundable installment', 700, '17% refundable',
+            'After visa approval', 400, ''
+        )),
+        $mk('p542', 'EU-JS-BG-01', 'job', 'Bulgaria (Hotel Staff / Kitchen / Housekeeping / Gardener Assistant)', 3500, $three(
+            'Non-refundable', 1500, 'Non-refundable',
+            '17% refundable installment', 1000, '17% refundable',
+            'After visa approval', 1000, ''
+        )),
+        $mk('p543', 'EU-JS-BY-01', 'job', 'Belarus (General Worker, Production Assistant, Painter, Plasterer)', 3500, $three(
+            'Non-refundable', 1500, 'Non-refundable',
+            '17% refundable installment', 1000, '17% refundable',
+            'After visa approval', 1000, ''
+        )),
+        $mk('p544', 'EU-JS-EXP-01', 'job', 'Expedited / Express Processing (1–4 Months)', 250, [
+            ['name' => 'Additional fee (payable upfront)', 'amount' => 250, 'payable_stage' => 'Pre-Admission', 'note' => 'Non-refundable'],
         ]),
     ];
 }

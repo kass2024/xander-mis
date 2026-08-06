@@ -39,7 +39,8 @@ $packages = [];
 $sql = "
   SELECT id, title, total_amount, currency
   FROM fee_packages
-  ORDER BY id ASC
+  WHERE contract_code IS NOT NULL AND contract_code <> ''
+  ORDER BY display_order ASC, id ASC
 ";
 
 $result = $conn->query($sql);

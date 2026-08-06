@@ -625,7 +625,7 @@ function sendRegistrationConfirmation($studentId, $firstName, $lastName, $email,
         $phoneFull   = htmlspecialchars(trim($areaCode . ' ' . $phone));
         $emailSafe   = htmlspecialchars($email);
         $studentId   = htmlspecialchars($studentId);
-        $paymentLink = "https://xanderglobalscholars.com/payment.php?student_id=" . urlencode($studentId);
+        $paymentLink = xander_payment_public_url('/payment.php?student_id=' . urlencode((string) $studentId));
 
         $mail->Body = '
         <!DOCTYPE html>
@@ -1315,7 +1315,7 @@ $fee_items = [];
 $packages_summary = [];
 
 if (!$momo_mode) {
-    $packages_result = $conn->query("SELECT * FROM fee_packages ORDER BY display_order ASC, id ASC");
+    $packages_result = $conn->query("SELECT * FROM fee_packages WHERE contract_code IS NOT NULL AND contract_code <> '' ORDER BY display_order ASC, id ASC");
     if (!$packages_result) {
         error_log('Failed to fetch packages: ' . $conn->error);
         $registration_error = $debug_mode

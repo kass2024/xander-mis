@@ -49,11 +49,15 @@ function xander_prescreening_index_exists(mysqli $conn, string $table, string $i
 {
     $table = preg_replace('/[^a-z_]/', '', $table);
     $indexName = preg_replace('/[^a-z_]/', '', $indexName);
-    $r = @$conn->query(
-        "SHOW INDEX FROM `{$table}` WHERE Key_name = '" . $conn->real_escape_string($indexName) . "'"
-    );
-
-    return $r && $r->num_rows > 0;
+    try {
+        $r = @$conn->query(
+            "SHOW INDEX FROM `{$table}` WHERE Key_name = '" . $conn->real_escape_string($indexName) . "'"
+        );
+        return $r && $r->num_rows > 0;
+    } catch (Throwable $e) {
+        error_log('[prescreening_schema] index check failed on ' . $table . ': ' . $e->getMessage());
+        return false;
+    }
 }
 
 /**

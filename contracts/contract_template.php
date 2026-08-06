@@ -26,13 +26,11 @@ if ($isPdf && file_exists($letterheadPath)) {
 }
 
 
-/* Employer signature */
-$employerSignaturePath = $basePath . '/employer-signature.png';
-$employerSignatureBase64 = '';
-if (file_exists($employerSignaturePath)) {
-    $employerSignatureBase64 =
-        'data:image/png;base64,' . base64_encode(file_get_contents($employerSignaturePath));
-}
+/* Employer signature / stamp */
+require_once __DIR__ . '/../includes/contract_branding.php';
+xander_contract_ensure_branding_assets();
+$employerSignaturePath = xander_contract_employer_signature_path();
+$employerSignatureBase64 = xander_contract_branding_data_uri($employerSignaturePath);
 ?>
 <!DOCTYPE html>
 <html lang="en">

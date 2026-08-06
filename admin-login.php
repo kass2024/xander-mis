@@ -27,6 +27,11 @@ require_once 'database.php';  // provides $conn2
 require_once __DIR__ . '/helpers/mysqli_compat.php';
 require_once __DIR__ . '/helpers/admin_password_reset.php';
 
+if (defined('XANDER_IS_LOCAL_XAMPP') && XANDER_IS_LOCAL_XAMPP) {
+    require_once __DIR__ . '/includes/db_local_admin_seed.php';
+    xander_db_seed_local_admin_if_empty($conn);
+}
+
 xander_ensure_admin_password_reset_columns($conn);
 
 $error = '';

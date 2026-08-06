@@ -3,8 +3,17 @@ declare(strict_types=1);
 
 /**
  * Latest signed contract per student email (avoids duplicate list rows from retests).
+ * @deprecated Use xander_admin_all_signed_contracts_sql for admin list (delete must target exact row).
  */
 function xander_admin_signed_contracts_sql(string $contractsTable, string $signaturesTable): string
+{
+    return xander_admin_all_signed_contracts_sql($contractsTable, $signaturesTable);
+}
+
+/**
+ * All signed contracts (one row per contract) for admin management / delete.
+ */
+function xander_admin_all_signed_contracts_sql(string $contractsTable, string $signaturesTable): string
 {
     $contractsTable = preg_replace('/[^a-z_]/', '', $contractsTable);
     $signaturesTable = preg_replace('/[^a-z_]/', '', $signaturesTable);
@@ -28,18 +37,36 @@ function xander_admin_signed_contracts_sql(string $contractsTable, string $signa
             GROUP BY contract_id
         ) s2 ON s1.contract_id = s2.contract_id AND s1.id = s2.max_id
     ) sig ON sig.contract_id = c.id
-    INNER JOIN (
-        SELECT sig3.student_email, MAX(c3.id) AS max_contract_id
-        FROM `{$contractsTable}` c3
-        INNER JOIN `{$signaturesTable}` sig3 ON sig3.contract_id = c3.id
-        WHERE c3.status = 'signed'
-          AND sig3.student_email IS NOT NULL
-          AND sig3.student_email != ''
-        GROUP BY sig3.student_email
-    ) latest ON latest.max_contract_id = c.id
     WHERE c.status = 'signed'
     ORDER BY c.signed_at DESC, c.id DESC
     ";
+}
+
+/** Resolve contract PDF path safely (relative or absolute). */
+function xander_admin_resolve_contract_pdf_path(string $pdfPath): ?string
+{
+    $pdfPath = trim($pdfPath);
+    if ($pdfPath === '') {
+        return null;
+    }
+
+    $candidates = [$pdfPath];
+    if (!preg_match('/^[a-zA-Z]:\\\\|^\\//', $pdfPath)) {
+        $candidates[] = dirname(__DIR__) . DIRECTORY_SEPARATOR . ltrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $pdfPath), DIRECTORY_SEPARATOR);
+    }
+
+    $baseDir = realpath(dirname(__DIR__) . '/uploads/contracts');
+    foreach ($candidates as $candidate) {
+        $filePath = realpath($candidate);
+        if (!$filePath || !is_file($filePath) || !$baseDir) {
+            continue;
+        }
+        if (str_starts_with($filePath, $baseDir)) {
+            return $filePath;
+        }
+    }
+
+    return null;
 }
 
 /**
@@ -72,9 +99,8 @@ function xander_admin_delete_contract(
 
     $pdfPath = trim((string) ($row['pdf_path'] ?? ''));
     if ($pdfPath !== '') {
-        $filePath = realpath(__DIR__ . '/../' . ltrim($pdfPath, '/\\'));
-        $baseDir = realpath(__DIR__ . '/../uploads/contracts');
-        if ($filePath && $baseDir && str_starts_with($filePath, $baseDir) && is_file($filePath)) {
+        $filePath = xander_admin_resolve_contract_pdf_path($pdfPath);
+        if ($filePath) {
             @unlink($filePath);
         }
     }

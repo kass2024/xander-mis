@@ -2283,20 +2283,21 @@ if (strtolower($role) !== 'catholic university of america') {
                         r.name AS region,
                         c.name AS country,
                         GROUP_CONCAT(
-                          DISTINCT p.platform_name
-                          ORDER BY p.platform_name
+                          DISTINCT COALESCE(NULLIF(p.platform_name, ''), p.name)
+                          ORDER BY COALESCE(NULLIF(p.platform_name, ''), p.name)
                           SEPARATOR ', '
                         ) AS platforms
                       FROM universities u
                       LEFT JOIN regions r ON r.id = u.region_id
                       LEFT JOIN countries c ON c.id = u.country_id
                       LEFT JOIN university_platforms up ON up.university_id = u.id
-                      LEFT JOIN platforms p ON p.id = up.platform_id AND p.status = 'Active'
+                      LEFT JOIN platforms p ON p.id = up.platform_id AND (p.status = 'Active' OR p.status IS NULL)
                       GROUP BY u.id, u.name, u.region_id, u.country_id, r.name, c.name
                       ORDER BY u.name
                     ";
                     $res = mysqli_query($conn, $q);
                     $i = 1;
+                    if ($res):
                     while ($row = mysqli_fetch_assoc($res)):
                     ?>
                     <tr>
@@ -2316,7 +2317,9 @@ if (strtolower($role) !== 'catholic university of america') {
                         </button>
                       </td>
                     </tr>
-                    <?php endwhile; ?>
+                    <?php endwhile; else: ?>
+                    <tr><td colspan="6" class="text-center text-muted">Universities unavailable.</td></tr>
+                    <?php endif; ?>
                   </tbody>
                 </table>
               </div>
@@ -2347,6 +2350,7 @@ if (strtolower($role) !== 'catholic university of america') {
                     <?php
                     $res = mysqli_query($conn, "SELECT * FROM program_levels ORDER BY id");
                     $i = 1;
+                    if ($res):
                     while ($l = mysqli_fetch_assoc($res)):
                     ?>
                     <tr>
@@ -2359,7 +2363,9 @@ if (strtolower($role) !== 'catholic university of america') {
                         </button>
                       </td>
                     </tr>
-                    <?php endwhile; ?>
+                    <?php endwhile; else: ?>
+                    <tr><td colspan="4" class="text-center text-muted">Program levels unavailable.</td></tr>
+                    <?php endif; ?>
                   </tbody>
                 </table>
               </div>
@@ -2401,6 +2407,7 @@ if (strtolower($role) !== 'catholic university of america') {
               ";
               $res = mysqli_query($conn, $q);
               $tree = [];
+              if ($res) {
               while ($row = mysqli_fetch_assoc($res)) {
                 $u = $row['university'];
                 $c = $row['level_code'];
@@ -2411,6 +2418,7 @@ if (strtolower($role) !== 'catholic university of america') {
                   ];
                 }
                 $tree[$u][$c]['programs'][] = $row;
+              }
               }
               ?>
               <div class="container-fluid px-0">
@@ -2522,9 +2530,11 @@ if (strtolower($role) !== 'catholic university of america') {
               <label class="form-label">Platforms <small class="text-muted">(multiple allowed)</small></label>
               <select class="form-select" name="platform_ids[]" id="uni_platforms" multiple>
                 <?php
-                $p = mysqli_query($conn, "SELECT id, platform_name FROM platforms WHERE status = 'Active' ORDER BY platform_name");
+                $p = mysqli_query($conn, "SELECT id, COALESCE(NULLIF(platform_name,''), name) AS platform_name FROM platforms WHERE status = 'Active' OR status IS NULL ORDER BY platform_name, name");
+                if ($p) {
                 while ($row = mysqli_fetch_assoc($p)) {
-                  echo '<option value="'.$row['id'].'">'.htmlspecialchars($row['platform_name']).'</option>';
+                  echo '<option value="'.$row['id'].'">'.htmlspecialchars($row['platform_name'] ?? 'Platform').'</option>';
+                }
                 }
                 ?>
               </select>
@@ -2695,9 +2705,20 @@ if (strtolower($role) !== 'catholic university of america') {
       document.getElementById('sidebar').classList.toggle('show');
     }
     
-    function toggleSidebarMenu(menuId) {
-      const link = document.querySelector(`[href="#${menuId}"]`);
-      const submenu = document.getElementById(`submenu_${menuId}`);
+    function toggleSidebarMenu(menuId, evt) {
+      const event = evt || (typeof window !== 'undefined' ? window.event : null);
+      if (event) {
+        if (typeof event.preventDefault === 'function') event.preventDefault();
+        if (typeof event.stopPropagation === 'function') event.stopPropagation();
+      }
+
+      const submenu = document.getElementById('submenu_' + menuId);
+      const link = submenu && submenu.previousElementSibling && submenu.previousElementSibling.classList.contains('sidebar-link')
+        ? submenu.previousElementSibling
+        : null;
+      if (!link || !submenu) {
+        return false;
+      }
       
       // Close other top-level submenus (but ignore nested country folders)
       document.querySelectorAll('.sidebar-submenu').forEach(menu => {
@@ -2724,6 +2745,7 @@ if (strtolower($role) !== 'catholic university of america') {
         const arrow = link.querySelector('.arrow');
         if (arrow) arrow.style.transform = 'rotate(180deg)';
       }
+      return false;
     }
 
     // Nested country folders inside the Marketing Materials submenu.
@@ -2937,16 +2959,35 @@ if (strtolower($role) !== 'catholic university of america') {
     // Payment dashboard functionality
     document.addEventListener('DOMContentLoaded', async () => {
       const dashboard = document.getElementById('paymentDashboard');
-      if (!dashboard) return;
-      
+      const kpiWrap = document.getElementById('payment-kpis');
+      if (!dashboard || !kpiWrap) return;
+
+      const showPaymentError = (message) => {
+        kpiWrap.innerHTML = `
+          <div class="alert alert-warning mb-0">
+            <strong>Payment dashboard unavailable.</strong><br>
+            ${message}
+          </div>
+        `;
+        const recentBody = document.getElementById('recent-payments');
+        if (recentBody) {
+          recentBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No payment data</td></tr>';
+        }
+      };
+
       try {
         const res = await fetch('payment_dashboard_stats.php', {
           credentials: 'same-origin'
         });
-        
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        
-        const data = await res.json();
+
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || data.error) {
+          throw new Error((data && (data.message || data.mysqli_error)) ? (data.message || data.mysqli_error) : ('HTTP ' + res.status));
+        }
+
+        if (!data.status) {
+          throw new Error('Invalid payment stats response');
+        }
         
         // KPI Cards
         const kpis = [
@@ -3024,15 +3065,7 @@ if (strtolower($role) !== 'catholic university of america') {
           
       } catch (err) {
         console.error('Payment dashboard failed:', err);
-        const paymentDashboard = document.getElementById('paymentDashboard');
-        if (paymentDashboard) {
-          paymentDashboard.innerHTML = `
-            <div class="alert alert-danger mb-0">
-              <strong>Payment dashboard error.</strong><br>
-              ${err.message}
-            </div>
-          `;
-        }
+        showPaymentError(err.message || 'Could not load payment data.');
       }
     });
     

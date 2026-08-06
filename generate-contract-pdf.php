@@ -6,7 +6,9 @@ use Dompdf\Options;
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/includes/contract_fee_packages.php';
 require_once __DIR__ . '/includes/contract_package_map.php';
+require_once __DIR__ . '/includes/contract_pdf_helpers.php';
 
 /* =====================================================
    SAFE ESCAPE
@@ -78,15 +80,26 @@ $stmt = $conn->prepare("
         throw new RuntimeException('Invalid student signature.');
     }
 
-    $studentSignature = $data['signature_image'];
+    $studentSignature = xander_pdf_signature_on_white($data['signature_image']);
 
-    $consultantSigPath = __DIR__ . '/admin/employer-signature.png';
-    if (!file_exists($consultantSigPath)) {
-        throw new RuntimeException('Consultant signature missing.');
+    require_once __DIR__ . '/includes/contract_branding.php';
+    xander_contract_ensure_branding_assets();
+
+    $consultantStampPath = xander_contract_stamp_asset_path();
+    if (!file_exists($consultantStampPath)) {
+        throw new RuntimeException('Company stamp missing.');
     }
 
-    $consultantSignature =
-        'data:image/png;base64,' . base64_encode(file_get_contents($consultantSigPath));
+    $consultantSignaturePath = xander_contract_signature_asset_path();
+    if (!file_exists($consultantSignaturePath)) {
+        throw new RuntimeException('Authorized signature missing.');
+    }
+
+    $consultantStamp = xander_contract_branding_data_uri($consultantStampPath);
+    $consultantHandSignature = xander_contract_branding_data_uri($consultantSignaturePath);
+    if ($consultantStamp === '' || $consultantHandSignature === '') {
+        throw new RuntimeException('Company stamp or signature could not be loaded.');
+    }
 
     /* =====================================================
        3. ARTICLE 7 – SELECTED PACKAGE
@@ -120,7 +133,29 @@ $letterheadBase64 =
 ===================================================== */
 @page {
     size: A4;
-    margin: 0cm 2.54cm 2.54cm 2.54cm;
+    margin: 2.2cm 2.54cm 2.6cm 2.54cm;
+}
+
+@page :first {
+    margin-top: 0.6cm;
+}
+
+/* =====================================================
+   LETTERHEAD (first page only — in document flow)
+===================================================== */
+.letterhead-first {
+    width: 100%;
+    margin: 0 0 14pt 0;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+}
+
+.letterhead-first img {
+    width: 100%;
+    max-height: 3.2cm;
+    height: auto;
+    display: block;
+    object-fit: contain;
 }
 
 /* =====================================================
@@ -223,26 +258,26 @@ a {
     vertical-align: bottom;
 }
 
-/* LABEL COLUMN — SMALLER */
+/* LABEL COLUMN */
 .client-label {
-    width: 26%;
+    width: 44%;
     white-space: nowrap;
-    padding-right: 12pt;
+    padding-right: 10pt;
+    font-size: 10.5pt;
 }
 
-/* VALUE COLUMN — PUSH FAR RIGHT */
+/* VALUE COLUMN — aligned right of label, no overlap */
 .client-value {
-    width: 74%;
+    width: 56%;
     font-weight: bold;
     border-bottom: 1px solid #000;
-
     white-space: nowrap;
     overflow: hidden;
     text-overflow: clip;
-
-    padding-left: 18pt;   /* <<< KEY FIX */
-    padding-right: 6pt;
+    padding-left: 6pt;
+    padding-right: 2pt;
     box-sizing: border-box;
+    text-align: left;
 }
 
 /* =====================================================
@@ -255,19 +290,19 @@ a {
    CLIENT TYPE ROW – EXTRA WIDTH OVERRIDE
 ===================================================== */
 .client-type-row .client-label {
-    width: 20% !important;
+    width: 44% !important;
 }
 
 .client-type-row .client-value {
-    width: 80% !important;
+    width: 56% !important;
 }
 
 .client-type-value {
     border-bottom: none !important;
     white-space: nowrap !important;
-    font-size: 9pt;          /* slightly smaller */
-    word-spacing: 5pt;       /* reduced spacing */
-    padding-left: 18pt;
+    font-size: 9pt;
+    word-spacing: 5pt;
+    padding-left: 6pt;
     overflow: hidden;
 }
 
@@ -364,14 +399,11 @@ h2 + table.client-table {
     display: block;
 }
 
-/* =====================================================
-   FOOTER
-===================================================== */
-.footer {
-    margin-top: 24pt;
+.pdf-page-footer {
+    margin-top: 18pt;
     text-align: center;
-    font-size: 10pt;
-    color: #444;
+    font-size: 9pt;
+    color: #666;
 }
 
 </style>
@@ -382,7 +414,7 @@ h2 + table.client-table {
 <!-- =========================
      LETTERHEAD
 ========================= -->
-<div class="letterhead">
+<div class="letterhead-first">
     <img src="<?= $letterheadBase64 ?>" alt="Xander Global Scholars Letterhead">
 </div>
 
@@ -412,9 +444,9 @@ h2 + table.client-table {
 <h2>1. COMPANY</h2>
 
 <p>
-    <strong>Xander Global Scholars Ltd</strong>, Rwanda registered company<br>
-    A platform of <strong>Xander Tech LLC</strong>, an Arizona-registered company<br>
-    Phone: +1 270 438 7305<br>
+    <strong>Xander Global Scholars Ltd</strong>, a Rwanda-registered company<br>
+    In partnership with <strong>Xander Tech LLC</strong>, an Arizona-registered company<br>
+    Phone: +1 450 390 8614<br>
     Email: <a href="mailto:info@xanderglobalscholars.com">info@xanderglobalscholars.com</a>
 </p>
 
@@ -476,10 +508,8 @@ h2 + table.client-table {
     <td class="client-label">Client Type:</td>
    <td class="client-value client-type-value">
    <?= checkbox(in_array('Student', $clientTypes)) ?> Student&nbsp;
-<?= checkbox(in_array('Professional', $clientTypes)) ?> Professional&nbsp;
-<?= checkbox(in_array('Job Seeker', $clientTypes)) ?> Job&nbsp;Seeker&nbsp;
-<?= checkbox(in_array('Visitor Visa Applicant', $clientTypes)) ?> Visitor&nbsp;Visa 
- 
+<?= checkbox(in_array('Job Applicant', $clientTypes) || in_array('Job Seeker', $clientTypes)) ?> Job&nbsp;Applicant&nbsp;
+<?= checkbox(in_array('Visitor Visa Applicant', $clientTypes)) ?> Visitor&nbsp;Visa&nbsp;Applicant
 </td>
 
 </tr>
@@ -548,6 +578,7 @@ h2 + table.client-table {
 </ul>
 
 <p><strong>No Guarantee Disclaimer</strong></p>
+<p>The Client acknowledges and agrees that Xander Global Scholars does not guarantee:</p>
 <ul>
     <li>Visa approval</li>
     <li>Admission</li>
@@ -566,39 +597,7 @@ h2 + table.client-table {
 ========================= -->
 <h2>5. FEES &amp; PAYMENT TERMS</h2>
 
-<p>
-    All fees cover professional consulting, documentation support,
-    administrative processing, and coordination services.
-</p>
-
-<p>
-    <strong>
-        Government fees, embassy charges, biometric fees, tuition deposits,
-        courier fees, legal fees, and third-party costs are paid separately
-        and are non-refundable.
-    </strong>
-</p>
-
-<p>
-    The Client shall select <strong>one (1)</strong> applicable service package
-    from the options below.
-</p>
-
-<p><strong><?= esc($package['title']) ?></strong></p>
-
-<ul>
-<?php foreach ($package['lines'] as $line): ?>
-    <li><?= esc($line) ?></li>
-<?php endforeach; ?>
-</ul>
-
-<?php if (!empty($package['total'])): ?>
-<p><strong>Total Package Fee: <?= esc($package['total']) ?></strong></p>
-<?php endif; ?>
-
-<p>
-    <strong>Failure to pay may result in suspension or termination of services.</strong>
-</p>
+<?php renderContractFeePackagesPdf($data['selected_package_code']); ?>
 <hr>
 <!-- =========================
      ARTICLE 6 – PROCESSING TIMELINE
@@ -606,7 +605,7 @@ h2 + table.client-table {
 <h2>6. PROCESSING TIMELINE</h2>
 
 <p>
-    Estimated processing time is <strong>2–4 months</strong>, depending on:
+    Estimated <strong>Standard</strong> processing time is <strong>2–9 months</strong>, depending on:
 </p>
 
 <ul>
@@ -626,11 +625,11 @@ h2 + table.client-table {
 <h2>7. REFUND POLICY</h2>
 
 <p>
-If the Job Seeker visa application is refused, the Client shall be entitled to a <strong>30% refund</strong> of the total amount paid. The refund will be processed within <strong>2–4 months</strong> from the date of the official refusal decision.
+If a Job Seeker visa application is refused, the client shall be entitled to a <strong>17% refund of the total amount paid at the second installment</strong>. Refunds will be processed within <strong>1–2 months</strong> of the official refusal decision date.
 </p>
 
 <p>
-The remaining <strong>70% is non-refundable</strong> as it covers services already rendered, including:
+The remaining <strong>83% is non-refundable</strong> as it covers services already rendered, including:
 </p>
 
 <ul>
@@ -638,11 +637,12 @@ The remaining <strong>70% is non-refundable</strong> as it covers services alrea
     <li>Documentation handling</li>
     <li>Application support</li>
     <li>Government-related procedures</li>
-    <li>Professional time and services</li>
+    <li>Professional time and consultation services</li>
+    <li>Work permit application</li>
 </ul>
 
 <p>
-<strong>N.B:</strong> All other services and fees paid are strictly non-refundable.
+<strong>FINAL NOTICE:</strong> All other services and fees paid are strictly non-refundable, unless otherwise stated under an official promotion or written agreement from Xander Global Scholars.
 </p>
 <!-- =========================
      ARTICLE 8 – CLIENT RESPONSIBILITIES
@@ -661,7 +661,7 @@ The remaining <strong>70% is non-refundable</strong> as it covers services alrea
 
 <p>
     Any failure resulting from false, misleading, or delayed information
-    shall be the sole responsibility of the Client.
+    shall be the sole responsibility of the Client, and there will be no refund.
 </p>
 <hr>
 <!-- =========================
@@ -670,8 +670,8 @@ The remaining <strong>70% is non-refundable</strong> as it covers services alrea
 <h2>9. DATA COLLECTION &amp; CONSENT</h2>
 
 <p>
-    The Client authorizes the Company to collect, store, process,
-    and use personal data for:
+    The Client authorizes the Company to collect, store temporarily for no longer than 12 months,
+    process, and use personal data for:
 </p>
 
 <ul>
@@ -725,8 +725,8 @@ The remaining <strong>70% is non-refundable</strong> as it covers services alrea
 </ul>
 
 <p>
-    Fraud may result in civil, administrative, or criminal penalties under
-    U.S., EU, UK, Canadian, and international laws.
+    Fraud may result in civil, administrative, or criminal penalties under your local legal
+    administration, Africa, U.S., EU, UK, Canadian, and international laws.
 </p>
 <hr>
 <!-- =========================
@@ -830,19 +830,25 @@ The remaining <strong>70% is non-refundable</strong> as it covers services alrea
 
             <p style="margin:0 0 6pt 0;">
                 Name: <strong>Jean de Dieu Hakizimana</strong><br>
-                Title: <strong>Owner / Managing Director</strong>
+                Title: <strong>Chief of Operation</strong>
             </p>
 
             <div style="
-                width:7.5cm;
-                height:4cm;
+                width:8.5cm;
+                height:4.2cm;
                 border-bottom:1.2px solid #000;
                 margin-bottom:6pt;
                 padding:4pt 0;
+                display:flex;
+                align-items:flex-end;
+                gap:8pt;
             ">
-                <img src="<?= $consultantSignature ?>"
-                     alt="Authorized Signature & Stamp"
-                     style="max-width:100%; max-height:100%; display:block;">
+                <img src="<?= $consultantHandSignature ?>"
+                     alt="Authorized Signature"
+                     style="max-height:3.6cm; max-width:3.8cm; display:block;">
+                <img src="<?= $consultantStamp ?>"
+                     alt="Authorized Stamp"
+                     style="max-height:3.8cm; max-width:3.8cm; display:block;">
             </div>
 
             <p style="margin:0;">
@@ -860,15 +866,17 @@ The remaining <strong>70% is non-refundable</strong> as it covers services alrea
                 Name: <strong><?= esc($data['full_name']) ?></strong>
             </p>
 
-            <div style="
+            <div class="client-signature-box" style="
                 width:7cm;
                 height:3cm;
                 border-bottom:1px solid #000;
                 margin-bottom:4pt;
+                background:#ffffff;
+                padding:4pt;
             ">
                 <img src="<?= $studentSignature ?>"
                      alt="Client Signature"
-                     style="width:100%; height:100%; object-fit:contain;">
+                     style="width:100%; height:100%; object-fit:contain; background:#ffffff; display:block;">
             </div>
 
             <p style="margin:0;">
@@ -892,7 +900,7 @@ The remaining <strong>70% is non-refundable</strong> as it covers services alrea
 
 </div>
 
-<div class="footer">
+<div class="pdf-page-footer">
 Contract Reference: <?= esc($data['contract_token']) ?>
 </div>
 
@@ -908,6 +916,7 @@ Contract Reference: <?= esc($data['contract_token']) ?>
     $dompdf->loadHtml($html);
     $dompdf->setPaper('A4', 'portrait');
     $dompdf->render();
+    xander_dompdf_add_page_numbers($dompdf);
 
 if (!$dompdf->getCanvas()) {
     throw new RuntimeException('DOMPDF failed to render (canvas is null)');

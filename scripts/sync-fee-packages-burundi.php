@@ -4,7 +4,7 @@
  * Packages are applied in contract order via display_order (1–16).
  * fee_items are updated in-place by package_id so existing payment FKs stay valid.
  *
- * Run: php scripts/sync-fee-packages-burundi.php
+ * Run: php scripts/sync-fee-packages-from-catalog.php
  */
 declare(strict_types=1);
 

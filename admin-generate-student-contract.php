@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 session_start();
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/includes/contract_tables_schema.php';
+xander_ensure_student_contract_tables($conn);
 
 /* =====================================================
    1. ADMIN SECURITY

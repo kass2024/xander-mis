@@ -28,8 +28,11 @@ $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
 /* =====================================================
    4. CHECK FOR SUCCESS/ERROR MESSAGES
 ===================================================== */
-$showSuccess = isset($_GET['sent']) && $_GET['sent'] == '1';
+$showSuccess = (isset($_GET['sent']) && $_GET['sent'] == '1') || (isset($_GET['deleted']) && $_GET['deleted'] == '1');
 $showError = isset($_GET['error']) && !empty($_GET['error']);
+$successMessage = (isset($_GET['deleted']) && $_GET['deleted'] == '1')
+    ? 'Contract deleted successfully.'
+    : 'Email sent successfully!';
 
 /* =====================================================
    5. FETCH SIGNED CONTRACTS
@@ -75,7 +78,7 @@ body { padding: 32px 20px; }
 
 <?php if ($showSuccess): ?>
 <div class="alert alert-success xgs-alert success" id="successAlert">
-    <span>✅ Email sent successfully!</span>
+    <span>✅ <?= htmlspecialchars($successMessage) ?></span>
     <button type="button" class="close-btn" onclick="this.parentElement.remove()" aria-label="Close">×</button>
 </div>
 <?php endif; ?>
@@ -92,6 +95,7 @@ body { padding: 32px 20px; }
 <thead>
 <tr>
     <th>#</th>
+    <th>ID</th>
     <th>Student</th>
     <th>Email</th>
     <th>Status</th>
@@ -103,7 +107,7 @@ body { padding: 32px 20px; }
 
 <?php if ($result->num_rows === 0): ?>
 <tr>
-    <td colspan="6" class="empty-state xgs-empty-state">
+    <td colspan="7" class="empty-state xgs-empty-state">
         <strong>📭 No signed contracts found</strong>
         <p>Contracts will appear here once students sign them.</p>
     </td>
@@ -116,8 +120,9 @@ body { padding: 32px 20px; }
     $fullName = !empty($fullName) ? $fullName : 'Unknown Student';
     $hasBeenSent = !empty($row['sent_at']);
 ?>
-<tr>
+<tr id="contract-row-<?= (int)$row['contract_id'] ?>">
     <td><?= $i++ ?></td>
+    <td>#<?= (int)$row['contract_id'] ?></td>
     <td><strong><?= htmlspecialchars($fullName) ?></strong></td>
     <td><?= htmlspecialchars($row['email'] ?? '—') ?></td>
     <td><span class="status signed xgs-badge signed">✓ SIGNED</span></td>
@@ -140,7 +145,7 @@ body { padding: 32px 20px; }
               style="display:inline;">
 
             <input type="hidden" name="contract_id" value="<?= (int)$row['contract_id'] ?>">
-            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
 
             <button class="btn <?= $hasBeenSent ? 'btn-resend' : 'btn-send' ?> xgs-admin-btn <?= $hasBeenSent ? 'resend' : 'send' ?>"
                     title="<?= $hasBeenSent ? 'Resend contract email' : 'Send contract email' ?>">
@@ -151,13 +156,15 @@ body { padding: 32px 20px; }
         <!-- Delete Form -->
         <form action="<?= $basePath ?>/admin-delete-contract.php"
               method="post"
-              onsubmit="return confirm('⚠️ Delete this contract permanently?\nThis action cannot be undone.')"
+              class="delete-contract-form"
+              onsubmit="return deleteContract(this, this.querySelector('button'))"
               style="display:inline;">
 
             <input type="hidden" name="contract_id" value="<?= (int)$row['contract_id'] ?>">
-            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
+            <input type="hidden" name="ajax" value="1">
 
-            <button class="btn btn-del xgs-admin-btn del" title="Delete contract permanently">🗑 Delete</button>
+            <button type="submit" class="btn btn-del xgs-admin-btn del" title="Delete contract permanently">🗑 Delete</button>
         </form>
 
         <?php if ($hasBeenSent): ?>
@@ -243,6 +250,64 @@ function sendContract(form, btn) {
         showNotification('Failed to send email: ' + error.message, 'error');
         
         // Restore button
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+
+    return false;
+}
+
+function deleteContract(form, btn) {
+    if (!confirm('⚠️ Delete this contract permanently?\nThis action cannot be undone.')) {
+        return false;
+    }
+
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="xgs-loading"></span> Deleting...';
+
+    const formData = new FormData(form);
+    formData.append('_t', Date.now());
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(async response => {
+        const contentType = response.headers.get('content-type') || '';
+        const isJson = contentType.includes('application/json');
+        const payload = isJson ? await response.json() : null;
+
+        if (!response.ok || !payload || payload.success !== true) {
+            const msg = payload?.message || ('Delete failed (HTTP ' + response.status + ').');
+            throw new Error(msg);
+        }
+
+        showNotification(payload.message || 'Contract deleted successfully.', 'success');
+
+        const row = form.closest('tr');
+        if (row) {
+            row.remove();
+        }
+
+        const tbody = document.querySelector('.xgs-admin-table tbody');
+        if (tbody && tbody.querySelectorAll('tr').length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="empty-state xgs-empty-state">
+                        <strong>📭 No signed contracts found</strong>
+                        <p>Contracts will appear here once students sign them.</p>
+                    </td>
+                </tr>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Delete contract error:', error);
+        showNotification(error.message || 'Failed to delete contract.', 'error');
         btn.disabled = false;
         btn.innerHTML = originalText;
     });

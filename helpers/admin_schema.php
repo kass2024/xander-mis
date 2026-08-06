@@ -12,7 +12,13 @@ function xander_ensure_admins_registration_schema(mysqli $conn): void
     }
     $ensured = true;
 
-    $res = @$conn->query("SHOW COLUMNS FROM `admins` LIKE 'status'");
+    try {
+        $res = @$conn->query("SHOW COLUMNS FROM `admins` LIKE 'status'");
+    } catch (Throwable $e) {
+        error_log('[admin_schema] admins table unavailable: ' . $e->getMessage());
+        return;
+    }
+
     if ($res && $res->num_rows > 0) {
         $res->free();
         return;
@@ -24,7 +30,11 @@ function xander_ensure_admins_registration_schema(mysqli $conn): void
     $sql = "ALTER TABLE `admins`
             ADD COLUMN `status` VARCHAR(20) NOT NULL DEFAULT 'pending'
             AFTER `role`";
-    if (!@$conn->query($sql)) {
-        error_log('[admin_schema] Failed to add admins.status: ' . $conn->error);
+    try {
+        if (!@$conn->query($sql)) {
+            error_log('[admin_schema] Failed to add admins.status: ' . $conn->error);
+        }
+    } catch (Throwable $e) {
+        error_log('[admin_schema] ALTER admins.status failed: ' . $e->getMessage());
     }
 }

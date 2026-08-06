@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . "/db.php";
 require_once __DIR__ . "/site_session_bootstrap.php";
+require_once __DIR__ . '/includes/contract_tables_schema.php';
+xander_ensure_student_contract_tables($conn);
 
 /**
  * 0. Safety check: DB connection
@@ -56,7 +58,13 @@ if (!$contract) {
  * 4. Contract state flag (DO NOT EXIT)
  */
 $isSigned = ($contract['status'] === 'signed');
-$selectedPackageCode = (string) ($contract['selected_package_code'] ?? '');
+$selectedPackageCode = $isSigned ? (string) ($contract['selected_package_code'] ?? '') : '';
+
+require_once __DIR__ . '/helpers/payment_config.php';
+$payStudentId = !empty($contract['student_id']) ? (int) $contract['student_id'] : 0;
+$payHereUrl = $payStudentId > 0
+    ? xander_payment_public_url('/payment.php?student_id=' . $payStudentId)
+    : xander_payment_public_url('/payment.php');
 
 /* =====================================================
    LOAD STUDENT DATA FOR SERVER-SIDE RENDERING (SAFE)
@@ -102,9 +110,11 @@ if (!empty($contract['student_id']) && is_numeric($contract['student_id'])) {
 <title>Xander Global Scholars – Service Contract</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/contract-modern.css">
+<link rel="stylesheet" href="assets/css/contract-modern.css?v=20260806">
 <style>
 /* Page-specific tweaks for the main student contract */
+.contract-letterhead { width:100%; margin:0 0 24px; }
+.contract-letterhead img { width:100%; height:auto; display:block; border-radius:8px; }
 .contract            { /* legacy alias mapped onto modern card */ }
 .page-section        { padding: 32px 16px 64px; }
 .contract            { max-width: 980px; margin: 0 auto; background:#fff; padding:40px 44px; border-radius:16px; box-shadow:0 16px 48px rgba(15,23,42,.10); font-size:15px; line-height:1.75; color:#1e293b; }
@@ -181,7 +191,31 @@ if (!empty($contract['student_id']) && is_numeric($contract['student_id'])) {
   </div>
 </div>
 
-<div class="contract">
+<?php if ($isSigned): ?>
+<div class="xgs-pay-here-banner" style="max-width:980px;margin:0 auto 24px;padding:18px 22px;background:linear-gradient(135deg,#1d4ed8,#2563eb);border-radius:12px;color:#fff;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;box-shadow:0 8px 24px rgba(37,99,235,.25);">
+  <div>
+    <strong style="font-size:16px;">Ready to pay?</strong>
+    <div style="font-size:14px;opacity:.92;margin-top:4px;">Complete your service fees securely through our payment portal.</div>
+  </div>
+  <a href="<?= htmlspecialchars($payHereUrl, ENT_QUOTES, 'UTF-8') ?>" style="display:inline-flex;align-items:center;gap:8px;background:#fff;color:#1d4ed8;padding:12px 22px;border-radius:8px;font-weight:700;text-decoration:none;white-space:nowrap;">Pay Here →</a>
+</div>
+<?php endif; ?>
+
+<?php
+require_once __DIR__ . '/includes/contract_branding.php';
+xander_contract_ensure_branding_assets();
+$contractSignatureSrc = xander_contract_web_signature_src();
+$contractHandSignatureSrc = xander_contract_hand_signature_web_src();
+$contractLetterheadSrc = xander_contract_letterhead_web_src();
+?>
+
+<div class="contract xgs-contract bc-fee-host">
+
+<?php if ($contractLetterheadSrc !== ''): ?>
+<div class="contract-letterhead">
+  <img src="<?= htmlspecialchars($contractLetterheadSrc, ENT_QUOTES, 'UTF-8') ?>" alt="Xander Global Scholars Letterhead">
+</div>
+<?php endif; ?>
 
 <div class="contract-title">
   XANDER GLOBAL SCHOLARS LTD Master International Employment, Education &<br>
@@ -201,9 +235,9 @@ This Agreement (“Agreement”) is made and entered into on
 <h2>1. COMPANY</h2>
 
 <p>
-<strong>Xander Global Scholars Ltd</strong>, Rwanda registered company<br>
-A platform of <strong>Xander Tech LLC</strong>, an Arizona-registered company<br>
-Phone: +1 270 438 7305<br>
+<strong>Xander Global Scholars Ltd</strong>, a Rwanda-registered company<br>
+In partnership with <strong>Xander Tech LLC</strong>, an Arizona-registered company<br>
+Phone: +1 450 390 8614<br>
 Email: info@xanderglobalscholars.com
 </p>
 
@@ -374,8 +408,7 @@ Email: info@xanderglobalscholars.com
     <div style="font-weight:600; margin-bottom:8px; color:#0f172a;">Client Type:</div>
     <div class="xgs-checkgroup">
       <label><input type="checkbox" name="client_type[]" value="Student"> Student</label>
-      <label><input type="checkbox" name="client_type[]" value="Professional"> Professional</label>
-      <label><input type="checkbox" name="client_type[]" value="Job Seeker"> Job Seeker</label>
+      <label><input type="checkbox" name="client_type[]" value="Job Applicant"> Job Applicant</label>
       <label><input type="checkbox" name="client_type[]" value="Visitor Visa Applicant"> Visitor Visa Applicant</label>
     </div>
   </div>
@@ -436,6 +469,7 @@ not limited to:
 </ul>
 
 <p><strong>No Guarantee Disclaimer</strong></p>
+<p>The Client acknowledges and agrees that Xander Global Scholars does not guarantee:</p>
 <ul>
 <li>Visa approval</li>
 <li>Admission</li>
@@ -464,7 +498,7 @@ renderContractFeePackagesSection($isSigned, $selectedPackageCode);
 <h2>6. PROCESSING TIMELINE</h2>
 
 <p>
-Estimated processing time is 2–4 months, depending on:
+Estimated <strong>Standard</strong> processing time is <strong>2–9 months</strong>, depending on:
 </p>
 
 <ul>
@@ -481,11 +515,11 @@ The Company shall not be responsible for delays beyond its control.
 <h2>7. REFUND POLICY</h2>
 
 <p>
-If the Job Seeker visa application is refused, the Client shall be entitled to a <strong>30% refund</strong> of the total amount paid. The refund will be processed within 2–4 months from the date of the official refusal decision.
+If a Job Seeker visa application is refused, the client shall be entitled to a <strong>17% refund of the total amount paid at the second installment</strong>. Refunds will be processed within <strong>1–2 months</strong> of the official refusal decision date.
 </p>
 
 <p>
-The remaining <strong>70% is non-refundable</strong> as it covers services already rendered, including:
+The remaining <strong>83% is non-refundable</strong> as it covers services already rendered, including:
 </p>
 
 <ul>
@@ -493,11 +527,12 @@ The remaining <strong>70% is non-refundable</strong> as it covers services alrea
   <li>Documentation handling</li>
   <li>Application support</li>
   <li>Government-related procedures</li>
-  <li>Professional time and services</li>
+  <li>Professional time and consultation services</li>
+  <li>Work permit application</li>
 </ul>
 
 <p>
-<strong>N.B:</strong> All other services and fees paid are strictly non-refundable.
+<strong>FINAL NOTICE:</strong> All other services and fees paid are strictly non-refundable, unless otherwise stated under an official promotion or written agreement from Xander Global Scholars.
 </p>
 <h2>8. CLIENT RESPONSIBILITIES</h2>
 
@@ -512,12 +547,12 @@ The remaining <strong>70% is non-refundable</strong> as it covers services alrea
 
 <p>
 Any failure resulting from false, misleading, or delayed information shall be
-the sole responsibility of the Client.
+the sole responsibility of the Client, and there will be no refund.
 </p>
 <div class="hr"></div>
 <h2>9. DATA COLLECTION & CONSENT</h2>
 
-<p>The Client authorizes the Company to collect, store, process, and use personal data for:</p>
+<p>The Client authorizes the Company to collect, store temporarily for no longer than 12 months, process, and use personal data for:</p>
 <ul>
   <li>Applications</li>
   <li>Admissions</li>
@@ -558,8 +593,8 @@ All documents and information submitted must be genuine, accurate, and lawful.
 </ul>
 
 <p>
-Fraud may result in civil, administrative, or criminal penalties under
-U.S., EU, UK, Canadian, and international laws.
+Fraud may result in civil, administrative, or criminal penalties under your local legal
+administration, Africa, U.S., EU, UK, Canadian, and international laws.
 </p>
 <div class="hr"></div>
 <h2>13. LIMITATION OF LIABILITY</h2>
@@ -629,14 +664,19 @@ and supersedes all prior agreements.
   <p><strong>For Xander Global Scholars Ltd / Xander Tech LLC</strong></p>
 
   <p>Name: <strong>Jean de Dieu Hakizimana</strong></p>
-  <p>Title: <strong>Owner / Managing Director</strong></p>
+  <p>Title: <strong>Chief of Operation</strong></p>
 
-  <p>Stamp/Signature:</p>
-  <div style="border-bottom:1.5px solid #000; min-height:110px; max-width:340px; display:flex; align-items:flex-end; padding:6px 0; margin:6px 0 10px;">
+  <p>Signature &amp; Stamp:</p>
+  <div style="border-bottom:1.5px solid #000; min-height:120px; max-width:320px; display:flex; align-items:flex-end; gap:12px; padding:6px 0; margin:6px 0 10px;">
     <img
-      src="assets/signatures/xander-signature.png"
+      src="<?= htmlspecialchars($contractHandSignatureSrc, ENT_QUOTES, 'UTF-8') ?>"
       alt="Authorized Signature"
-      style="max-height:105px; max-width:100%; height:auto; display:block; filter:contrast(1.15) saturate(1.1); -webkit-filter:contrast(1.15) saturate(1.1);"
+      style="max-height:100px; max-width:140px; width:auto; height:auto; display:block;"
+    >
+    <img
+      src="<?= htmlspecialchars($contractSignatureSrc, ENT_QUOTES, 'UTF-8') ?>"
+      alt="Xander Global Scholars Official Stamp"
+      style="max-height:115px; max-width:140px; width:auto; height:auto; display:block;"
     >
   </div>
 
@@ -697,8 +737,12 @@ and supersedes all prior agreements.
   </p>
 
   <div style="margin-top:10px;">
+    <?php if (!$isSigned): ?>
     <button type="button" id="clearSignature">Clear</button>
     <button type="button" id="signContract">Sign & Submit</button>
+    <?php else: ?>
+    <p class="contract-warning" style="margin:0;">This contract has already been signed.</p>
+    <?php endif; ?>
     <input type="hidden" id="signatureData">
   </div>
 
@@ -730,14 +774,19 @@ and supersedes all prior agreements.
 
 <script>
 (() => {
+  const isSigned = <?= $isSigned ? 'true' : 'false' ?>;
+  if (isSigned) return;
+
   /* ==========================
      CONFIG & ELEMENTS
   ========================== */
   const canvas = document.querySelector('.signature-canvas');
+  if (!canvas) return;
   const ctx = canvas.getContext('2d');
 
   const btnClear = document.getElementById('clearSignature');
   const btnSubmit = document.getElementById('signContract');
+  if (!btnSubmit) return;
 
   const inputName = document.getElementById('sig_student_name');
   const inputDate = document.getElementById('sig_signed_date');
@@ -878,19 +927,29 @@ function getClientTypes() {
   const selectedRadio = document.querySelector('input[name="package"]:checked');
 
   if (!selectedRadio) {
-    alert("Please select one service package under Article 7 before signing.");
+    alert("Please select one service package under Section 5 (Fees & Payment) before signing.");
     return;
   }
 
-  const selectedPackageLabel = selectedRadio
-    .closest('label')
-    ?.textContent
-    ?.trim();
+  const selectedPackageCode = selectedRadio.value.trim()
+    || document.getElementById('selected_package_code')?.value?.trim()
+    || selectedRadio.getAttribute('data-package-code')
+    || '';
+  const selectedPackageLabel = selectedRadio.getAttribute('data-package-label')
+    || selectedRadio.closest('.package-item')?.getAttribute('data-package-label')
+    || selectedRadio.closest('.package-item')?.querySelector('.package-label-text')?.textContent?.trim()
+    || document.getElementById('selected_package_label')?.value?.trim()
+    || '';
 
-  if (!selectedPackageLabel) {
+  if (!selectedPackageCode || !selectedPackageLabel) {
     alert("Invalid package selection. Please reselect your package.");
     return;
   }
+
+  const holder = document.getElementById('selected_package_code');
+  if (holder) holder.value = selectedPackageCode;
+  const labelHolder = document.getElementById('selected_package_label');
+  if (labelHolder) labelHolder.value = selectedPackageLabel;
 
   /* ==========================
      3. STUDENT NAME VALIDATION
@@ -933,7 +992,8 @@ function getClientTypes() {
     signature,
     studentName,
     signedDate,
-    selectedPackageLabel
+    selectedPackageLabel,
+    selectedPackageCode
   );
 });
 
@@ -959,14 +1019,11 @@ function finishSubmitProgress() {
   /* ==========================
      SEND TO BACKEND
   ========================== */
-function submitSignature(signature, name, date, selectedPackage) {
-  // 🚀 START SMART PROGRESS BAR
+function submitSignature(signature, name, date, selectedPackage, selectedPackageCode) {
   startSubmitProgress();
 
-  /* ==========================
-     1. HARD SAFETY CHECKS
-  ========================== */
-  if (!signature || !name || !date || !selectedPackage) {
+  if (!signature || !name || !date || !selectedPackage || !selectedPackageCode) {
+    finishSubmitProgress();
     alert("Missing required data. Please review the form and try again.");
     return;
   }
@@ -984,6 +1041,7 @@ const countryInput   = document.getElementById('student_country');
 const addressInput   = document.getElementById('student_address');
 
   if (!emailInput || !dobInput || !nationalityInput || !passportInput || !phoneInput) {
+    finishSubmitProgress();
     alert("Student information fields are missing. Please reload the page.");
     return;
   }
@@ -998,7 +1056,7 @@ const payload = {
      📦 ARTICLE 7 – PACKAGE (LOCKED)
   ========================== */
   selected_package_label: selectedPackage,
-  selected_package_code: document.getElementById('selected_package_code')?.value || null,
+  selected_package_code: selectedPackageCode,
 
   /* ==========================
      ✍️ SIGNATURE DATA
@@ -1032,13 +1090,21 @@ const payload = {
    FINAL VALIDATION
 ========================== */
 if (!payload.student_email) {
+  finishSubmitProgress();
   alert("Student email is required.");
   emailInput.focus();
   return;
 }
 
-if (!payload.selected_package_label) {
-  alert("Selected package is missing. Please reselect a package under Article 7.");
+if (!payload.selected_package_code) {
+  finishSubmitProgress();
+  alert("Selected package is missing. Please reselect a package under Section 5.");
+  return;
+}
+
+if (!payload.client_type || payload.client_type.length === 0) {
+  finishSubmitProgress();
+  alert("Please select at least one Client Type (Student, Job Applicant, or Visitor Visa Applicant).");
   return;
 }
 
@@ -1284,59 +1350,90 @@ function lockFields() {
 </script>
 <script>
 /**
- * =====================================================
- * PACKAGE SELECTION CONTROLLER (UNIVERSAL)
- * =====================================================
- * ✔ Works with onclick="showPkg('pxxx')"
- * ✔ Ensures ONLY ONE package is visible at a time
- * ✔ ID-agnostic (p501, p71, future-safe)
- * ✔ Backend-safe
- * ✔ No UI conflicts
- * =====================================================
+ * Package selection — draft uses <label> for native radio clicks; signed is view-only.
  */
-
 (function () {
   'use strict';
 
-  /**
-   * Hide ALL package detail blocks
-   */
-  function hideAllPackages() {
+  const wrap = document.getElementById('bcFeeWrap');
+  if (!wrap) return;
+
+  const readOnly = wrap.dataset.readonly === '1';
+
+  function showDetailsFor(code) {
     document.querySelectorAll('.package-details').forEach(el => {
       el.style.display = 'none';
     });
+    document.querySelectorAll('.package-item').forEach(el => {
+      el.classList.remove('is-selected');
+    });
+
+    if (!code) return;
+
+    const details = document.getElementById(code);
+    const item = document.querySelector('.package-item[data-package-code="' + code + '"]');
+    if (details) details.style.display = 'block';
+    if (item) item.classList.add('is-selected');
   }
 
-  /**
-   * Show selected package + store selection
-   * @param {string} id
-   */
+  function syncHiddenFields(radio) {
+    if (!radio || readOnly) return;
+
+    const codeHolder = document.getElementById('selected_package_code');
+    const labelHolder = document.getElementById('selected_package_label');
+    const label = radio.getAttribute('data-package-label')
+      || radio.closest('.package-item')?.getAttribute('data-package-label')
+      || '';
+
+    if (codeHolder) codeHolder.value = radio.value;
+    if (labelHolder) labelHolder.value = label;
+  }
+
+  function onSelected(radio) {
+    if (!radio) return;
+    showDetailsFor(radio.value);
+    syncHiddenFields(radio);
+  }
+
   window.showPkg = function (id) {
-    hideAllPackages();
-
-    const selected = document.getElementById(id);
-    if (selected) {
-      selected.style.display = 'block';
-    }
-
-    // Save selected package code for backend
-    const holder = document.getElementById('selected_package_code');
-    if (holder) {
-      holder.value = id;
+    showDetailsFor(id);
+    if (!readOnly) {
+      const radio = document.querySelector('input[name="package"][value="' + id + '"]');
+      if (radio && !radio.disabled) {
+        radio.checked = true;
+        syncHiddenFields(radio);
+      }
     }
   };
 
-  /**
-   * Optional helper: return selected package label
-   */
+  document.querySelectorAll('input[name="package"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      if (radio.checked) onSelected(radio);
+    });
+
+    if (radio.checked) {
+      onSelected(radio);
+    }
+  });
+
+  if (readOnly) {
+    document.querySelectorAll('.package-item').forEach((item) => {
+      item.addEventListener('click', () => {
+        const code = item.getAttribute('data-package-code');
+        if (code) showDetailsFor(code);
+      });
+    });
+  }
+
   window.getSelectedPackage = function () {
     const radio = document.querySelector('input[name="package"]:checked');
     if (!radio) return null;
 
-    const label = radio.closest('label');
-    return label ? label.textContent.trim() : null;
+    return radio.getAttribute('data-package-label')
+      || radio.closest('.package-item')?.getAttribute('data-package-label')
+      || radio.closest('.package-item')?.querySelector('.package-label-text')?.textContent?.trim()
+      || null;
   };
-
 })();
 </script>
 
@@ -1379,20 +1476,20 @@ function lockFields() {
   'use strict';
 
   const today = new Date();
+  const isoDate = today.toISOString().slice(0, 10);
   const formatted = today.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
   });
 
-  // Static dates
   const xanderDate = document.getElementById('xander_date');
   const notaryDate = document.getElementById('notary_date');
   const studentDate = document.getElementById('sig_signed_date');
 
   if (xanderDate) xanderDate.textContent = formatted;
   if (notaryDate) notaryDate.textContent = formatted;
-  if (studentDate) studentDate.value = formatted;
+  if (studentDate) studentDate.value = isoDate;
 
 })();
 </script>

@@ -258,15 +258,26 @@ $stmt = $conn->prepare("
         throw new RuntimeException('Invalid student signature.');
     }
 
-    $studentSignature = $data['signature_image'];
+    $studentSignature = xander_pdf_signature_on_white($data['signature_image']);
 
-    $consultantSigPath = __DIR__ . '/admin/employer-signature.png';
-    if (!file_exists($consultantSigPath)) {
-        throw new RuntimeException('Consultant signature missing.');
+    require_once __DIR__ . '/includes/contract_branding.php';
+    xander_contract_ensure_branding_assets();
+
+    $consultantStampPath = xander_contract_stamp_asset_path();
+    if (!file_exists($consultantStampPath)) {
+        throw new RuntimeException('Company stamp missing.');
     }
 
-    $consultantSignature =
-        'data:image/png;base64,' . base64_encode(file_get_contents($consultantSigPath));
+    $consultantSignaturePath = xander_contract_signature_asset_path();
+    if (!file_exists($consultantSignaturePath)) {
+        throw new RuntimeException('Authorized signature missing.');
+    }
+
+    $consultantStamp = xander_contract_branding_data_uri($consultantStampPath);
+    $consultantHandSignature = xander_contract_branding_data_uri($consultantSignaturePath);
+    if ($consultantStamp === '' || $consultantHandSignature === '') {
+        throw new RuntimeException('Company stamp or signature could not be loaded.');
+    }
 
     /* =====================================================
        3. ARTICLE 7 – SELECTED PACKAGE
@@ -670,8 +681,9 @@ all prior discussions. Any amendment must be in writing and signed by both parti
 Name: TWAJAMAHORO Jean Pierre<br>
 Title: Managing Director
 
-<div class="signature-box">
-    <img src="<?= $consultantSignature ?>" alt="Consultant Signature">
+<div class="signature-box" style="display:flex; align-items:flex-end; gap:8pt;">
+    <img src="<?= $consultantHandSignature ?>" alt="Consultant Signature" style="max-height:3.6cm; max-width:3.8cm;">
+    <img src="<?= $consultantStamp ?>" alt="Company Stamp" style="max-height:3.8cm; max-width:3.8cm;">
 </div>
 
 Date: <?= esc($data['signed_date']) ?>

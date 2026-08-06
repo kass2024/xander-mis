@@ -37,18 +37,23 @@ function xander_normalize_password_reset_identifier(?string $raw): string
 function xander_ensure_admin_password_reset_columns(mysqli $conn): void
 {
     foreach (['password_reset_token', 'password_reset_expires'] as $col) {
-        $esc = $conn->real_escape_string($col);
-        $r = @$conn->query("SHOW COLUMNS FROM `admins` LIKE '{$esc}'");
-        if ($r && $r->num_rows > 0) {
-            continue;
-        }
-        if ($col === 'password_reset_token') {
-            $sql = "ALTER TABLE `admins` ADD COLUMN `password_reset_token` VARCHAR(64) NULL DEFAULT NULL";
-        } else {
-            $sql = "ALTER TABLE `admins` ADD COLUMN `password_reset_expires` DATETIME NULL DEFAULT NULL";
-        }
-        if (!@$conn->query($sql)) {
-            xander_password_reset_log('Column migration failed: ' . $conn->error, true);
+        try {
+            $esc = $conn->real_escape_string($col);
+            $r = @$conn->query("SHOW COLUMNS FROM `admins` LIKE '{$esc}'");
+            if ($r && $r->num_rows > 0) {
+                continue;
+            }
+            if ($col === 'password_reset_token') {
+                $sql = "ALTER TABLE `admins` ADD COLUMN `password_reset_token` VARCHAR(64) NULL DEFAULT NULL";
+            } else {
+                $sql = "ALTER TABLE `admins` ADD COLUMN `password_reset_expires` DATETIME NULL DEFAULT NULL";
+            }
+            if (!@$conn->query($sql)) {
+                xander_password_reset_log('Column migration failed: ' . $conn->error, true);
+            }
+        } catch (Throwable $e) {
+            xander_password_reset_log('Column migration skipped: ' . $e->getMessage(), true);
+            return;
         }
     }
 }

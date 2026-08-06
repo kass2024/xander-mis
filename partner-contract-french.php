@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/includes/contract_branding.php';
+xander_contract_ensure_branding_assets();
+$employerStampSrc = xander_contract_stamp_web_src();
 
 if (!isset($conn) || $conn->connect_error) {
     http_response_code(500);
@@ -794,7 +797,7 @@ Nom : Dr Jean Pierre Twajamahoro
 Fonction : Propriétaire & Directeur Général
 </div>
 <div style="margin-bottom:18px;">
-Signature : <img src="admin/employer-signature.png" alt="Signature de l'Employeur" style="max-height:60px; border-bottom:1px solid #000; padding-bottom:5px;">
+Signature : <img src="<?= htmlspecialchars($employerStampSrc, ENT_QUOTES, 'UTF-8') ?>" alt="Signature de l'Employeur" style="max-height:90px; border-bottom:1px solid #000; padding-bottom:5px;">
 </div>
 <div>
 Date : <span id="parrot_date">_________________________</span>
