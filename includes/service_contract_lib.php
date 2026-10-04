@@ -367,10 +367,107 @@ function xander_sc_study_row_to_offering(array $row, array $country, string $id,
     ];
 }
 
+/** @param array<string, mixed> $pkg @param array{id:?int,name:string,ref:string} $country */
+function xander_sc_package_to_offering(array $pkg, array $country, string $service): array
+{
+    $title = trim((string) ($pkg['title'] ?? ''));
+    $lines = array_values(array_map('strval', $pkg['lines'] ?? []));
+    $description = implode('; ', $lines);
+    $row = [
+        'id'            => (string) ($pkg['contract_code'] ?? ''),
+        'kind'          => $service === 'study' ? 'catalog_service' : ($service === 'work' ? 'job' : 'visit_package'),
+        'service_type'  => $service,
+        'active'        => true,
+        'country_ref'   => $country['ref'],
+        'country_id'    => $country['id'],
+        'country_name'  => $country['name'],
+        'title'         => $title,
+        'lines'         => $lines,
+        'currency'      => (string) ($pkg['currency'] ?? 'EUR'),
+        'catalog_total' => $pkg['total'] ?? null,
+        'description'   => $description,
+        'school_name'   => $service === 'study' ? $title : '',
+        'program_name'  => $service === 'study' ? $description : '',
+        'job_title'     => $service === 'work' ? $title : '',
+        'package_name'  => $service === 'visit' ? $title : '',
+    ];
+    $profile = is_array($pkg['profile'] ?? null) ? $pkg['profile'] : [];
+    if ($service === 'work') {
+        $row['category'] = 'Job seeker';
+        $row['roles'] = (string) ($profile['roles'] ?? '');
+        $row['processing'] = (string) ($profile['processing'] ?? '');
+        $row['salary'] = (string) ($profile['salary'] ?? '');
+        $row['requirements'] = (string) ($profile['requirements'] ?? '');
+        $row['note'] = (string) ($profile['note'] ?? '');
+    } elseif ($service === 'visit') {
+        $row['included'] = $lines;
+    }
+
+    return $row;
+}
+
+/**
+ * Services staff marked as available in this country, including older titles that name the country.
+ *
+ * @param array{id:?int,name:string,ref:string} $country
+ * @return list<array<string, mixed>>
+ */
+function xander_sc_country_service_offerings(mysqli $conn, string $service, array $country): array
+{
+    require_once __DIR__ . '/contract_service_settings.php';
+    $sections = xander_sc_sections_for_service($service);
+    if ($sections === []) {
+        return [];
+    }
+    $links = xander_contract_services_country_links($conn)['by_code'];
+    $countryName = (string) $country['name'];
+    $out = [];
+    foreach (xander_contract_services_catalog($conn) as $pkg) {
+        if (!in_array((string) ($pkg['section'] ?? ''), $sections, true)) {
+            continue;
+        }
+        if (array_key_exists('is_active', $pkg) && !$pkg['is_active']) {
+            continue;
+        }
+        $code = (string) ($pkg['contract_code'] ?? '');
+        if ($code === '' || $code === 'p544') {
+            continue;
+        }
+        $names = $links[$code] ?? [];
+        if (!xander_sc_package_matches_country((string) ($pkg['title'] ?? ''), $names, $countryName)) {
+            continue;
+        }
+        $out[] = xander_sc_package_to_offering($pkg, $country, $service);
+    }
+    usort($out, static fn (array $a, array $b): int => strcasecmp((string) $a['title'], (string) $b['title']));
+
+    return $out;
+}
+
+/** @param list<array<string, mixed>> $primary @param list<array<string, mixed>> $extra */
+function xander_sc_merge_offerings(array $primary, array $extra): array
+{
+    $seen = [];
+    foreach ($primary as $row) {
+        $seen[(string) ($row['id'] ?? '')] = true;
+    }
+    foreach ($extra as $row) {
+        $id = (string) ($row['id'] ?? '');
+        if ($id === '' || isset($seen[$id])) {
+            continue;
+        }
+        $seen[$id] = true;
+        $primary[] = $row;
+    }
+
+    return $primary;
+}
+
 /** @return list<array<string, mixed>> */
 function xander_sc_catalog_service_offerings(mysqli $conn, string $service, array $country): array
 {
-    $rows = xander_sc_catalog_offerings(xander_contract_fee_catalog(), $service, (string) $country['name']);
+    require_once __DIR__ . '/contract_service_settings.php';
+    $rows = xander_sc_catalog_offerings(xander_contract_services_catalog($conn), $service, (string) $country['name']);
     foreach ($rows as &$row) {
         $row['country_ref'] = $country['ref'];
         $row['country_id'] = $country['id'];
@@ -390,10 +487,12 @@ function xander_sc_offerings(mysqli $conn, string $service, string $countryRef):
         return [];
     }
     if ($service === 'study') {
-        return xander_sc_study_offerings($conn, $country);
+        $rows = xander_sc_study_offerings($conn, $country);
+    } else {
+        $rows = xander_sc_catalog_service_offerings($conn, $service, $country);
     }
 
-    return xander_sc_catalog_service_offerings($conn, $service, $country);
+    return xander_sc_merge_offerings($rows, xander_sc_country_service_offerings($conn, $service, $country));
 }
 
 function xander_sc_find_offering(mysqli $conn, string $service, string $countryRef, string $offeringId): ?array

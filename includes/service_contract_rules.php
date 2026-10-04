@@ -143,6 +143,38 @@ function xander_sc_catalog_section_for_service(string $service): ?string
     };
 }
 
+/** @return list<string> */
+function xander_sc_sections_for_service(string $service): array
+{
+    return match ($service) {
+        'study' => ['study', 'credit'],
+        'work'  => ['job'],
+        'visit' => ['visit'],
+        default => [],
+    };
+}
+
+/**
+ * A service is available in a country when staff selected that country,
+ * or when an older service title already names the country.
+ *
+ * @param list<string> $linkedCountryNames
+ */
+function xander_sc_package_matches_country(string $title, array $linkedCountryNames, string $countryName): bool
+{
+    $countryName = trim($countryName);
+    if ($countryName === '') {
+        return false;
+    }
+    foreach ($linkedCountryNames as $name) {
+        if (strcasecmp(trim((string) $name), $countryName) === 0) {
+            return true;
+        }
+    }
+
+    return in_array($countryName, xander_sc_destinations_in_title($title), true);
+}
+
 /**
  * @param list<array<string, mixed>> $catalog
  * @return list<array{name:string, ref:string}>

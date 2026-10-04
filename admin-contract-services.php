@@ -35,6 +35,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 ];
             }
         }
+        $countryIds = xander_contract_services_country_ids(is_array($_POST['country_ids'] ?? null) ? $_POST['country_ids'] : []);
         if ($action === 'save') {
             $result = xander_contract_services_save(
                 $conn,
@@ -43,7 +44,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 (string) ($_POST['service_section'] ?? ''),
                 (string) ($_POST['currency'] ?? ''),
                 isset($_POST['is_active']),
-                $items
+                $items,
+                $countryIds
             );
         } else {
             $result = xander_contract_services_create(
@@ -51,7 +53,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 (string) ($_POST['title'] ?? ''),
                 (string) ($_POST['service_section'] ?? ''),
                 (string) ($_POST['currency'] ?? ''),
-                $items
+                $items,
+                $countryIds
             );
         }
         if (!empty($result['ok'])) {
@@ -68,6 +71,8 @@ if (isset($_GET['saved'])) {
 
 $packages = xander_contract_services_admin_list($conn);
 $sections = xander_contract_service_sections();
+$countryOptions = xander_contract_service_country_options($conn);
+$countriesByPackage = xander_contract_services_country_links($conn)['by_package'];
 $currencies = [];
 foreach (xander_priority_currency_codes() as $code) {
     $all = xander_all_currencies();
@@ -91,6 +96,22 @@ function svc_h(mixed $value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
+
+/** @param list<int> $selectedIds */
+function svc_country_picker(array $selectedIds): void
+{
+    $selected = implode(',', array_map('intval', $selectedIds));
+    ?>
+    <div class="sc-field svc-country-picker" data-country-picker data-selected="<?= svc_h($selected) ?>">
+        <label>Available in <span class="sc-required">Required</span></label>
+        <input class="svc-country-filter" type="text" placeholder="Type a country, for example France" autocomplete="off" spellcheck="false">
+        <div class="svc-country-chips"></div>
+        <div class="svc-country-results"></div>
+        <div class="svc-country-inputs"></div>
+        <p class="sc-note">Choose every country where this service can be offered. Generate Contract Link lists it for that country.</p>
+    </div>
+    <?php
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -100,14 +121,14 @@ function svc_h(mixed $value): string
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= svc_h($basePath) ?>/assets/css/contract-modern.css">
-<link rel="stylesheet" href="<?= svc_h($basePath) ?>/assets/css/service-contract-wizard.css">
+<link rel="stylesheet" href="<?= svc_h($basePath) ?>/assets/css/service-contract-wizard.css?v=20261004f">
 </head>
 <body class="xgs-contract-body">
 <main class="sc-shell">
 <div class="sc-card">
     <a class="sc-btn sc-btn-ghost" href="<?= svc_h($basePath) ?>/admin-dashboard.php">← Dashboard</a>
     <h1>Contract services and prices</h1>
-    <p class="sc-lead">These are the services shown in section 5 of the student contract. The terms and conditions stay the same. Changing a price updates new and unsigned contracts.</p>
+    <p class="sc-lead">These are the services shown in section 5 of the student contract and in Generate Contract Link. Choose the countries where each service is available. The terms and conditions stay the same.</p>
     <?php if ($message !== ''): ?><div class="sc-note"><?= svc_h($message) ?></div><?php endif; ?>
     <?php if ($error !== ''): ?><div class="sc-error"><?= svc_h($error) ?></div><?php endif; ?>
 
@@ -140,6 +161,7 @@ function svc_h(mixed $value): string
                 <div class="sc-field"><label>Amount</label><input name="item_amount[]" type="number" min="0.01" step="0.01" required></div>
             </div>
             <div class="sc-field"><label>Note</label><input name="item_note[]" placeholder="Non-refundable"></div>
+            <?php svc_country_picker([]); ?>
             <button class="sc-btn sc-btn-primary" type="submit">Add service</button>
         </form>
     </details>
@@ -154,6 +176,11 @@ function svc_h(mixed $value): string
         <summary style="cursor:pointer; font-weight:700;">
             <?= svc_h($package['title']) ?>
             — <?= svc_h(xander_contract_services_money((float) $package['total_amount'], (string) $package['currency'])) ?>
+            <?php
+            $savedCountries = $countriesByPackage[(int) $package['id']] ?? [];
+            $savedNames = array_map(static fn (array $country): string => (string) $country['name'], $savedCountries);
+            ?>
+            — <?= $savedNames === [] ? 'No country yet' : svc_h(implode(', ', $savedNames)) ?>
             <?= $package['is_active'] ? '' : ' (hidden)' ?>
         </summary>
         <form method="post" style="margin-top:14px;">
@@ -199,6 +226,7 @@ function svc_h(mixed $value): string
             </div>
             <div class="sc-field"><label>Note</label><input name="item_note[]" value="<?= svc_h($item['note']) ?>"></div>
             <?php endforeach; ?>
+            <?php svc_country_picker(array_map(static fn (array $country): int => (int) $country['id'], $savedCountries)); ?>
             <button class="sc-btn sc-btn-primary" type="submit">Save prices</button>
         </form>
     </details>
@@ -206,6 +234,83 @@ function svc_h(mixed $value): string
     <?php endforeach; ?>
 </div>
 </main>
+<script>
+window.SVC_COUNTRIES = <?= json_encode($countryOptions, JSON_UNESCAPED_UNICODE) ?>;
+(function () {
+  const countries = Array.isArray(window.SVC_COUNTRIES) ? window.SVC_COUNTRIES : [];
+  const aliases = {
+    'united states': ['usa', 'us', 'america'],
+    'united kingdom': ['uk', 'britain'],
+    'united arab emirates': ['uae'],
+    'netherlands': ['holland'],
+    'cote d ivoire': ['ivory'],
+    'eswatini': ['swaziland']
+  };
+  function fold(value) {
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  function matches(name, query) {
+    const q = fold(query);
+    if (!q) return false;
+    const folded = fold(name);
+    const words = folded.split(' ').filter(Boolean);
+    const tokens = q.split(' ').filter(Boolean);
+    if (tokens.every((token) => words.some((word) => word.startsWith(token)))) return true;
+    const extra = aliases[folded] || [];
+    return tokens.every((token) => extra.some((alias) => fold(alias).startsWith(token)));
+  }
+  document.querySelectorAll('[data-country-picker]').forEach((picker) => {
+    const selected = new Set(String(picker.dataset.selected || '').split(',').map((id) => Number(id)).filter((id) => id > 0));
+    const filter = picker.querySelector('.svc-country-filter');
+    const chips = picker.querySelector('.svc-country-chips');
+    const results = picker.querySelector('.svc-country-results');
+    const inputs = picker.querySelector('.svc-country-inputs');
+    const byId = {};
+    countries.forEach((country) => { byId[country.id] = country; });
+    function render() {
+      inputs.innerHTML = Array.from(selected).map((id) => '<input type="hidden" name="country_ids[]" value="' + id + '">').join('');
+      chips.innerHTML = Array.from(selected).map((id) => {
+        const country = byId[id];
+        if (!country) return '';
+        return '<span class="svc-country-chip">' + country.name.replace(/[&<>]/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[ch])) + '<button type="button" data-remove="' + id + '" aria-label="Remove ' + country.name.replace(/"/g, '') + '">&times;</button></span>';
+      }).join('');
+      const query = filter.value.trim();
+      const found = query === '' ? [] : countries.filter((country) => !selected.has(country.id) && matches(country.name, query)).slice(0, 8);
+      if (!query) {
+        results.innerHTML = '<p class="svc-country-hint">Type to find a country, then add it.</p>';
+      } else if (!found.length) {
+        results.innerHTML = '<p class="svc-country-hint">No country matches that search.</p>';
+      } else {
+        results.innerHTML = found.map((country) => '<div class="svc-country-option"><span>' + country.name.replace(/[&<>]/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[ch])) + '</span><button type="button" data-add="' + country.id + '">Add</button></div>').join('');
+      }
+    }
+    filter.addEventListener('input', render);
+    filter.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      const button = results.querySelector('[data-add]');
+      if (!button) return;
+      selected.add(Number(button.getAttribute('data-add')));
+      filter.value = '';
+      render();
+    });
+    picker.addEventListener('click', (event) => {
+      const add = event.target.closest('[data-add]');
+      const remove = event.target.closest('[data-remove]');
+      if (add) {
+        selected.add(Number(add.getAttribute('data-add')));
+        filter.value = '';
+        render();
+        filter.focus();
+      } else if (remove) {
+        selected.delete(Number(remove.getAttribute('data-remove')));
+        render();
+      }
+    });
+    render();
+  });
+})();
+</script>
 <?php include __DIR__ . '/footer.php'; ?>
 </body>
 </html>

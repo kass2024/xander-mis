@@ -105,6 +105,10 @@ $visitFacts = xander_sc_renderer_facts('visit', ['package_name' => 'Canada Visit
 expect($visitFacts['show_visit'] && str_contains($visitFacts['visit_text'], 'Canada Visit Visa') && !$visitFacts['show_study'] && !$visitFacts['show_work'], 'visit renderer contains visit fields only');
 
 expect(xander_sc_format_reference(123, '2026') === 'CTR-2026-000123', 'reference format is CTR-year-sequence');
+expect(xander_sc_package_matches_country('Language pathway', ['France'], 'France'), 'a service is available in a country staff selected');
+expect(!xander_sc_package_matches_country('Language pathway', ['Spain'], 'France'), 'a service stays unavailable in a country that was not selected');
+expect(xander_sc_package_matches_country('Job in Spain', [], 'Spain'), 'an older title still makes the service available in that country');
+expect(xander_sc_sections_for_service('study') === ['study', 'credit'], 'study contracts can use study and credit services');
 
 if ($failed > 0) {
     fwrite(STDERR, "{$failed} test(s) failed.\n");

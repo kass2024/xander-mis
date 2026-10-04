@@ -66,6 +66,13 @@ body.xgs-contract-body .site-header { display: none !important; }
 .sc-country-row:hover, .sc-country-row.is-active { border-color: #93c5fd; background: #f8fbff; }
 .sc-country-row.is-selected { border-color: #1d4ed8; background: #dbeafe; box-shadow: 0 0 0 3px rgba(29, 78, 216, .15); }
 .sc-country-empty { margin: 0; padding: 14px; color: #475569; background: #fff; border-radius: 10px; }
+.svc-country-chips { display: flex; flex-wrap: wrap; gap: 8px; min-height: 8px; margin-top: 8px; }
+.svc-country-chip { display: inline-flex; align-items: center; gap: 6px; background: #dbeafe; color: #1e3a8a; border-radius: 999px; padding: 6px 8px 6px 12px; font-weight: 700; font-size: 14px; }
+.svc-country-chip button { border: 0; background: #1d4ed8; color: #fff; width: 22px; height: 22px; border-radius: 999px; cursor: pointer; line-height: 1; font-size: 16px; }
+.svc-country-results { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.svc-country-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; }
+.svc-country-option button { border: 0; background: #1d4ed8; color: #fff; border-radius: 8px; padding: 6px 12px; font-weight: 700; cursor: pointer; }
+.svc-country-hint { margin: 0; color: #64748b; font-size: 14px; }
 .sc-panel { display: none; }
 .sc-panel.is-active { display: block; }
 .sc-choice-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }

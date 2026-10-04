@@ -24,6 +24,14 @@ function xander_contract_services_ensure(mysqli $conn): void
 
     xander_db_add_column_if_missing($conn, 'fee_packages', 'service_section', "VARCHAR(16) NULL DEFAULT NULL");
     xander_db_add_column_if_missing($conn, 'fee_packages', 'is_active', 'TINYINT(1) NOT NULL DEFAULT 1');
+    $conn->query(
+        'CREATE TABLE IF NOT EXISTS fee_package_countries (
+            package_id INT NOT NULL,
+            country_id INT UNSIGNED NOT NULL,
+            PRIMARY KEY (package_id, country_id),
+            KEY idx_fee_package_countries_country (country_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    );
     if (xander_db_table_exists($conn, 'fee_items')) {
         xander_db_add_column_if_missing($conn, 'fee_items', 'note', 'VARCHAR(255) NULL DEFAULT NULL');
     }
@@ -371,6 +379,137 @@ function xander_contract_services_admin_list(mysqli $conn): array
     return array_values($byId);
 }
 
+/** @return list<array{id:int, name:string}> */
+function xander_contract_service_country_options(mysqli $conn): array
+{
+    if (!xander_db_table_exists($conn, 'countries')) {
+        return [];
+    }
+    $res = $conn->query("SELECT id, name FROM countries WHERE name IS NOT NULL AND name <> '' ORDER BY name ASC");
+    if (!$res) {
+        return [];
+    }
+    $out = [];
+    $seen = [];
+    while ($row = $res->fetch_assoc()) {
+        $id = (int) ($row['id'] ?? 0);
+        $name = trim((string) ($row['name'] ?? ''));
+        $key = mb_strtolower($name);
+        if ($id <= 0 || $name === '' || isset($seen[$key])) {
+            continue;
+        }
+        $seen[$key] = true;
+        $out[] = ['id' => $id, 'name' => $name];
+    }
+    $res->free();
+
+    return $out;
+}
+
+/**
+ * @param list<mixed> $raw
+ * @return list<int>
+ */
+function xander_contract_services_country_ids(array $raw): array
+{
+    $ids = [];
+    foreach ($raw as $value) {
+        $id = (int) $value;
+        if ($id > 0) {
+            $ids[$id] = $id;
+        }
+    }
+
+    return array_values($ids);
+}
+
+/**
+ * @param list<int> $ids
+ * @return list<int>
+ */
+function xander_contract_services_known_country_ids(mysqli $conn, array $ids): array
+{
+    $ids = xander_contract_services_country_ids($ids);
+    if ($ids === [] || !xander_db_table_exists($conn, 'countries')) {
+        return [];
+    }
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    $stmt = $conn->prepare('SELECT id FROM countries WHERE id IN (' . $placeholders . ')');
+    if (!$stmt) {
+        return [];
+    }
+    $refs = [];
+    foreach ($ids as $i => $id) {
+        $ids[$i] = (int) $id;
+        $refs[] = &$ids[$i];
+    }
+    $stmt->bind_param(str_repeat('i', count($ids)), ...$refs);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $known = [];
+    while ($row = $res->fetch_assoc()) {
+        $known[] = (int) $row['id'];
+    }
+    $stmt->close();
+
+    return $known;
+}
+
+/**
+ * @return array{by_package: array<int, list<array{id:int, name:string}>>, by_code: array<string, list<string>>}
+ */
+function xander_contract_services_country_links(mysqli $conn): array
+{
+    xander_contract_services_ensure($conn);
+    $empty = ['by_package' => [], 'by_code' => []];
+    if (!xander_db_table_exists($conn, 'fee_package_countries') || !xander_db_table_exists($conn, 'countries')) {
+        return $empty;
+    }
+    $sql = '
+        SELECT fp.id AS package_id, fp.contract_code, c.id AS country_id, c.name AS country_name
+        FROM fee_package_countries fpc
+        INNER JOIN fee_packages fp ON fp.id = fpc.package_id
+        INNER JOIN countries c ON c.id = fpc.country_id
+        ORDER BY c.name ASC
+    ';
+    $res = $conn->query($sql);
+    if (!$res) {
+        return $empty;
+    }
+    $byPackage = [];
+    $byCode = [];
+    while ($row = $res->fetch_assoc()) {
+        $packageId = (int) $row['package_id'];
+        $name = trim((string) $row['country_name']);
+        $byPackage[$packageId][] = ['id' => (int) $row['country_id'], 'name' => $name];
+        $code = (string) $row['contract_code'];
+        if ($code !== '' && $name !== '') {
+            $byCode[$code][] = $name;
+        }
+    }
+    $res->free();
+
+    return ['by_package' => $byPackage, 'by_code' => $byCode];
+}
+
+/** @param list<int> $countryIds */
+function xander_contract_services_replace_countries(mysqli $conn, int $packageId, array $countryIds): void
+{
+    $conn->query('DELETE FROM fee_package_countries WHERE package_id = ' . $packageId);
+    if ($countryIds === []) {
+        return;
+    }
+    $stmt = $conn->prepare('INSERT INTO fee_package_countries (package_id, country_id) VALUES (?, ?)');
+    if (!$stmt) {
+        throw new RuntimeException('Could not save the service countries.');
+    }
+    foreach ($countryIds as $countryId) {
+        $stmt->bind_param('ii', $packageId, $countryId);
+        $stmt->execute();
+    }
+    $stmt->close();
+}
+
 /**
  * @param list<array{name:string, amount:float, note:string}> $items
  * @return array{ok:bool, error?:string}
@@ -382,7 +521,8 @@ function xander_contract_services_save(
     string $section,
     string $currency,
     bool $active,
-    array $items
+    array $items,
+    array $countryIds = []
 ): array {
     xander_contract_services_ensure($conn);
     $title = trim($title);
@@ -429,6 +569,10 @@ function xander_contract_services_save(
     $total = round($total, 2);
     if ($total <= 0) {
         return ['ok' => false, 'error' => 'The service total must be greater than zero.'];
+    }
+    $countryIds = xander_contract_services_known_country_ids($conn, $countryIds);
+    if ($countryIds === []) {
+        return ['ok' => false, 'error' => 'Choose at least one country where this service is available.'];
     }
     $activeFlag = $active ? 1 : 0;
 
@@ -481,6 +625,7 @@ function xander_contract_services_save(
                 $conn->query('DELETE FROM fee_items WHERE id = ' . (int) $extraId . ' AND package_id = ' . $packageId);
             }
         }
+        xander_contract_services_replace_countries($conn, $packageId, $countryIds);
         $conn->commit();
     } catch (Throwable $e) {
         $conn->rollback();
@@ -499,7 +644,8 @@ function xander_contract_services_create(
     string $title,
     string $section,
     string $currency,
-    array $items
+    array $items,
+    array $countryIds = []
 ): array {
     xander_contract_services_ensure($conn);
     $title = trim($title);
@@ -551,6 +697,10 @@ function xander_contract_services_create(
     if ($total <= 0) {
         return ['ok' => false, 'error' => 'The service total must be greater than zero.'];
     }
+    $countryIds = xander_contract_services_known_country_ids($conn, $countryIds);
+    if ($countryIds === []) {
+        return ['ok' => false, 'error' => 'Choose at least one country where this service is available.'];
+    }
     $order = $next;
 
     $conn->begin_transaction();
@@ -573,6 +723,7 @@ function xander_contract_services_create(
             $ins->execute();
         }
         $ins->close();
+        xander_contract_services_replace_countries($conn, $packageId, $countryIds);
         $conn->commit();
     } catch (Throwable $e) {
         $conn->rollback();

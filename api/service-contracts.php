@@ -47,9 +47,9 @@ if ($method === 'GET') {
         }
         $offerings = xander_sc_offerings($conn, $service, $countryRef);
         $empty = match ($service) {
-            'study' => 'No active programs are currently available for this destination.',
-            'work'  => 'No active jobs are currently available for this destination.',
-            'visit' => 'No active visit packages are currently available for this destination.',
+            'study' => 'No active programs are currently available for this destination. Add the service under Services and prices and choose this country, or add it below for this contract only.',
+            'work'  => 'No active jobs are currently available for this destination. Add the service under Services and prices and choose this country, or add it below for this contract only.',
+            'visit' => 'No active visit packages are currently available for this destination. Add the service under Services and prices and choose this country, or add it below for this contract only.',
             default => 'Nothing is available for this destination.',
         };
         xander_sc_api_out([

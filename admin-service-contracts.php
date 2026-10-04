@@ -204,7 +204,7 @@ function sc_h(mixed $value): string
         preview: <?= json_encode($basePath . '/student-contract.php') ?>
     };
     </script>
-    <script src="<?= sc_h($basePath) ?>/assets/js/service-contract-wizard.js?v=20261004c"></script>
+    <script src="<?= sc_h($basePath) ?>/assets/js/service-contract-wizard.js?v=20261004f"></script>
 <?php else: ?>
     <div class="sc-toolbar">
         <div>

@@ -379,7 +379,7 @@
         service: state.service,
         country_ref: state.country_ref
       });
-      const addForm = '<div class="sc-add-service"><h3>Add this service</h3><div class="sc-field"><label for="sc-custom-title">Service name</label><input id="sc-custom-title" placeholder="School, job, or visit package"></div><div class="sc-field"><label for="sc-custom-details">Details</label><textarea id="sc-custom-details" rows="3"></textarea></div><button type="button" class="sc-btn sc-btn-primary" id="sc-add-service">Add service</button></div>';
+      const addForm = '<div class="sc-add-service"><h3>Add this service</h3><p class="sc-note">This contract uses <strong>' + escapeHtml(state.country_name || 'the selected country') + '</strong>. To make the service appear for that country next time, add it under Services and prices and choose the country there.</p><div class="sc-field"><label for="sc-custom-title">Service name</label><input id="sc-custom-title" placeholder="School, job, or visit package"></div><div class="sc-field"><label for="sc-custom-details">Details</label><textarea id="sc-custom-details" rows="3"></textarea></div><button type="button" class="sc-btn sc-btn-primary" id="sc-add-service">Add service</button></div>';
       if (!data.offerings.length) {
         box.innerHTML = '<p class="sc-empty">' + escapeHtml(data.message || 'No active option is listed for this destination. Add the service below.') + '</p>' + addForm;
         bindCustomService();
