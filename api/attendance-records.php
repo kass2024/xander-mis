@@ -36,8 +36,6 @@ date_default_timezone_set(
 
 $now       = date("Y-m-d H:i:s");
 $today     = date("Y-m-d");
-$dayOfWeek = date("w");
-$isWeekend = ($dayOfWeek == 0 || $dayOfWeek == 6);
 
 // =============================================================
 // 4. BLOCK FAKE GPS
@@ -124,7 +122,7 @@ if ($action === "checkin") {
 
     echo json_encode([
         "status" => "success",
-        "message" => $isWeekend ? "Weekend check-in (no salary)." : "Check-in successful",
+        "message" => "Check-in successful",
         "time" => $now
     ]);
     exit;
@@ -148,24 +146,6 @@ if ($action === "checkout") {
         exit;
     }
 
-    // Weekend → no salary
-    if ($isWeekend) {
-        $up = $conn->prepare("
-            UPDATE attendance SET
-                check_out_time = ?, check_out_location = ?, check_out_lat = ?, check_out_lng = ?,
-                break_duration_minutes = 0,
-                total_work_minutes = 0,
-                total_payment_rwf = 0,
-                daily_salary_rwf = 0
-            WHERE id = ?
-        ");
-        $up->bind_param("ssdddi", $now, $location, $lat, $lng, $attendance_id);
-        $up->execute();
-
-        echo json_encode(["status" => "success", "message" => "Weekend checkout", "salary" => 0]);
-        exit;
-    }
-
     // get rate
     $rate = $conn->prepare("SELECT salary_per_minute, allowed_break_minutes FROM admins WHERE id = ?");
     $rate->bind_param("i", $admin_id);
@@ -174,7 +154,7 @@ if ($action === "checkout") {
     $rate->fetch();
     $rate->close();
 
-    $salary_per_minute = floatval($salary_per_minute ?: 8.33);
+    $salary_per_minute = floatval($salary_per_minute);
     $allowed_break = intval($allowed_break ?? 0);
 
     // time calc
@@ -182,18 +162,9 @@ if ($action === "checkout") {
     $checkout_ts = strtotime($now);
     $total_minutes = ceil(($checkout_ts - $checkin_ts) / 60);
 
-    // =============================================================
-    // NEW RULE:
-    // If worked minutes >= 300 → count as FULL DAY (480)
-    // Otherwise keep actual minutes
-    // =============================================================
-    if ($total_minutes >= 300) {
-        $effective_minutes = 480;
-    } else {
-        $effective_minutes = $total_minutes;
-    }
-
-    $payment = round($effective_minutes * $salary_per_minute);
+    // Pay actual minutes, capped at a maximum of 480 minutes per day.
+    $payable_minutes = min($total_minutes, 480);
+    $payment = round($payable_minutes * $salary_per_minute);
 
     // SAVE INTO ALL REQUIRED FIELDS
     $up = $conn->prepare("
@@ -208,7 +179,7 @@ if ($action === "checkout") {
     $up->bind_param(
         "ssddiiiii",
         $now, $location, $lat, $lng,
-        $allowed_break, $effective_minutes,
+        $allowed_break, $total_minutes,
         $payment, $payment,
         $attendance_id
     );
@@ -217,7 +188,8 @@ if ($action === "checkout") {
     echo json_encode([
         "status" => "success",
         "message" => "Checkout successful",
-        "worked_minutes" => $effective_minutes,
+        "worked_minutes" => $total_minutes,
+        "paid_minutes" => $payable_minutes,
         "salary" => $payment
     ]);
     exit;

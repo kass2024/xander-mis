@@ -81,7 +81,8 @@ while ($row = $res->fetch_assoc()) {
     if ($iso >= 6) continue;
 
     if (isset($byDay[$d])) {
-        $salary = round($rate * $mins);
+        $payableMinutes = min($mins, 480);
+        $salary = round($rate * $payableMinutes);
         $byDay[$d]['minutes'] = $mins;
         $byDay[$d]['salary']  = $salary;
         $totalMins += $mins;

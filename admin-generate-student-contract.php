@@ -202,8 +202,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <body class="xgs-contract-body">
 
-<?php include 'header.php'; ?>
-
 <main class="issue-shell">
 
     <a href="admin-dashboard.php">
@@ -211,7 +209,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </a>
 
     <h1>📄 Issue Student Contract</h1>
-    <p class="subtitle">Generate or retrieve a persistent student contract link</p>
+    <p class="subtitle">Build a customer contract, then send the link. The public link is created only after you confirm.</p>
+    <a class="btn btn-primary" href="admin-service-contracts.php?wizard=1" style="text-decoration:none;margin-bottom:14px;">Generate Contract Link</a>
 
     <?php if ($message): ?>
         <div class="alert-success">✓ <?= htmlspecialchars($message) ?></div>

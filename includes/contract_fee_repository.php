@@ -50,6 +50,8 @@ function xander_packages_from_catalog(): array
  */
 function xander_load_contract_packages_from_db(mysqli $conn): array
 {
+    require_once __DIR__ . '/contract_service_settings.php';
+    xander_contract_services_ensure($conn);
     $cols = $conn->query("SHOW COLUMNS FROM fee_packages LIKE 'contract_code'");
     if (!$cols || $cols->num_rows === 0) {
         return [];
@@ -57,7 +59,7 @@ function xander_load_contract_packages_from_db(mysqli $conn): array
 
     $sql = "
         SELECT fp.id, fp.contract_code, fp.title, fp.total_amount, fp.currency,
-               fi.id AS item_id, fi.name AS item_name, fi.amount AS item_amount, fi.payable_stage
+               fi.id AS item_id, fi.name AS item_name, fi.amount AS item_amount, fi.payable_stage, fi.note AS item_note
         FROM fee_packages fp
         LEFT JOIN fee_items fi ON fi.package_id = fp.id
         WHERE fp.contract_code IS NOT NULL AND fp.contract_code <> ''
@@ -68,36 +70,37 @@ function xander_load_contract_packages_from_db(mysqli $conn): array
         return [];
     }
 
-    $sym = '€';
+    require_once __DIR__ . '/contract_service_settings.php';
     $byCode = [];
     while ($row = $res->fetch_assoc()) {
         $code = (string) $row['contract_code'];
         if (!isset($byCode[$code])) {
+            $currency = strtoupper((string) ($row['currency'] ?: 'EUR'));
             $total = (float) $row['total_amount'];
-            $totalFmt = $sym . number_format($total, 0, '.', ',');
+            $totalFmt = xander_contract_services_money($total, $currency);
             $title = trim((string) $row['title']);
             $byCode[$code] = [
                 'package_id' => (int) $row['id'],
-                'title'      => $title,
+                'title'      => $title . ' – ' . $totalFmt,
                 'total'      => $totalFmt,
                 'lines'      => [],
                 'label'      => $title . ' – ' . $totalFmt,
+                'currency'   => $currency,
             ];
         }
         if ($row['item_name'] !== null && $row['item_name'] !== '') {
-            $amt = number_format((float) $row['item_amount'], 0, '.', ',');
-            $byCode[$code]['lines'][] = $sym . $amt . ' – ' . trim((string) $row['item_name']);
+            $currency = $byCode[$code]['currency'];
+            $note = '';
+            if (array_key_exists('item_note', $row)) {
+                $note = trim((string) $row['item_note']);
+            }
+            $line = xander_contract_services_money((float) $row['item_amount'], $currency) . ' – ' . trim((string) $row['item_name']);
+            if ($note !== '') {
+                $line .= ' (' . $note . ')';
+            }
+            $byCode[$code]['lines'][] = $line;
         }
     }
-
-    foreach ($byCode as $code => &$pkg) {
-        $catalog = xander_contract_fee_catalog_by_code();
-        if (isset($catalog[$code])) {
-            $pkg['label'] = $catalog[$code]['label'];
-            $pkg['title'] = $catalog[$code]['label'];
-        }
-    }
-    unset($pkg);
 
     return $byCode;
 }
@@ -116,8 +119,17 @@ function xander_contract_fee_catalog_by_code(): array
 }
 
 /** @return list<array> */
-function xander_contract_fee_catalog_list(): array
+function xander_contract_fee_catalog_list(string $includeCode = ''): array
 {
+    $conn = $GLOBALS['conn'] ?? null;
+    if ($conn instanceof mysqli) {
+        require_once __DIR__ . '/contract_service_settings.php';
+        $fromSettings = xander_contract_services_catalog($conn, $includeCode);
+        if ($fromSettings !== []) {
+            return $fromSettings;
+        }
+    }
+
     return xander_contract_fee_catalog();
 }
 

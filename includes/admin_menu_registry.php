@@ -152,8 +152,11 @@ function xander_admin_menu_registry(): array
             'icon' => 'bi-file-earmark-lock',
             'section' => 'Applications',
             'links' => [
+                'admin-service-contracts.php?wizard=1' => 'Generate Contract Link',
+                'admin-service-contracts.php' => 'Contract status',
                 'admin-generate-student-contract.php' => 'Issue contract link',
                 'admin-contracts.php' => 'View students Contracts',
+                'admin-contract-services.php' => 'Services and prices',
                 'admin-generate-student-contract-burundi.php' => 'Issue Burundi contract link',
                 'admin-contracts-burundi.php' => 'Burundi contracts',
             ],

@@ -25,7 +25,7 @@ while ($admin = $admins->fetch_assoc()) {
     $salaryPerMinute = $admin['salary_per_minute'];
 
     // Get today's attendance
-    $stmt = $conn->prepare("SELECT check_in_time, check_out_time, total_work_minutes, daily_salary_rwf FROM attendance WHERE admin_id = ? AND date = ?");
+    $stmt = $conn->prepare("SELECT check_in_time, check_out_time, total_work_minutes FROM attendance WHERE admin_id = ? AND date = ?");
     $stmt->bind_param("is", $adminId, $dateToday);
     $stmt->execute();
     $stmt->store_result();
@@ -69,7 +69,7 @@ while ($admin = $admins->fetch_assoc()) {
         }
     } else {
         // Attendance exists — fetch values
-        $stmt->bind_result($checkIn, $checkOut, $minutesWorked, $salary);
+        $stmt->bind_result($checkIn, $checkOut, $minutesWorked);
         $stmt->fetch();
 
         if (!empty($checkIn) && empty($checkOut)) {
@@ -106,6 +106,8 @@ while ($admin = $admins->fetch_assoc()) {
 
         } elseif (!empty($checkIn) && !empty($checkOut)) {
             // Full attendance
+            $payableMinutes = min((int)$minutesWorked, 480);
+            $salary = (int)round($payableMinutes * (float)$salaryPerMinute);
             $checkedInOutList .= "<li><strong>$name</strong> – $minutesWorked mins – RWF $salary</li>";
 
             if ($role === 'staff' && !empty($email)) {

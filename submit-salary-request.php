@@ -45,7 +45,32 @@ if (!is_numeric($salary_rwf)) {
     exit;
 }
 
-$salary_rwf = floatval($salary_rwf);
+if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) {
+    $_SESSION['error'] = "Invalid salary month.";
+    header("Location: salary.php");
+    exit;
+}
+
+// Recalculate on the server so the request always uses the configured rate.
+$salaryStmt = $conn->prepare("
+    SELECT COALESCE(SUM(
+        ROUND(
+            LEAST(COALESCE(att.total_work_minutes, 0), 480)
+            * COALESCE(a.salary_per_minute, 0),
+            0
+        )
+    ), 0)
+    FROM attendance att
+    JOIN admins a ON a.id = att.admin_id
+    WHERE att.admin_id = ?
+      AND DATE_FORMAT(att.date, '%Y-%m') = ?
+");
+$salaryStmt->bind_param("is", $admin_id, $month);
+$salaryStmt->execute();
+$salaryStmt->bind_result($calculated_salary);
+$salaryStmt->fetch();
+$salaryStmt->close();
+$salary_rwf = (float)$calculated_salary;
 
 /* ===========================================================
    PAYMENT METHOD VALIDATION

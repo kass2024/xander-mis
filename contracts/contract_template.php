@@ -184,15 +184,6 @@ body {
 <?php endif; ?>
 
 
-<?php
-// ===============================
-// HEADER (FULL WIDTH, PARENT DIR)
-// ===============================
-if (empty($isPdf)) {
-    include __DIR__ . '/../header.php';
-}
-?>
-
 <div class="page-wrapper">
 
   <div class="contract">

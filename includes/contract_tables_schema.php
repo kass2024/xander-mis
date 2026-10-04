@@ -95,4 +95,7 @@ function xander_ensure_student_contract_tables(mysqli $conn): void
 
     require_once __DIR__ . '/burundi_contract_db.php';
     xander_ensure_burundi_contract_tables($conn);
+
+    require_once __DIR__ . '/service_contract_schema.php';
+    xander_ensure_service_contract_table($conn);
 }

@@ -3,6 +3,16 @@ declare(strict_types=1);
 
 ob_start(); // 🔑 CRITICAL: buffer all output
 
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+if (!empty($_SESSION['admin_id']) || !empty($_SESSION['id'])) {
+    header('Content-Type: application/json');
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'Only the customer can sign this contract.']);
+    exit;
+}
+
 require_once __DIR__ . "/db.php";
 require_once __DIR__ . "/vendor/autoload.php";
 require_once __DIR__ . "/includes/contract_signature_schema.php";

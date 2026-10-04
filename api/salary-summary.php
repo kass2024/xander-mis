@@ -16,11 +16,18 @@ $month = date('Y-m');
 
 $q = $conn->query("
     SELECT 
-        SUM(total_payment_rwf) AS total_salary,
-        SUM(total_work_minutes) AS total_minutes
-    FROM attendance
-    WHERE admin_id=$id
-    AND date LIKE '$month%'
+        COALESCE(SUM(
+            ROUND(
+                LEAST(COALESCE(att.total_work_minutes, 0), 480)
+                * COALESCE(a.salary_per_minute, 0),
+                0
+            )
+        ), 0) AS total_salary,
+        COALESCE(SUM(att.total_work_minutes), 0) AS total_minutes
+    FROM attendance att
+    JOIN admins a ON a.id = att.admin_id
+    WHERE att.admin_id=$id
+    AND att.date LIKE '$month%'
 ");
 
 $rows = $q->fetch_assoc();

@@ -22,13 +22,13 @@ if ($admin_id <= 0 || $date === '') {
 // ------------------------------
 $stmt = $conn->prepare("
     SELECT 
-        check_in_time,
-        check_out_time,
-        total_work_minutes,
-        daily_salary_rwf,
-        total_payment_rwf
-    FROM attendance
-    WHERE admin_id = ? AND date = ?
+        a.salary_per_minute,
+        att.check_in_time,
+        att.check_out_time,
+        att.total_work_minutes
+    FROM attendance att
+    JOIN admins a ON a.id = att.admin_id
+    WHERE att.admin_id = ? AND att.date = ?
     LIMIT 1
 ");
 $stmt->bind_param("is", $admin_id, $date);
@@ -46,19 +46,13 @@ if ($result->num_rows === 0) {
 $row = $result->fetch_assoc();
 
 // ------------------------------
-// 3. Build Safe Salary Value
+// 3. Calculate salary from the current configured rate
 // ------------------------------
-$salary = 0;
-
-// Priority 1: daily_salary_rwf
-if (!empty($row['daily_salary_rwf']) && $row['daily_salary_rwf'] > 0) {
-    $salary = intval($row['daily_salary_rwf']);
-}
-// Priority 2: fallback to total_payment_rwf
-else if (!empty($row['total_payment_rwf']) && $row['total_payment_rwf'] > 0) {
-    $salary = intval($row['total_payment_rwf']);
-}
-// Priority 3: salary stays 0 (weekends, missing checkout, job-hours < requirements)
+$worked_minutes = intval($row['total_work_minutes'] ?? 0);
+$payable_minutes = min($worked_minutes, 480);
+$salary = (int)round(
+    $payable_minutes * (float)($row['salary_per_minute'] ?? 0)
+);
 
 // ------------------------------
 // 4. Successful Output
@@ -68,8 +62,9 @@ echo json_encode([
     "message"         => "Daily salary report loaded",
     "check_in_time"   => $row['check_in_time'],
     "check_out_time"  => $row['check_out_time'],
-    "worked_minutes"  => intval($row['total_work_minutes']),
-    "salary"          => $salary       // ⭐ ALWAYS RETURNS A VALID SALARY
+    "worked_minutes"  => $worked_minutes,
+    "paid_minutes"    => $payable_minutes,
+    "salary"          => $salary
 ]);
 
 ?>

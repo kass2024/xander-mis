@@ -4,7 +4,15 @@ declare(strict_types=1);
 require_once __DIR__ . "/db.php";
 require_once __DIR__ . "/site_session_bootstrap.php";
 require_once __DIR__ . '/includes/contract_tables_schema.php';
+require_once __DIR__ . '/includes/service_contract_lib.php';
+require_once __DIR__ . '/includes/service_contract_render.php';
 xander_ensure_student_contract_tables($conn);
+
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+$isStaffViewer = !empty($_SESSION['admin_id']) || !empty($_SESSION['id']);
+$isPreview = isset($_GET['preview']) && (string) $_GET['preview'] === '1' && $isStaffViewer;
 
 /**
  * 0. Safety check: DB connection
@@ -17,12 +25,12 @@ if (!isset($conn) || $conn->connect_error) {
 /**
  * 1. Validate token presence
  */
-if (!isset($_GET['token']) || trim($_GET['token']) === '') {
+if (!$isPreview && (!isset($_GET['token']) || trim($_GET['token']) === '')) {
     http_response_code(400);
     exit("Invalid contract link.");
 }
 
-$token = trim($_GET['token']);
+$token = $isPreview ? '' : trim((string) ($_GET['token'] ?? ''));
 
 /**
  * 2. Load contract session
@@ -49,16 +57,89 @@ $stmt->close();
 /**
  * 3. Token not found
  */
-if (!$contract) {
-    http_response_code(404);
-    exit("This contract link is invalid or expired.");
+$isDynamicContract = false;
+$serviceContractRow = null;
+$signBlockReason = null;
+
+if ($isPreview) {
+    $previewService = (string) ($_GET['service'] ?? 'study');
+    if (!in_array($previewService, ['study', 'work', 'visit'], true)) {
+        $previewService = 'study';
+    }
+    $previewOffering = [
+        'title' => (string) ($_GET['offering'] ?? ''),
+        'description' => (string) ($_GET['details'] ?? ''),
+        'school_name' => $previewService === 'study' ? (string) ($_GET['offering'] ?? '') : '',
+        'program_name' => $previewService === 'study' ? (string) ($_GET['details'] ?? '') : '',
+        'job_title' => $previewService === 'work' ? (string) ($_GET['offering'] ?? '') : '',
+        'package_name' => $previewService === 'visit' ? (string) ($_GET['offering'] ?? '') : '',
+        'country_name' => (string) ($_GET['country'] ?? ''),
+    ];
+    $serviceContractRow = [
+        'status' => 'pending_signature',
+        'service_type' => $previewService,
+        'reference' => 'PREVIEW',
+        'created_at' => date('Y-m-d H:i:s'),
+        'country_name' => (string) ($_GET['country'] ?? ''),
+        'country' => ['name' => (string) ($_GET['country'] ?? '')],
+        'offering' => $previewOffering,
+        'customer' => [
+            'full_name' => (string) ($_GET['customer'] ?? ''),
+            'email' => (string) ($_GET['email'] ?? ''),
+            'phone' => (string) ($_GET['phone'] ?? ''),
+        ],
+        'fee' => [
+            'fee_label' => (string) ($_GET['fee_type'] ?? ''),
+            'formatted' => trim((string) ($_GET['currency'] ?? '') . ' ' . (string) ($_GET['amount'] ?? '')),
+            'amount' => (float) ($_GET['amount'] ?? 0),
+            'remaining_formatted' => trim((string) ($_GET['remaining_currency'] ?? '') . ' ' . (string) ($_GET['remaining'] ?? '')),
+        ],
+        'staff' => ['prepared_by' => (string) ($_GET['prepared_by'] ?? '')],
+        'amount' => (float) ($_GET['amount'] ?? 0),
+        'upfront_paid_at' => '',
+    ];
+    $isDynamicContract = true;
+    $isSigned = false;
+    $signBlockReason = 'Preview only. The customer signs from the contract link.';
+    $selectedPackageCode = '';
+    $contract = [
+        'status' => 'draft',
+        'student_id' => null,
+        'contract_token' => '',
+    ];
+} elseif (!$contract) {
+    $serviceContractRow = xander_sc_load_by_token($conn, $token, true);
+    if (!$serviceContractRow) {
+        http_response_code(404);
+        exit("This contract link is invalid or expired.");
+    }
+    $isDynamicContract = true;
+    $signBlockReason = xander_sc_sign_block_reason($serviceContractRow, date('Y-m-d H:i:s'));
+    $isSigned = (($serviceContractRow['status'] ?? '') === 'signed');
+    $selectedPackageCode = '';
+    $contract = [
+        'status' => $isSigned ? 'signed' : 'draft',
+        'student_id' => $serviceContractRow['customer_id'] ?? null,
+        'contract_token' => $token,
+    ];
+} else {
+    /**
+     * 4. Contract state flag (DO NOT EXIT)
+     */
+    $isSigned = ($contract['status'] === 'signed');
+    $selectedPackageCode = $isSigned ? (string) ($contract['selected_package_code'] ?? '') : '';
 }
 
-/**
- * 4. Contract state flag (DO NOT EXIT)
- */
-$isSigned = ($contract['status'] === 'signed');
-$selectedPackageCode = $isSigned ? (string) ($contract['selected_package_code'] ?? '') : '';
+$dynCustomer = $isDynamicContract ? (array) ($serviceContractRow['customer'] ?? []) : [];
+$dynLock = $isDynamicContract ? ' readonly' : '';
+$dynClientType = $isDynamicContract ? xander_sc_client_type_for_service((string) ($serviceContractRow['service_type'] ?? '')) : '';
+$canSignDynamic = $isDynamicContract && !$isSigned && $signBlockReason === null && !$isStaffViewer && !$isPreview;
+$upfrontAmount = $isDynamicContract ? (float) ($serviceContractRow['amount'] ?? ($serviceContractRow['fee']['amount'] ?? 0)) : 0;
+$upfrontPaid = $isDynamicContract && trim((string) ($serviceContractRow['upfront_paid_at'] ?? '')) !== '';
+$studySkipsPayHere = $isDynamicContract && (string) ($serviceContractRow['service_type'] ?? '') === 'study';
+$needsUpfrontPayment = $isDynamicContract && !$isSigned && !$isStaffViewer && !$isPreview && $upfrontAmount > 0 && !$upfrontPaid && !$studySkipsPayHere;
+$preparedByName = $isDynamicContract ? trim((string) ($serviceContractRow['staff']['prepared_by'] ?? $serviceContractRow['staff']['name'] ?? '')) : '';
+$showSignaturePad = !$isSigned && !$isStaffViewer && !$isPreview && !$needsUpfrontPayment && ($canSignDynamic || !$isDynamicContract);
 
 require_once __DIR__ . '/helpers/payment_config.php';
 $payStudentId = !empty($contract['student_id']) ? (int) $contract['student_id'] : 0;
@@ -107,21 +188,24 @@ if (!empty($contract['student_id']) && is_numeric($contract['student_id'])) {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<?php if (str_contains(str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '')), '/contract/')): ?>
+<base href="<?= htmlspecialchars((xander_sc_app_base_path() === '' ? '/' : xander_sc_app_base_path() . '/'), ENT_QUOTES, 'UTF-8') ?>">
+<?php endif; ?>
 <title>Xander Global Scholars – Service Contract</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/contract-modern.css?v=20260806e">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/contract-modern.css?v=20261004b">
 <style>
 /* Page-specific tweaks for the main student contract */
 .contract-letterhead { width:100%; margin:0 0 24px; }
 .contract-letterhead img { width:100%; height:auto; display:block; border-radius:8px; }
 .contract            { /* legacy alias mapped onto modern card */ }
 .page-section        { padding: 32px 16px 64px; }
-.contract            { max-width: 980px; margin: 0 auto; background:#fff; padding:40px 44px; border-radius:16px; box-shadow:0 16px 48px rgba(15,23,42,.10); font-size:15px; line-height:1.75; color:#1e293b; }
-.contract h2         { font-size:17px; font-weight:700; color:#0f172a; margin:32px 0 12px; padding-bottom:8px; border-bottom:2px solid #e2e8f0; display:flex; align-items:center; gap:10px; }
+.contract            { max-width: 980px; margin: 0 auto; background:#fff; padding:40px 44px; border-radius:16px; box-shadow:0 16px 48px rgba(15,23,42,.10); font-size:17.5px; line-height:1.8; color:#1e293b; }
+.contract h2         { font-size:20px; font-weight:700; color:#0f172a; margin:32px 0 12px; padding-bottom:8px; border-bottom:2px solid #e2e8f0; display:flex; align-items:center; gap:10px; }
 .contract h2::before { content:""; display:inline-block; width:4px; height:18px; background:linear-gradient(180deg,#1d4ed8,#2563eb); border-radius:2px; }
-.contract-title      { font-size:clamp(20px,2vw,24px); font-weight:800; text-align:center; margin:0 0 8px; color:#0f172a; letter-spacing:-0.01em; }
-.contract-subtitle   { font-size:14px; text-align:center; color:#64748b; margin:0 0 28px; }
+.contract-title      { font-size:clamp(24px,2.4vw,30px); font-weight:800; text-align:center; margin:0 0 8px; color:#0f172a; letter-spacing:-0.02em; }
+.contract-subtitle   { font-size:16px; text-align:center; color:#64748b; margin:0 0 28px; }
 .hr                  { height:1px; border:none; background:linear-gradient(to right,transparent,#cbd5e1,transparent); margin:28px 0; }
 .line-sm             { display:inline-block; min-width:140px; border-bottom:1.5px solid #94a3b8; }
 .line                { display:inline-block; min-width:220px; border-bottom:1.5px solid #94a3b8; }
@@ -163,9 +247,33 @@ if (!empty($contract['student_id']) && is_numeric($contract['student_id'])) {
 
 .contract-warning { margin:18px 0; padding:14px 16px; background:#fef3c7; border-left:4px solid #d97706; border-radius:8px; color:#7c2d12; }
 
+.contract { padding-bottom: 72px; }
+.contract-prepared-by {
+  position: fixed;
+  right: 18px;
+  bottom: 10px;
+  z-index: 30;
+  margin: 0;
+  padding: 8px 14px;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
 @media print {
+  .contract-prepared-by {
+    position: fixed;
+    right: 12mm;
+    bottom: 8mm;
+    border: none;
+    background: transparent;
+    font-size: 12pt;
+    padding: 0;
+  }
   body { background:#fff; }
-  .contract { box-shadow:none; border-radius:0; padding:0; }
+  .contract { box-shadow:none; border-radius:0; padding:0 0 16mm; }
   button, #signContract, #clearSignature { display:none; }
 }
 </style>
@@ -174,8 +282,6 @@ if (!empty($contract['student_id']) && is_numeric($contract['student_id'])) {
 </head>
 
 <body class="xgs-contract-body">
-
-<?php include 'header.php'; ?>
 
 <section class="page-section">
 
@@ -191,13 +297,20 @@ if (!empty($contract['student_id']) && is_numeric($contract['student_id'])) {
   </div>
 </div>
 
-<?php if ($isSigned): ?>
+<?php
+$contractPayUrl = $payHereUrl;
+if ($isDynamicContract && $token !== '') {
+    $contractPayUrl = xander_payment_public_url('/payment.php?contract_token=' . rawurlencode($token) . '&amount=' . rawurlencode((string) $upfrontAmount) . '&currency=' . rawurlencode((string) ($serviceContractRow['currency'] ?? $serviceContractRow['fee']['currency'] ?? '')));
+}
+$customerMaySign = !$isSigned && !$isStaffViewer && !$isPreview && ($canSignDynamic || (!$isDynamicContract && !$needsUpfrontPayment));
+?>
+<?php if ($needsUpfrontPayment): ?>
 <div class="xgs-pay-here-banner" style="max-width:980px;margin:0 auto 24px;padding:18px 22px;background:linear-gradient(135deg,#1d4ed8,#2563eb);border-radius:12px;color:#fff;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;box-shadow:0 8px 24px rgba(37,99,235,.25);">
   <div>
-    <strong style="font-size:16px;">Ready to pay?</strong>
-    <div style="font-size:14px;opacity:.92;margin-top:4px;">Complete your service fees securely through our payment portal.</div>
+    <strong style="font-size:16px;">Pay Here is required before you sign</strong>
+    <div style="font-size:14px;opacity:.92;margin-top:4px;">Pay the upfront fee of <?= htmlspecialchars(xander_sc_format_money($upfrontAmount, (string) ($serviceContractRow['currency'] ?? $serviceContractRow['fee']['currency'] ?? '')), ENT_QUOTES, 'UTF-8') ?>. The signature stays closed until this payment is confirmed. An upfront fee of 0 does not need Pay Here.</div>
   </div>
-  <a href="<?= htmlspecialchars($payHereUrl, ENT_QUOTES, 'UTF-8') ?>" style="display:inline-flex;align-items:center;gap:8px;background:#fff;color:#1d4ed8;padding:12px 22px;border-radius:8px;font-weight:700;text-decoration:none;white-space:nowrap;">Pay Here →</a>
+  <a href="<?= htmlspecialchars($contractPayUrl, ENT_QUOTES, 'UTF-8') ?>" style="display:inline-flex;align-items:center;gap:8px;background:#fff;color:#1d4ed8;padding:12px 22px;border-radius:8px;font-weight:700;text-decoration:none;white-space:nowrap;">Pay Here →</a>
 </div>
 <?php endif; ?>
 
@@ -229,7 +342,7 @@ $contractLetterheadSrc = xander_contract_letterhead_web_src();
 
 <p>
 This Agreement (“Agreement”) is made and entered into on
-<span class="line-sm"></span> (“Effective Date”), by and between:
+<span class="line-sm"><?php if ($isDynamicContract && !empty($serviceContractRow['created_at'])) { echo htmlspecialchars(date('F j, Y', strtotime((string) $serviceContractRow['created_at'])), ENT_QUOTES, 'UTF-8'); } ?></span> (“Effective Date”), by and between:
 </p>
 <div class="hr"></div>
 <h2>1. COMPANY</h2>
@@ -259,6 +372,8 @@ Email: info@xanderglobalscholars.com
       name="student_email"
       autocomplete="email"
       required
+      <?= $dynLock ?>
+      value="<?= htmlspecialchars((string) ($dynCustomer['email'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
       style="
         width:60%;
         border:none;
@@ -279,6 +394,8 @@ Email: info@xanderglobalscholars.com
       name="student_name"
       autocomplete="name"
       required
+      <?= $dynLock ?>
+      value="<?= htmlspecialchars((string) ($dynCustomer['full_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
       style="
         width:65%;
         border:none;
@@ -298,6 +415,8 @@ Email: info@xanderglobalscholars.com
       name="student_dob"
       autocomplete="bday"
       required
+      <?= $dynLock ?>
+      value="<?= htmlspecialchars((string) ($dynCustomer['dob'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
       style="
         width:40%;
         border:none;
@@ -316,6 +435,8 @@ Email: info@xanderglobalscholars.com
       id="student_passport"
       name="student_passport"
       autocomplete="off"
+      <?= $dynLock ?>
+      value="<?= htmlspecialchars((string) ($dynCustomer['passport'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
       style="
         width:55%;
         border:none;
@@ -335,6 +456,8 @@ Email: info@xanderglobalscholars.com
       name="student_nationality"
       autocomplete="country-name"
       required
+      <?= $dynLock ?>
+      value="<?= htmlspecialchars((string) ($dynCustomer['nationality'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
       style="
         width:45%;
         border:none;
@@ -353,6 +476,8 @@ Email: info@xanderglobalscholars.com
       id="student_country"
       name="student_country"
       autocomplete="country"
+      <?= $dynLock ?>
+      value="<?= htmlspecialchars((string) ($dynCustomer['residence_country'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
       style="
         width:45%;
         border:none;
@@ -371,6 +496,8 @@ Email: info@xanderglobalscholars.com
       id="student_address"
       name="student_address"
       autocomplete="street-address"
+      <?= $dynLock ?>
+      value="<?= htmlspecialchars((string) ($dynCustomer['address'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
       style="
         width:70%;
         border:none;
@@ -392,6 +519,8 @@ Email: info@xanderglobalscholars.com
       name="student_phone"
       autocomplete="tel"
       required
+      <?= $dynLock ?>
+      value="<?= htmlspecialchars((string) ($dynCustomer['phone'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"
       style="
         width:45%;
         border:none;
@@ -407,11 +536,15 @@ Email: info@xanderglobalscholars.com
   <div style="margin-top:18px;">
     <div style="font-weight:600; margin-bottom:8px; color:#0f172a;">Client Type:</div>
     <div class="xgs-checkgroup">
-      <label><input type="checkbox" name="client_type[]" value="Student"> Student</label>
-      <label><input type="checkbox" name="client_type[]" value="Job Applicant"> Job Applicant</label>
-      <label><input type="checkbox" name="client_type[]" value="Visitor Visa Applicant"> Visitor Visa Applicant</label>
+      <label><input type="checkbox" name="client_type[]" value="Student" <?= $dynClientType === 'Student' ? 'checked' : '' ?> <?= $isDynamicContract ? 'disabled' : '' ?>> Student</label>
+      <label><input type="checkbox" name="client_type[]" value="Job Applicant" <?= $dynClientType === 'Job Applicant' ? 'checked' : '' ?> <?= $isDynamicContract ? 'disabled' : '' ?>> Job Applicant</label>
+      <label><input type="checkbox" name="client_type[]" value="Visitor Visa Applicant" <?= $dynClientType === 'Visitor Visa Applicant' ? 'checked' : '' ?> <?= $isDynamicContract ? 'disabled' : '' ?>> Visitor Visa Applicant</label>
     </div>
   </div>
+
+<?php if ($isDynamicContract && is_array($serviceContractRow)): ?>
+<?php xander_sc_render_service_facts($serviceContractRow); ?>
+<?php endif; ?>
 
 </div>
 
@@ -489,10 +622,14 @@ immigration authorities, lenders, and other third-party entities.
 
 <h2>5. FEES & PAYMENT TERMS</h2>
 
+<?php if ($isDynamicContract && is_array($serviceContractRow)): ?>
+<?php xander_sc_render_locked_fee($serviceContractRow); ?>
+<?php else: ?>
 <?php
 require_once __DIR__ . '/includes/contract_fee_packages.php';
-renderContractFeePackagesSection($isSigned, $selectedPackageCode);
+renderContractFeePackagesSection($isSigned, $selectedPackageCode, (string) ($contract['selected_package_label'] ?? ''));
 ?>
+<?php endif; ?>
 <!-- PACKAGES_END -->
 <div class="hr"></div>
 <h2>6. PROCESSING TIMELINE</h2>
@@ -690,6 +827,20 @@ and supersedes all prior agreements.
 <!-- ============================
      STUDENT (DRAWN SIGNATURE + AUTO DATE)
 ============================ -->
+<?php if ($needsUpfrontPayment): ?>
+<div class="xgs-pay-here-banner" style="margin:0 0 18px;padding:18px 22px;background:linear-gradient(135deg,#1d4ed8,#2563eb);border-radius:12px;color:#fff;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;">
+  <div>
+    <strong style="font-size:18px;">Pay Here is required before you sign</strong>
+    <div style="font-size:15px;opacity:.92;margin-top:4px;">Pay the upfront fee of <?= htmlspecialchars(xander_sc_format_money($upfrontAmount, (string) ($serviceContractRow['currency'] ?? $serviceContractRow['fee']['currency'] ?? '')), ENT_QUOTES, 'UTF-8') ?>. After payment is confirmed, return here to sign. A zero upfront fee does not need this step.</div>
+  </div>
+  <a href="<?= htmlspecialchars($contractPayUrl, ENT_QUOTES, 'UTF-8') ?>" style="display:inline-flex;align-items:center;gap:8px;background:#fff;color:#1d4ed8;padding:12px 22px;border-radius:8px;font-weight:700;text-decoration:none;white-space:nowrap;">Pay Here →</a>
+</div>
+<?php elseif ($studySkipsPayHere && !$isSigned && !$isStaffViewer && !$isPreview): ?>
+<p class="contract-warning">Study contracts do not use Pay Here. You can sign this contract.</p>
+<?php elseif ($isDynamicContract && !$isSigned && !$isStaffViewer && !$isPreview && $upfrontAmount <= 0): ?>
+<p class="contract-warning">The upfront fee is 0, so Pay Here is not required. You can sign this contract.</p>
+<?php endif; ?>
+
 <div class="signature">
 
   <p><strong>Client (Student / Applicant)</strong></p>
@@ -714,9 +865,15 @@ and supersedes all prior agreements.
 
   <p>Signature:</p>
 
+  <?php if ($isDynamicContract && $isSigned && !empty($serviceContractRow['signature_image'])): ?>
+  <div style="border-bottom:1.5px solid #000; min-height:80px; max-width:320px;">
+    <img src="<?= htmlspecialchars((string) $serviceContractRow['signature_image'], ENT_QUOTES, 'UTF-8') ?>" alt="Client signature" style="max-height:100px; max-width:280px;">
+  </div>
+  <?php elseif ($showSignaturePad): ?>
   <div style="border:1.5px dashed #7a7a7a; height:140px; padding:6px;">
     <canvas class="signature-canvas"></canvas>
   </div>
+  <?php endif; ?>
 
   <p>
     Date:
@@ -737,11 +894,24 @@ and supersedes all prior agreements.
   </p>
 
   <div style="margin-top:10px;">
-    <?php if (!$isSigned): ?>
+    <?php if ($isSigned): ?>
+    <p class="contract-warning" style="margin:0;">This contract has already been signed.</p>
+    <?php elseif ($isStaffViewer || $isPreview): ?>
+    <p class="contract-warning" style="margin:0;"><?= $studySkipsPayHere ? 'Staff cannot sign a study contract. ' : '' ?>Signing is closed here. Only the customer can sign from their contract link.</p>
+    <?php elseif ($needsUpfrontPayment): ?>
+    <p class="contract-warning" style="margin:0;">Use Pay Here above before signing. The signature stays closed until that payment is confirmed.</p>
+    <?php elseif ($customerMaySign && $isDynamicContract): ?>
+    <label style="display:flex; gap:8px; align-items:flex-start; margin:0 0 12px; font-weight:600;">
+      <input type="checkbox" id="contract_agree" style="margin-top:4px;">
+      <span>I have reviewed this contract and agree to its terms.</span>
+    </label>
     <button type="button" id="clearSignature">Clear</button>
     <button type="button" id="signContract">Sign & Submit</button>
-    <?php else: ?>
-    <p class="contract-warning" style="margin:0;">This contract has already been signed.</p>
+    <?php elseif ($customerMaySign): ?>
+    <button type="button" id="clearSignature">Clear</button>
+    <button type="button" id="signContract">Sign & Submit</button>
+    <?php elseif ($signBlockReason): ?>
+    <p class="contract-warning" style="margin:0;"><?= htmlspecialchars($signBlockReason, ENT_QUOTES, 'UTF-8') ?></p>
     <?php endif; ?>
     <input type="hidden" id="signatureData">
   </div>
@@ -765,6 +935,9 @@ and supersedes all prior agreements.
 
 </div>
 
+<?php if ($preparedByName !== ''): ?>
+<p class="contract-prepared-by">Prepared by: <?= htmlspecialchars($preparedByName, ENT_QUOTES, 'UTF-8') ?></p>
+<?php endif; ?>
 
 </div>
 </section>
@@ -775,6 +948,8 @@ and supersedes all prior agreements.
 <script>
 (() => {
   const isSigned = <?= $isSigned ? 'true' : 'false' ?>;
+  const isDynamic = <?= $isDynamicContract ? 'true' : 'false' ?>;
+  window.XGS_DYNAMIC_CONTRACT = isDynamic;
   if (isSigned) return;
 
   /* ==========================
@@ -921,6 +1096,26 @@ function getClientTypes() {
     return;
   }
 
+  if (isDynamic) {
+    const agree = document.getElementById('contract_agree');
+    if (!agree || !agree.checked) {
+      alert("Please confirm that you have reviewed this contract and agree to its terms.");
+      return;
+    }
+    const studentName = inputName.value.trim();
+    const signedDate = inputDate.value;
+    if (!studentName || !signedDate) {
+      alert("Please complete the signature name and date.");
+      return;
+    }
+    if (!hasSignature()) {
+      alert("Please draw your signature before submitting.");
+      return;
+    }
+    submitDynamicSignature(canvas.toDataURL("image/png"), studentName, signedDate);
+    return;
+  }
+
   /* ==========================
      2. PACKAGE SELECTION (ARTICLE 7)
   ========================== */
@@ -1019,6 +1214,43 @@ function finishSubmitProgress() {
   /* ==========================
      SEND TO BACKEND
   ========================== */
+function submitDynamicSignature(signature, name, date) {
+  startSubmitProgress();
+  const endpoint = <?= json_encode(rtrim(xander_sc_app_base_path(), '/') . '/submit-service-contract-signature.php') ?>;
+  fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      token: "<?= htmlspecialchars($token, ENT_QUOTES, 'UTF-8') ?>",
+      signature: signature,
+      student_name: name,
+      full_name: name,
+      signed_date: date,
+      agreement: true
+    })
+  })
+  .then(async res => {
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || "Server error");
+    }
+    return data;
+  })
+  .then(data => {
+    if (window.ContractSigningUI) {
+      ContractSigningUI.finishAndReload(data.message || "Contract signed successfully.", 3000);
+    } else {
+      alert("Contract signed successfully.");
+      window.location.reload();
+    }
+  })
+  .catch(err => {
+    if (window.ContractSigningUI) ContractSigningUI.hide({ submitBtn: submitBtnUI });
+    else if (submitBtnUI) submitBtnUI.disabled = false;
+    alert(err.message || "Unable to submit at this time.\nPlease check your connection and try again.");
+  });
+}
+
 function submitSignature(signature, name, date, selectedPackage, selectedPackageCode) {
   startSubmitProgress();
 
@@ -1182,6 +1414,7 @@ fetch("submit-signature.php", {
 <script>
 (() => {
   'use strict';
+  if (window.XGS_DYNAMIC_CONTRACT) return;
 
   /* =====================================================
      FIELD REFERENCES (REAL INPUTS ONLY)

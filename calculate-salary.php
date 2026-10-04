@@ -56,7 +56,7 @@ if (!$salary_per_minute || $salary_per_minute <= 0) {
    FETCH ATTENDANCE FOR THE SELECTED MONTH
 =========================================================== */
 $stmt2 = $conn->prepare("
-    SELECT total_work_minutes, daily_salary_rwf
+    SELECT total_work_minutes
     FROM attendance
     WHERE admin_id = ?
       AND DATE_FORMAT(date, '%Y-%m') = ?
@@ -77,9 +77,8 @@ while ($row = $result->fetch_assoc()) {
         $total_minutes += intval($row['total_work_minutes']);
     }
 
-    if (isset($row['daily_salary_rwf'])) {
-        $total_salary += intval($row['daily_salary_rwf']);
-    }
+    $payable_minutes = min(intval($row['total_work_minutes'] ?? 0), 480);
+    $total_salary += (int)round($payable_minutes * (float)$salary_per_minute);
 }
 
 $stmt2->close();

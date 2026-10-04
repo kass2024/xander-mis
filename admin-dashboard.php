@@ -9,6 +9,7 @@ header('Expires: 0');
 
 // Main database (e.g. student_applications)
 require_once 'db.php';
+require_once __DIR__ . '/includes/dashboard_live_stats.php';
 
 // Secondary database (e.g. applications from Cyprus system)
 require_once 'database.php';  // This connects to visaeofi_cyprus
@@ -161,6 +162,12 @@ if ($countRes) {
         'incomplete_app', 'submitted', 'admit', 'i20_sent', 'sevis_paid',
         'visa_scheduled', 'visa_approved', 'enrolled', 'addn_doc', 'deny', 'app_start'
     ], 0);
+}
+
+$liveStats = xander_dashboard_stats($conn);
+$totalApplications = (int) $liveStats['total'];
+foreach ($liveStats['flags'] as $flagKey => $flagValue) {
+    $flagCounts[$flagKey] = (int) $flagValue;
 }
 
 // Catholic-only flag counts (student_applications only)
@@ -331,8 +338,11 @@ $cards = [
     'title' => 'Student contract',
     'icon' => 'bi-file-earmark-lock',
     'links' => [
+      'admin-service-contracts.php?wizard=1' => 'Generate Contract Link',
+      'admin-service-contracts.php' => 'Contract status',
       'admin-generate-student-contract.php' => 'Issue contract link ',
       'admin-contracts.php' => 'View students Contracts',
+      'admin-contract-services.php' => 'Services and prices',
       'admin-generate-student-contract-burundi.php' => 'Issue Burundi contract link',
       'admin-contracts-burundi.php' => 'Burundi contracts',
     ]
@@ -1841,6 +1851,14 @@ if (strtolower($role) !== 'catholic university of america') {
         <i class="bi bi-chevron-down arrow"></i>
       </a>
       <div class="sidebar-submenu" id="submenu_contracts">
+        <a href="#" onclick="loadInFrame('admin-service-contracts.php?wizard=1', 'Generate Contract Link')">
+          <i class="bi bi-link-45deg"></i>
+          Generate Contract Link
+        </a>
+        <a href="#" onclick="loadInFrame('admin-service-contracts.php', 'Contract status')">
+          <i class="bi bi-list-check"></i>
+          Contract status
+        </a>
         <a href="#" onclick="loadInFrame('admin-generate-student-contract.php', 'Issue Contract Link')">
           <i class="bi bi-link"></i>
           Issue contract link
@@ -1848,6 +1866,10 @@ if (strtolower($role) !== 'catholic university of america') {
         <a href="#" onclick="loadInFrame('admin-contracts.php', 'View Student Contracts')">
           <i class="bi bi-files"></i>
           View students Contracts
+        </a>
+        <a href="#" onclick="loadInFrame('admin-contract-services.php', 'Services and prices')">
+          <i class="bi bi-cash-coin"></i>
+          Services and prices
         </a>
         <a href="#" onclick="loadInFrame('admin-generate-student-contract-burundi.php', 'Issue Burundi Contract Link')">
           <i class="bi bi-link-45deg"></i>
@@ -1996,7 +2018,7 @@ if (strtolower($role) !== 'catholic university of america') {
             <div class="col-xl-3 col-md-6">
               <div class="hero-card">
                 <div class="hero-meta">Total Applications</div>
-                <div class="hero-value"><?= $totalApplications ?></div>
+                <div class="hero-value" id="stat-total"><?= $totalApplications ?></div>
                 <i class="bi bi-stack hero-icon"></i>
               </div>
             </div>
@@ -2004,7 +2026,7 @@ if (strtolower($role) !== 'catholic university of america') {
             <div class="col-xl-3 col-md-6">
               <div class="hero-card success">
                 <div class="hero-meta">Submitted</div>
-                <div class="hero-value"><?= $flagCounts['submitted'] ?? 0 ?></div>
+                <div class="hero-value" id="stat-submitted"><?= $flagCounts['submitted'] ?? 0 ?></div>
                 <i class="bi bi-check2-circle hero-icon"></i>
               </div>
             </div>
@@ -2012,7 +2034,7 @@ if (strtolower($role) !== 'catholic university of america') {
             <div class="col-xl-3 col-md-6">
               <div class="hero-card info">
                 <div class="hero-meta">Admitted</div>
-                <div class="hero-value"><?= $flagCounts['admit'] ?? 0 ?></div>
+                <div class="hero-value" id="stat-admit"><?= $flagCounts['admit'] ?? 0 ?></div>
                 <i class="bi bi-mortarboard hero-icon"></i>
               </div>
             </div>
@@ -2020,7 +2042,7 @@ if (strtolower($role) !== 'catholic university of america') {
             <div class="col-xl-3 col-md-6">
               <div class="hero-card warning">
                 <div class="hero-meta">Visa Approved</div>
-                <div class="hero-value"><?= $flagCounts['visa_approved'] ?? 0 ?></div>
+                <div class="hero-value" id="stat-visa"><?= $flagCounts['visa_approved'] ?? 0 ?></div>
                 <i class="bi bi-passport hero-icon"></i>
               </div>
             </div>
@@ -2041,7 +2063,7 @@ if (strtolower($role) !== 'catholic university of america') {
                 <?php foreach ($flagMap as $key => $label): ?>
                   <a class="flag-btn" href="#" onclick="loadInFrame('view-applicants.php?flag=<?= $key ?>', '<?= $label ?> Applicants')">
                     <?= $label ?>
-                    <span class="flag-count"><?= (int)($flagCounts[$key] ?? 0) ?></span>
+                    <span class="flag-count" data-flag="<?= htmlspecialchars($key, ENT_QUOTES, 'UTF-8') ?>"><?= (int)($flagCounts[$key] ?? 0) ?></span>
                   </a>
                 <?php endforeach; ?>
               </div>
@@ -2772,6 +2794,8 @@ if (strtolower($role) !== 'catholic university of america') {
     // Show dashboard view
     function showDashboard() {
       document.getElementById('dashboard-view').style.display = 'block';
+      if (typeof window.refreshDashboardStats === 'function') window.refreshDashboardStats();
+      if (typeof window.loadPaymentDashboard === 'function') window.loadPaymentDashboard();
       document.getElementById('content-frame').style.display = 'none';
       document.getElementById('pageTitle').textContent = 'Dashboard';
       
@@ -2959,8 +2983,30 @@ if (strtolower($role) !== 'catholic university of america') {
       }
     });
     
+    window.refreshDashboardStats = async function () {
+      try {
+        const res = await fetch('dashboard_live_stats.php?t=' + Date.now(), { credentials: 'same-origin', cache: 'no-store' });
+        const data = await res.json();
+        if (!res.ok || !data.ok) return;
+        const set = (id, value) => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = Number(value || 0).toLocaleString();
+        };
+        set('stat-total', data.total);
+        set('stat-submitted', data.submitted);
+        set('stat-admit', data.admit);
+        set('stat-visa', data.visa_approved);
+        document.querySelectorAll('[data-flag]').forEach((el) => {
+          const key = el.getAttribute('data-flag');
+          if (data.flags && Object.prototype.hasOwnProperty.call(data.flags, key)) {
+            el.textContent = Number(data.flags[key] || 0).toLocaleString();
+          }
+        });
+      } catch (e) { /* keep the last numbers */ }
+    };
+
     // Payment dashboard functionality
-    document.addEventListener('DOMContentLoaded', async () => {
+    window.loadPaymentDashboard = async function () {
       const dashboard = document.getElementById('paymentDashboard');
       const kpiWrap = document.getElementById('payment-kpis');
       if (!dashboard || !kpiWrap) return;
@@ -2982,8 +3028,9 @@ if (strtolower($role) !== 'catholic university of america') {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 25000);
 
-        const res = await fetch('payment_dashboard_stats.php', {
+        const res = await fetch('payment_dashboard_stats.php?t=' + Date.now(), {
           credentials: 'same-origin',
+          cache: 'no-store',
           signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -3020,7 +3067,8 @@ if (strtolower($role) !== 'catholic university of america') {
         
         // Payment Status Chart
         if (document.getElementById('paymentStatusChart')) {
-          new Chart(document.getElementById('paymentStatusChart'), {
+          if (window._payStatusChart) window._payStatusChart.destroy();
+          window._payStatusChart = new Chart(document.getElementById('paymentStatusChart'), {
             type: 'doughnut',
             data: {
               labels: ['Fully Paid', 'Partial Paid', 'Unpaid'],
@@ -3039,7 +3087,8 @@ if (strtolower($role) !== 'catholic university of america') {
         
         // Payment Method Chart
         if (document.getElementById('paymentMethodChart')) {
-          new Chart(document.getElementById('paymentMethodChart'), {
+          if (window._payMethodChart) window._payMethodChart.destroy();
+          window._payMethodChart = new Chart(document.getElementById('paymentMethodChart'), {
             type: 'bar',
             data: {
               labels: Object.keys(data.methods),
@@ -3078,6 +3127,14 @@ if (strtolower($role) !== 'catholic university of america') {
           : (err.message || 'Could not load payment data.');
         showPaymentError(msg);
       }
+    };
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof window.refreshDashboardStats === 'function') {
+        window.refreshDashboardStats();
+        setInterval(window.refreshDashboardStats, 30000);
+      }
+      window.loadPaymentDashboard();
+      setInterval(window.loadPaymentDashboard, 45000);
     });
     
     // Payment KPI click handler

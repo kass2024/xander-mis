@@ -140,6 +140,16 @@ body {
   font-weight: 500;
 }
 
+.salary {
+  margin-top: 18px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(242, 166, 90, 0.16);
+  color: var(--deep-navy);
+  font-weight: 700;
+  display: none;
+}
+
 /* ===== LOADER ===== */
 .loader {
   display: none;
@@ -237,6 +247,7 @@ body {
     </div>
 
     <div id="loader" class="loader">⏳ Processing…</div>
+    <div id="salaryText" class="salary" aria-live="polite"></div>
 
     <button id="btnIn" class="btn green" disabled>CHECK IN</button>
     <button id="btnOut" class="btn red" disabled>CHECK OUT</button>
@@ -263,6 +274,7 @@ let lat = null, lng = null, gpsReady = false, insideOffice = false, office = nul
 
 const statusText = document.getElementById("statusText");
 const distanceText = document.getElementById("distanceText");
+const salaryText = document.getElementById("salaryText");
 const btnIn = document.getElementById("btnIn");
 const btnOut = document.getElementById("btnOut");
 const loader = document.getElementById("loader");
@@ -380,6 +392,10 @@ function sendAttendance(action) {
   .then(r => r.json())
   .then(res => {
     alert(res.message);
+    if (action === "checkout" && res.success) {
+      salaryText.innerText = "Today's salary: " + Number(res.salary || 0).toLocaleString() + " RWF";
+      salaryText.style.display = "block";
+    }
     logEvent("Attendance " + action, {lat, lng, distance: distanceText.innerText});
   })
   .catch(() => alert("Network error"))

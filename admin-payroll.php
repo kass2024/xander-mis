@@ -95,7 +95,8 @@ while ($row = $result->fetch_assoc()) {
     if (!isset($admins[$aid]['days'][$date])) continue; // only weekdays in map
 
     $rate   = $admins[$aid]['rate'];
-    $salary = round($rate * $mins);
+    $payableMinutes = min($mins, 480);
+    $salary = round($rate * $payableMinutes);
 
     $admins[$aid]['days'][$date]['minutes'] = $mins;
     $admins[$aid]['days'][$date]['salary']  = $salary;

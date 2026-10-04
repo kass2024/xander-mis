@@ -109,50 +109,6 @@ function xander_fee_packages_needs_sync(mysqli $conn): bool
         if ($id === null) {
             return true;
         }
-
-        $stmt = $conn->prepare(
-            'SELECT title, total_amount FROM fee_packages WHERE id = ? LIMIT 1'
-        );
-        $stmt->bind_param('i', $id);
-        $stmt->execute();
-        $row = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-
-        if (!$row) {
-            return true;
-        }
-
-        if (abs((float) $row['total_amount'] - (float) $pkg['total']) > 0.009) {
-            return true;
-        }
-
-        if (trim((string) $row['title']) !== trim($pkg['title'])) {
-            return true;
-        }
-
-        $itemStmt = $conn->prepare(
-            'SELECT name, amount, payable_stage FROM fee_items WHERE package_id = ? ORDER BY id ASC'
-        );
-        $itemStmt->bind_param('i', $id);
-        $itemStmt->execute();
-        $dbItems = $itemStmt->get_result()->fetch_all(MYSQLI_ASSOC);
-        $itemStmt->close();
-
-        if (count($dbItems) !== count($pkg['items'])) {
-            return true;
-        }
-
-        foreach ($pkg['items'] as $i => $item) {
-            if (!isset($dbItems[$i])) {
-                return true;
-            }
-            if (trim((string) $dbItems[$i]['name']) !== trim((string) $item['name'])) {
-                return true;
-            }
-            if (abs((float) $dbItems[$i]['amount'] - (float) $item['amount']) > 0.009) {
-                return true;
-            }
-        }
     }
 
     return false;
@@ -201,13 +157,7 @@ function xander_sync_fee_packages_from_catalog(mysqli $conn): bool
             }
 
             if ($packageId !== null) {
-                xander_fee_packages_resolve_code_conflict($conn, $dbCode, $packageId);
-                $stmt = $conn->prepare(
-                    'UPDATE fee_packages SET code = ?, title = ?, currency = ?, total_amount = ?, total_expected = ?, contract_code = ?, display_order = ? WHERE id = ?'
-                );
-                $stmt->bind_param('sssddsii', $dbCode, $title, $currency, $total, $total, $contractCode, $displayOrder, $packageId);
-                $stmt->execute();
-                $stmt->close();
+                continue;
             } else {
                 $stmt = $conn->prepare(
                     'INSERT INTO fee_packages (code, title, currency, total_amount, total_expected, contract_code, display_order) VALUES (?, ?, ?, ?, ?, ?, ?)'
@@ -219,13 +169,6 @@ function xander_sync_fee_packages_from_catalog(mysqli $conn): bool
             }
 
             xander_fee_packages_sync_items($conn, $packageId, $pkg['items'], $currency);
-        }
-
-        if ($activeCodes !== []) {
-            $escaped = array_map(static fn(string $c): string => "'" . $conn->real_escape_string($c) . "'", $activeCodes);
-            $conn->query(
-                'UPDATE fee_packages SET contract_code = NULL WHERE contract_code IS NOT NULL AND contract_code NOT IN (' . implode(',', $escaped) . ')'
-            );
         }
 
         $conn->commit();

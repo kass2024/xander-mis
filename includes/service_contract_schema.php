@@ -1,0 +1,71 @@
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/db_schema_align.php';
+
+function xander_sc_create_sql(): string
+{
+    return "
+        CREATE TABLE IF NOT EXISTS service_contracts (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            reference VARCHAR(40) NOT NULL,
+            public_token CHAR(64) NOT NULL,
+            status VARCHAR(32) NOT NULL DEFAULT 'pending_signature',
+            service_type VARCHAR(16) NOT NULL,
+            customer_id INT UNSIGNED NULL DEFAULT NULL,
+            customer_name VARCHAR(191) NOT NULL,
+            customer_email VARCHAR(191) NOT NULL,
+            customer_snapshot LONGTEXT NOT NULL,
+            destination_country_id INT UNSIGNED NULL DEFAULT NULL,
+            country_name VARCHAR(191) NOT NULL,
+            country_snapshot LONGTEXT NOT NULL,
+            offering_kind VARCHAR(32) NOT NULL,
+            offering_id VARCHAR(64) NOT NULL,
+            offering_title VARCHAR(255) NOT NULL,
+            offering_snapshot LONGTEXT NOT NULL,
+            fee_type VARCHAR(32) NOT NULL,
+            fee_description VARCHAR(255) NULL DEFAULT NULL,
+            amount DECIMAL(12,2) NOT NULL,
+            currency CHAR(3) NOT NULL,
+            fee_snapshot LONGTEXT NOT NULL,
+            staff_snapshot LONGTEXT NOT NULL,
+            contract_snapshot LONGTEXT NOT NULL,
+            contract_template VARCHAR(64) NOT NULL DEFAULT 'master_international_v1',
+            created_by_staff_id INT UNSIGNED NOT NULL,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL,
+            viewed_at DATETIME NULL DEFAULT NULL,
+            signed_at DATETIME NULL DEFAULT NULL,
+            expires_at DATETIME NULL DEFAULT NULL,
+            cancelled_at DATETIME NULL DEFAULT NULL,
+            signature_name VARCHAR(255) NULL DEFAULT NULL,
+            signature_image LONGTEXT NULL,
+            agreement_accepted TINYINT(1) NOT NULL DEFAULT 0,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_service_contracts_token (public_token),
+            UNIQUE KEY uq_service_contracts_reference (reference),
+            KEY idx_service_contracts_status (status),
+            KEY idx_service_contracts_service (service_type),
+            KEY idx_service_contracts_staff (created_by_staff_id),
+            KEY idx_service_contracts_email (customer_email)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ";
+}
+
+function xander_ensure_service_contract_table(mysqli $conn): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+
+    if (!xander_db_table_exists($conn, 'service_contracts')) {
+        if (!$conn->query(xander_sc_create_sql())) {
+            error_log('[service_contract_schema] CREATE service_contracts: ' . $conn->error);
+        }
+    }
+    if (xander_db_table_exists($conn, 'service_contracts')) {
+        xander_db_add_column_if_missing($conn, 'service_contracts', 'upfront_paid_at', 'DATETIME NULL DEFAULT NULL');
+    }
+}

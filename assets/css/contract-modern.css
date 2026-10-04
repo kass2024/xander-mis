@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700;800&display=swap");
+
 /* ==========================================================================
    XANDER GLOBAL SCHOLARS — MODERN CONTRACT UI
    Unified stylesheet for all student & admin contract pages.
@@ -51,7 +53,7 @@
   --xgs-shadow-xl:    0 24px 64px rgba(15,23,42,.12);
 
   /* Type */
-  --xgs-font:         "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --xgs-font:         "Source Sans 3", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --xgs-font-serif:   "Source Serif Pro", Georgia, "Times New Roman", serif;
 }
 
@@ -60,13 +62,15 @@
 
 html { scroll-behavior: smooth; }
 
+body.xgs-contract-body .site-header { display: none !important; }
+
 body.xgs-contract-body {
   margin: 0;
   background: var(--xgs-bg-grad);
   color: var(--xgs-text);
   font-family: var(--xgs-font);
-  font-size: 15px;
-  line-height: 1.7;
+  font-size: 17px;
+  line-height: 1.75;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -108,7 +112,7 @@ body.xgs-contract-body {
   margin-bottom: 14px;
 }
 .xgs-hero-title {
-  font-size: clamp(20px, 2.5vw, 28px);
+  font-size: clamp(24px, 2.8vw, 34px);
   font-weight: 800;
   line-height: 1.25;
   margin: 0 0 6px;
@@ -403,13 +407,13 @@ label.package-item:focus-within {
   gap: 12px;
   cursor: pointer;
   color: var(--xgs-ink);
-  font-size: 15px;
+  font-size: 17px;
   width: 100%;
 }
-.package-label-text { flex: 1; line-height: 1.45; }
+.package-label-text { flex: 1; line-height: 1.45; font-size: 17px; }
 .package-price-badge {
   flex-shrink: 0;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 800;
   color: #1d4ed8;
   background: #eef2ff;
@@ -425,7 +429,7 @@ label.package-item:focus-within {
   padding: 12px 0 0 32px;
   color: var(--xgs-text);
   border-top: 1px dashed var(--xgs-border);
-  font-size: 14px;
+  font-size: 16px;
   cursor: pointer;
 }
 .package-lines {
@@ -433,8 +437,32 @@ label.package-item:focus-within {
   padding-left: 18px;
 }
 .package-lines li {
-  margin: 0 0 6px;
-  line-height: 1.55;
+  margin: 0 0 8px;
+  line-height: 1.6;
+  font-size: 16px;
+}
+.job-facts {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0 32px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+.job-facts div { display: grid; grid-template-columns: 118px 1fr; gap: 8px; }
+.job-facts dt {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+.job-facts dd { margin: 0; font-size: 16px; line-height: 1.45; color: #0f172a; }
+@media (max-width: 640px) {
+  .job-facts { margin-left: 0; }
+  .job-facts div { grid-template-columns: 1fr; gap: 2px; }
 }
 
 .bc-fee-wrap { margin-top: 8px; }
@@ -467,7 +495,7 @@ label.package-item:focus-within {
 .contract .bc-fee-section-head h3.bc-fee-section-title {
   margin: 0;
   flex: 1;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
   color: #fff;
   border: none;

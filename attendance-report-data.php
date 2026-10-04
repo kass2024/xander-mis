@@ -16,7 +16,9 @@ $week  = $_POST['week'] ?? date("W");
 $month = $_POST['month'] ?? date("Y-m");
 $staff = $_POST['staff'] ?? '';
 
-$sql = "SELECT a.full_name, att.*
+$sql = "SELECT a.full_name, a.salary_per_minute, att.*,
+               ROUND(LEAST(COALESCE(att.total_work_minutes, 0), 480)
+                     * COALESCE(a.salary_per_minute, 0), 0) AS effective_daily_salary
         FROM attendance att
         JOIN admins a ON a.id = att.admin_id
         WHERE 1 ";
@@ -77,13 +79,13 @@ while ($row = $result->fetch_assoc()) {
         "check_in" => $row['check_in_time'],
         "check_out" => $row['check_out_time'],
         "minutes" => $row['total_work_minutes'],
-        "salary" => $row['daily_salary_rwf']
+        "salary" => (int)$row['effective_daily_salary']
     ];
 
     $chartLabels[] = $row['date'];
     $chartValues[] = $row['total_work_minutes'];
     $totalMinutes += $row['total_work_minutes'];
-    $totalSalary  += $row['daily_salary_rwf'];
+    $totalSalary  += (int)$row['effective_daily_salary'];
 }
 
 $avgMinutes = count($data) ? round($totalMinutes / count($data)) : 0;

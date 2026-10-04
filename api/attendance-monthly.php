@@ -23,23 +23,18 @@ if ($admin_id <= 0 || $month === '') {
 $stmt = $conn->prepare("
     SELECT 
         COUNT(*) AS total_days,
-        SUM(total_work_minutes) AS total_minutes,
-
-        -- Use fallback logic:
-        -- If daily_salary_rwf is NULL or 0, use total_payment_rwf
-        SUM(
-            CASE 
-                WHEN daily_salary_rwf > 0 
-                    THEN daily_salary_rwf
-                WHEN total_payment_rwf > 0
-                    THEN total_payment_rwf
-                ELSE 0
-            END
-        ) AS total_salary
-
-    FROM attendance
-    WHERE admin_id = ?
-      AND DATE_FORMAT(date, '%Y-%m') = ?
+        COALESCE(SUM(att.total_work_minutes), 0) AS total_minutes,
+        COALESCE(SUM(
+            ROUND(
+                LEAST(COALESCE(att.total_work_minutes, 0), 480)
+                * COALESCE(a.salary_per_minute, 0),
+                0
+            )
+        ), 0) AS total_salary
+    FROM attendance att
+    JOIN admins a ON a.id = att.admin_id
+    WHERE att.admin_id = ?
+      AND DATE_FORMAT(att.date, '%Y-%m') = ?
 ");
 $stmt->bind_param("is", $admin_id, $month);
 $stmt->execute();

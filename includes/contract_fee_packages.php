@@ -22,13 +22,14 @@ require_once __DIR__ . '/contract_fee_notice.php';
 
  */
 
-function renderContractFeePackagesSection(bool $isSigned, string $selectedCode = ''): void
+function renderContractFeePackagesSection(bool $isSigned, string $selectedCode = '', string $lockedLabel = ''): void
 
 {
 
     $disabled = $isSigned ? 'disabled' : '';
 
     $selectedCode = trim($selectedCode);
+    $lockedLabel = trim($lockedLabel);
 
 
 
@@ -48,13 +49,7 @@ function renderContractFeePackagesSection(bool $isSigned, string $selectedCode =
 
     $extractPrice = static function (string $label): string {
 
-        if (preg_match('/–\s*(€[\d,]+)\s*$/u', $label, $m)) {
-
-            return $m[1];
-
-        }
-
-        if (preg_match('/-\s*(€[\d,]+)\s*$/u', $label, $m)) {
+        if (preg_match('/[–-]\s*((?:€|£|\$|CA\$)[\d,]+(?:\.\d+)?|[A-Z]{3}\s[\d,]+(?:\.\d+)?)\s*$/u', $label, $m)) {
 
             return $m[1];
 
@@ -66,7 +61,7 @@ function renderContractFeePackagesSection(bool $isSigned, string $selectedCode =
 
 
 
-    $mk = static function (array $pkg) use ($disabled, $selectedCode, $extractPrice, $isSigned): void {
+    $mk = static function (array $pkg) use ($disabled, $selectedCode, $extractPrice, $isSigned, $lockedLabel): void {
 
         $id = $pkg['contract_code'];
         $inputId = 'pkg_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $id);
@@ -75,9 +70,15 @@ function renderContractFeePackagesSection(bool $isSigned, string $selectedCode =
 
         $label = $pkg['label'];
 
+        if ($isSigned && $lockedLabel !== '' && $selectedCode === $id) {
+
+            $label = $lockedLabel;
+
+        }
+
         $price = $extractPrice($label);
 
-        $titleOnly = $price !== '' ? preg_replace('/\s*[–-]\s*€[\d,]+\s*$/u', '', $label) : $label;
+        $titleOnly = $price !== '' ? preg_replace('/\s*[–-]\s*(?:(?:€|£|\$|CA\$)[\d,]+(?:\.\d+)?|[A-Z]{3}\s[\d,]+(?:\.\d+)?)\s*$/u', '', $label) : $label;
 
         $tag = $isSigned ? 'div' : 'label';
 
@@ -102,6 +103,23 @@ function renderContractFeePackagesSection(bool $isSigned, string $selectedCode =
         }
 
         echo '</div>';
+
+        $profile = is_array($pkg['profile'] ?? null) ? $pkg['profile'] : [];
+        $factRows = [
+            'Jobs' => (string) ($profile['roles'] ?? ''),
+            'Processing' => (string) ($profile['processing'] ?? ''),
+            'Salary from' => (string) ($profile['salary'] ?? ''),
+            'Requirements' => (string) ($profile['requirements'] ?? ''),
+            'Note' => (string) ($profile['note'] ?? ''),
+        ];
+        $factRows = array_filter($factRows, static fn (string $value): bool => trim($value) !== '');
+        if ($factRows !== []) {
+            echo '<dl class="job-facts">';
+            foreach ($factRows as $factLabel => $factValue) {
+                echo '<div><dt>' . htmlspecialchars($factLabel, ENT_QUOTES, 'UTF-8') . '</dt><dd>' . htmlspecialchars($factValue, ENT_QUOTES, 'UTF-8') . '</dd></div>';
+            }
+            echo '</dl>';
+        }
 
         echo '<div id="' . htmlspecialchars($id, ENT_QUOTES, 'UTF-8') . '" class="package-details" style="display:' . ($checked ? 'block' : 'none') . '">';
 
@@ -175,7 +193,7 @@ Fees apply exclusively to the selected package.
 
         if ($pkg) {
 
-            $summaryLabel = $pkg['label'] ?? $pkg['title'] ?? '';
+            $summaryLabel = $lockedLabel !== '' ? $lockedLabel : ($pkg['label'] ?? $pkg['title'] ?? '');
 
             echo '<div class="bc-selected-pkg-summary"><strong>Selected package:</strong> '
                 . htmlspecialchars($summaryLabel, ENT_QUOTES, 'UTF-8') . '</div>';
@@ -184,7 +202,7 @@ Fees apply exclusively to the selected package.
 
     }
 
-    $catalog = xander_contract_fee_catalog_list();
+    $catalog = xander_contract_fee_catalog_list($selectedCode);
     $expeditedCode = 'p544';
 
     foreach ($sections as $key => $meta) {

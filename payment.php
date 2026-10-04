@@ -50,6 +50,13 @@ if (!file_exists(__DIR__ . '/db.php')) {
     die('Database configuration file (db.php) is missing.');
 }
 require_once __DIR__ . '/db.php';
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+$contractTokenIn = trim((string) ($_GET['contract_token'] ?? ''));
+if (preg_match('/\A[a-f0-9]{64}\z/', $contractTokenIn)) {
+    $_SESSION['service_contract_token'] = $contractTokenIn;
+}
 require_once __DIR__ . '/helpers/payment_config.php';
 require_once __DIR__ . '/helpers/currencies.php';
 require_once __DIR__ . '/helpers/mailer.php';
@@ -1552,13 +1559,20 @@ $prefillSrcAmount = (string)($_GET['src_amount'] ?? '');
                     </div>
                     <h2 style="margin-top:10px;">Payment Completed.</h2>
                     <p>Thank you. A receipt email will be sent.</p>
+                    <?php if (!empty($_SESSION['service_contract_token'])): ?>
+                    <p style="margin-top:16px;"><a href="contract/payment-return.php" style="display:inline-block;background:#1d4ed8;color:#fff;padding:12px 18px;border-radius:8px;font-weight:700;text-decoration:none;">Return to your contract to sign</a></p>
+                    <?php endif; ?>
                 </div>
             <?php else: ?>
 
             <?php if ($momo_reference !== ''): ?>
                 <?php if (strtolower($momo_db_status) === 'completed'): ?>
                     <div class="alert alert-success">
-                        <div><strong>Payment Completed.</strong> Thank you. A receipt email will be sent.</div>
+                        <div><strong>Payment Completed.</strong> Thank you. A receipt email will be sent.
+                        <?php if (!empty($_SESSION['service_contract_token'])): ?>
+                        <div style="margin-top:10px;"><a href="contract/payment-return.php">Return to your contract to sign</a></div>
+                        <?php endif; ?>
+                        </div>
                     </div>
                 <?php elseif (strtolower($momo_db_status) === 'cancelled'): ?>
                     <div class="alert alert-error">
