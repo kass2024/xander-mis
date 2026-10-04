@@ -181,48 +181,191 @@
     state.offering = null;
   }
 
+  let countries = [];
+  let countryCursor = 0;
+  const COUNTRY_ALIASES = {
+    'united states': ['USA', 'US', 'America'],
+    'united states of america': ['USA', 'US', 'America'],
+    'united kingdom': ['UK', 'Britain', 'Great Britain'],
+    'united kingdom of great britain and northern ireland': ['UK', 'Britain'],
+    'united arab emirates': ['UAE', 'Emirates'],
+    'czech republic': ['Czechia'],
+    'czechia': ['Czech Republic'],
+    'republic of korea': ['South Korea', 'Korea'],
+    'korea south': ['Korea', 'South Korea'],
+    'south korea': ['Korea'],
+    'russian federation': ['Russia'],
+    'viet nam': ['Vietnam'],
+    'vietnam': ['Viet Nam'],
+    'cote d ivoire': ['Ivory Coast'],
+    'democratic republic of the congo': ['DRC', 'DR Congo'],
+    'netherlands': ['Holland'],
+    'myanmar': ['Burma'],
+    'eswatini': ['Swaziland'],
+    'cabo verde': ['Cape Verde'],
+    'timor leste': ['East Timor'],
+    'holy see': ['Vatican'],
+    'vatican city': ['Vatican', 'Holy See'],
+    'syrian arab republic': ['Syria'],
+    'lao peoples democratic republic': ['Laos'],
+    'iran islamic republic of': ['Iran'],
+    'united republic of tanzania': ['Tanzania'],
+    'republic of moldova': ['Moldova'],
+    'north macedonia': ['Macedonia'],
+    'state of palestine': ['Palestine']
+  };
+
+  function foldCountry(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/&/g, ' and ')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  }
+
+  function countryRank(name, query) {
+    const q = foldCountry(query);
+    if (!q) return { score: 1, hint: '' };
+    const folded = foldCountry(name);
+    const words = folded.split(' ').filter(Boolean);
+    const tokens = q.split(' ').filter(Boolean);
+    const aliases = COUNTRY_ALIASES[folded] || [];
+    const wordPrefix = tokens.every((token) => words.some((word) => word.startsWith(token)));
+    if (folded.startsWith(q)) return { score: 100, hint: '' };
+    if (wordPrefix) return { score: words[0] && words[0].startsWith(tokens[0]) ? 80 : 70, hint: '' };
+    const hint = aliases.find((alias) => {
+      const aliasWords = foldCountry(alias).split(' ').filter(Boolean);
+      return tokens.every((token) => aliasWords.some((word) => word.startsWith(token)));
+    }) || '';
+    if (hint) return { score: 60, hint };
+    if (tokens.every((token) => token.length >= 4 && folded.includes(token))) return { score: 30, hint: '' };
+    return { score: 0, hint: '' };
+  }
+
+  function highlightCountry(name, query) {
+    const tokens = foldCountry(query).split(' ').filter(Boolean);
+    if (!tokens.length) return escapeHtml(name);
+    const chars = Array.from(name);
+    const foldedChars = chars.map((ch) => ch.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase());
+    const folded = foldedChars.join('');
+    const flags = chars.map(() => false);
+    tokens.forEach((token) => {
+      let from = 0;
+      while (from < folded.length) {
+        const at = folded.indexOf(token, from);
+        if (at < 0) break;
+        for (let i = at; i < at + token.length && i < flags.length; i += 1) flags[i] = true;
+        from = at + Math.max(token.length, 1);
+      }
+    });
+    let html = '';
+    let open = false;
+    chars.forEach((ch, index) => {
+      if (flags[index] && !open) { html += '<mark>'; open = true; }
+      if (!flags[index] && open) { html += '</mark>'; open = false; }
+      html += escapeHtml(ch);
+    });
+    if (open) html += '</mark>';
+    return html;
+  }
+
+  function selectCountry(input) {
+    state.country_ref = input.value;
+    state.country_name = input.dataset.name || '';
+    serviceAdded = false;
+    clearOffering();
+    document.querySelectorAll('#sc-countries .sc-country-row').forEach((label) => {
+      label.classList.toggle('is-selected', label.contains(input));
+    });
+    const selected = document.getElementById('sc-country-selected');
+    if (selected) {
+      selected.hidden = state.country_name === '';
+      selected.textContent = state.country_name ? 'Selected: ' + state.country_name : '';
+    }
+    showError('');
+    renderSteps();
+  }
+
+  function renderCountries() {
+    const box = document.getElementById('sc-countries');
+    const meta = document.getElementById('sc-country-meta');
+    const clearBtn = document.getElementById('sc-country-clear');
+    const query = (document.getElementById('sc-country-search')?.value || '').trim();
+    if (clearBtn) clearBtn.hidden = query === '';
+    const ranked = countries
+      .map((country) => Object.assign({ country }, countryRank(country.name, query)))
+      .filter((row) => row.score > 0);
+    if (query) ranked.sort((a, b) => b.score - a.score || a.country.name.localeCompare(b.country.name));
+    countryCursor = 0;
+    if (meta) {
+      if (!query) meta.textContent = countries.length ? countries.length + ' countries. Type to narrow the list.' : '';
+      else if (!ranked.length) meta.textContent = 'No countries match “' + query + '”.';
+      else meta.textContent = ranked.length + (ranked.length === 1 ? ' country matches' : ' countries match') + ' “' + query + '”. Press Enter to choose the highlighted one.';
+    }
+    const selected = document.getElementById('sc-country-selected');
+    if (selected) {
+      selected.hidden = !state.country_name;
+      selected.textContent = state.country_name ? 'Selected: ' + state.country_name : '';
+    }
+    if (!box) return;
+    if (!ranked.length) {
+      box.innerHTML = '<p class="sc-country-empty">Try the start of the name, such as Fran for France, or a short name such as UAE.</p>';
+      return;
+    }
+    box.innerHTML = ranked.map((row, index) => {
+      const country = row.country;
+      const checked = state.country_ref === country.ref;
+      const classes = ['sc-country-row'];
+      if (checked) classes.push('is-selected');
+      if (query && index === 0) classes.push('is-active');
+      const hint = row.hint ? '<span class="sc-country-hint">' + escapeHtml(row.hint) + '</span>' : '';
+      return '<label class="' + classes.join(' ') + '" role="option">'
+        + '<input type="radio" name="country_ref" value="' + escapeAttr(country.ref) + '" data-name="' + escapeAttr(country.name) + '"' + (checked ? ' checked' : '') + '>'
+        + '<span class="sc-country-name">' + highlightCountry(country.name, query) + '</span>'
+        + hint
+        + '</label>';
+    }).join('');
+    box.querySelectorAll('input').forEach((input) => {
+      input.addEventListener('change', () => selectCountry(input));
+    });
+    box.scrollTop = 0;
+  }
+
+  function moveCountryCursor(delta) {
+    const rows = Array.from(document.querySelectorAll('#sc-countries .sc-country-row'));
+    if (!rows.length) return;
+    const current = rows.findIndex((row) => row.classList.contains('is-active'));
+    countryCursor = current === -1
+      ? (delta > 0 ? 0 : rows.length - 1)
+      : (current + delta + rows.length) % rows.length;
+    rows.forEach((row, index) => row.classList.toggle('is-active', index === countryCursor));
+    rows[countryCursor].scrollIntoView({ block: 'nearest' });
+  }
+
   async function loadCountries() {
     const box = document.getElementById('sc-countries');
-    box.innerHTML = '<p class="sc-note">Loading countries…</p>';
+    box.innerHTML = '<p class="sc-country-empty">Loading countries…</p>';
     state.country_ref = '';
     state.country_name = '';
+    countries = [];
+    const search = document.getElementById('sc-country-search');
+    if (search) search.value = '';
     clearOffering();
     try {
       const data = await apiGet({ action: 'countries', service: state.service });
-      if (!data.countries.length) {
-        box.innerHTML = '<p class="sc-empty">No countries are currently available for this service.</p>';
+      countries = Array.isArray(data.countries) ? data.countries : [];
+      if (!countries.length) {
+        box.innerHTML = '<p class="sc-country-empty">No countries are currently available for this service.</p>';
         renderSteps();
         return;
       }
-      box.innerHTML = data.countries.map((country) => (
-        '<label class="sc-choice sc-country"><input type="radio" name="country_ref" value="' + escapeAttr(country.ref) + '" data-name="' + escapeAttr(country.name) + '"> <strong>' + escapeHtml(country.name) + '</strong></label>'
-      )).join('');
-      box.querySelectorAll('input').forEach((input) => {
-        input.addEventListener('change', () => {
-          state.country_ref = input.value;
-          state.country_name = input.dataset.name || '';
-          serviceAdded = false;
-          clearOffering();
-          box.querySelectorAll('.sc-choice').forEach((label) => label.classList.remove('is-selected'));
-          const label = input.closest('.sc-choice');
-          if (label) label.classList.add('is-selected');
-          showError('');
-          renderSteps();
-        });
-      });
-      filterCountries();
+      renderCountries();
     } catch (err) {
       box.innerHTML = '<p class="sc-error">' + escapeHtml(err.message || 'Network error while loading countries.') + '</p>';
     }
     renderSteps();
-  }
-
-  function filterCountries() {
-    const query = (document.getElementById('sc-country-search')?.value || '').trim().toLowerCase();
-    document.querySelectorAll('#sc-countries .sc-country').forEach((label) => {
-      const name = (label.querySelector('strong')?.textContent || '').toLowerCase();
-      label.hidden = query !== '' && !name.includes(query);
-    });
   }
 
   async function loadOfferings() {
@@ -510,7 +653,33 @@
     }
     renderSteps();
   });
-  document.getElementById('sc-country-search')?.addEventListener('input', filterCountries);
+  const countrySearch = document.getElementById('sc-country-search');
+  countrySearch?.addEventListener('input', renderCountries);
+  countrySearch?.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      moveCountryCursor(1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      moveCountryCursor(-1);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const rows = Array.from(document.querySelectorAll('#sc-countries .sc-country-row'));
+      const row = rows.find((item) => item.classList.contains('is-active')) || (countrySearch.value.trim() ? rows[0] : null);
+      const input = row?.querySelector('input');
+      if (!input) return;
+      input.checked = true;
+      selectCountry(input);
+    } else if (event.key === 'Escape') {
+      countrySearch.value = '';
+      renderCountries();
+    }
+  });
+  document.getElementById('sc-country-clear')?.addEventListener('click', () => {
+    if (countrySearch) countrySearch.value = '';
+    renderCountries();
+    countrySearch?.focus();
+  });
   ['sc-amount', 'sc-currency', 'sc-fee-desc', 'sc-remaining', 'sc-remaining-currency', 'sc-staff-first', 'sc-staff-last', 'sc-first', 'sc-last', 'sc-email', 'sc-phone', 'sc-dob', 'sc-nationality'].forEach((id) => {
     document.getElementById(id)?.addEventListener('input', () => {
       renderSteps();

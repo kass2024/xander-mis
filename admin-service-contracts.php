@@ -47,7 +47,7 @@ function sc_h(mixed $value): string
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= sc_h($basePath) ?>/assets/css/contract-modern.css?v=20261004b">
-<link rel="stylesheet" href="<?= sc_h($basePath) ?>/assets/css/service-contract-wizard.css?v=20261004b">
+<link rel="stylesheet" href="<?= sc_h($basePath) ?>/assets/css/service-contract-wizard.css?v=20261004e">
 </head>
 <body class="xgs-contract-body">
 <main class="sc-shell">
@@ -75,11 +75,17 @@ function sc_h(mixed $value): string
             </div>
         </section>
         <section class="sc-panel" data-step="1">
-            <div class="sc-field">
-                <label for="sc-country-search">All countries</label>
-                <input id="sc-country-search" type="search" placeholder="Search the full country list" autocomplete="off">
+            <div class="sc-field sc-country-finder">
+                <label for="sc-country-search">Find a country</label>
+                <div class="sc-country-search-box">
+                    <svg class="sc-country-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3.5-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    <input id="sc-country-search" type="text" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="sc-countries" placeholder="Type France, UAE, Korea…" autocomplete="off" spellcheck="false">
+                    <button type="button" id="sc-country-clear" class="sc-country-clear" hidden aria-label="Clear country search">&times;</button>
+                </div>
+                <p id="sc-country-meta" class="sc-country-meta"></p>
+                <p id="sc-country-selected" class="sc-country-selected" hidden></p>
             </div>
-            <div id="sc-countries" class="sc-country-list"></div>
+            <div id="sc-countries" class="sc-country-list" role="listbox" aria-label="Countries"></div>
         </section>
         <section class="sc-panel" data-step="2">
             <h2 id="sc-offering-title">Select School or Study Program</h2>
@@ -198,7 +204,7 @@ function sc_h(mixed $value): string
         preview: <?= json_encode($basePath . '/student-contract.php') ?>
     };
     </script>
-    <script src="<?= sc_h($basePath) ?>/assets/js/service-contract-wizard.js?v=20261004b"></script>
+    <script src="<?= sc_h($basePath) ?>/assets/js/service-contract-wizard.js?v=20261004c"></script>
 <?php else: ?>
     <div class="sc-toolbar">
         <div>
